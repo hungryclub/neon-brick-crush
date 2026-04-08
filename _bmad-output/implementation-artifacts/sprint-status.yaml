@@ -1,0 +1,25 @@
+generated_at: '2026-04-08'
+project: 'neo-brick-crush'
+status: 'active'
+development_status:
+  epic-1: backlog
+  1-1-app-root-and-runtime-shell: backlog
+  1-2-aim-shoot-and-turn-loop: backlog
+  1-3-fail-and-instant-retry: backlog
+  1-4-rewarded-ad-retry-flow: backlog
+  epic-2: backlog
+  2-1-gate-modifier-pipeline: backlog
+  2-2-fever-meter-and-manual-activation: backlog
+  2-3-gate-fever-combo-feedback: backlog
+  epic-3: backlog
+  3-1-world-stage-data-and-loading: backlog
+  3-2-world-map-stage-selection-stars: backlog
+  3-3-tutorial-challenge-climax-flow: backlog
+  epic-4: backlog
+  4-1-xp-level-unlock-persistence: backlog
+  4-2-rewarded-ads-and-iap-adapters: backlog
+  4-3-event-reward-structure: backlog
+  epic-5: backlog
+  5-1-neon-feedback-and-audio-base: backlog
+  5-2-mobile-performance-and-pooling: backlog
+  5-3-debug-qa-and-release-guardrails: backlog
