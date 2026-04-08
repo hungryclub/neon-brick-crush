@@ -2,6 +2,10 @@ import { useEffect, useRef } from 'react';
 import { useSelector } from '@xstate/react';
 
 import createGameRuntime from '../../game/core/create-game-runtime';
+import {
+  createInitialRuntimeHudSnapshot,
+  type IRuntimeHudSnapshot
+} from '../../game/hud-bridges/game-runtime-bridge';
 import createGameRuntimeBridge from '../../game/hud-bridges/game-runtime-bridge';
 import HudPanel from '../components/HudPanel';
 import { sessionActor } from '../../state/machines/session.machine';
@@ -12,6 +16,8 @@ export default function GameShell() {
   const runtimeHostRef = useRef<HTMLDivElement | null>(null);
   const storeIsDebugVisible = useUiStore((state) => state.storeIsDebugVisible);
   const storeSetHasRuntime = useUiStore((state) => state.storeSetHasRuntime);
+  const storeSetRuntimeHud = useUiStore((state) => state.storeSetRuntimeHud);
+  const runtimeHud = useUiStore((state) => state.storeRuntimeHud);
   const sessionPhase = useSelector(sessionActor, selectSessionPhase);
   const isSessionBooting = useSelector(sessionActor, selectIsSessionBooting);
 
@@ -23,6 +29,11 @@ export default function GameShell() {
       storeSetHasRuntime(true);
       sessionActor.send({ type: 'BOOT_FINISHED' });
     });
+    const unsubscribeRuntimeHud = runtimeBridge.onRuntimeHudChanged(
+      (snapshot: IRuntimeHudSnapshot) => {
+        storeSetRuntimeHud(snapshot);
+      }
+    );
 
     const runtime = createGameRuntime({
       parent: runtimeHostRef.current,
@@ -31,22 +42,26 @@ export default function GameShell() {
 
     return () => {
       unsubscribeRuntimeReady();
+      unsubscribeRuntimeHud();
       storeSetHasRuntime(false);
+      storeSetRuntimeHud(createInitialRuntimeHudSnapshot());
       runtime.destroy();
     };
-  }, [storeSetHasRuntime]);
+  }, [storeSetHasRuntime, storeSetRuntimeHud]);
 
   return (
     <main style={layoutStyle}>
       <section style={stageShellStyle}>
         <div ref={runtimeHostRef} id='game-runtime-host' style={runtimeHostStyle} />
-        <HudPanel sessionPhase={sessionPhase} />
+        <HudPanel runtimeHud={runtimeHud} sessionPhase={sessionPhase} />
         {isSessionBooting ? <div style={bootOverlayStyle}>Booting runtime shell...</div> : null}
       </section>
       {storeIsDebugVisible ? (
         <aside style={debugPanelStyle}>
           <strong>Debug</strong>
           <span>session: {sessionPhase}</span>
+          <span>turn: {runtimeHud.turnNumber}</span>
+          <span>shot: {runtimeHud.shotState}</span>
         </aside>
       ) : null}
     </main>

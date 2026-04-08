@@ -1,14 +1,48 @@
+import type { IRuntimeHudSnapshot } from '../../game/hud-bridges/game-runtime-bridge';
+
 interface IHudPanelProps {
+  runtimeHud: IRuntimeHudSnapshot;
   sessionPhase: string;
 }
 
-export default function HudPanel({ sessionPhase }: IHudPanelProps) {
+export default function HudPanel({ runtimeHud, sessionPhase }: IHudPanelProps) {
+  const aimAngleLabel =
+    runtimeHud.aimAngle === null ? 'ready' : `${Math.round(runtimeHud.aimAngle)}deg`;
+  const dangerPercent = Math.round(runtimeHud.dangerLevel * 100);
+
   return (
     <div style={panelStyle}>
       <div style={pillStyle}>neo-brick-crush</div>
-      <div style={meterStyle}>
-        <span>Session</span>
-        <strong>{sessionPhase}</strong>
+      <div style={statsWrapStyle}>
+        <div style={meterStyle}>
+          <span>Session</span>
+          <strong>{sessionPhase}</strong>
+        </div>
+        <div style={meterStyle}>
+          <span>Turn</span>
+          <strong>{runtimeHud.turnNumber}</strong>
+        </div>
+        <div style={meterStyle}>
+          <span>Aim</span>
+          <strong>{aimAngleLabel}</strong>
+        </div>
+        <div style={meterStyle}>
+          <span>Blocks</span>
+          <strong>{runtimeHud.remainingBlocks}</strong>
+        </div>
+        <div style={meterStyle}>
+          <span>Danger</span>
+          <strong>{dangerPercent}%</strong>
+        </div>
+        <div
+          style={{
+            ...meterStyle,
+            ...(runtimeHud.hasReachedLossLine ? lossStateStyle : null)
+          }}
+        >
+          <span>Shot</span>
+          <strong>{runtimeHud.shotState}</strong>
+        </div>
       </div>
     </div>
   );
@@ -24,6 +58,13 @@ const panelStyle = {
   alignItems: 'center',
   gap: 12,
   pointerEvents: 'none'
+} as const;
+
+const statsWrapStyle = {
+  display: 'flex',
+  justifyContent: 'flex-end',
+  gap: 10,
+  flexWrap: 'wrap'
 } as const;
 
 const pillStyle = {
@@ -46,4 +87,9 @@ const meterStyle = {
   background: 'rgba(255, 0, 145, 0.18)',
   border: '1px solid rgba(255, 120, 199, 0.28)',
   textAlign: 'right'
+} as const;
+
+const lossStateStyle = {
+  background: 'rgba(255, 96, 96, 0.26)',
+  border: '1px solid rgba(255, 148, 148, 0.38)'
 } as const;
