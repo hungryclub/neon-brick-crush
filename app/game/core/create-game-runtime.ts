@@ -1,16 +1,17 @@
 import Phaser from 'phaser';
 
-import BootScene from '../scenes/BootScene';
+import type { IGameRuntimeBridge } from '../hud-bridges/game-runtime-bridge';
+import BootScene, { BOOT_SCENE_KEY } from '../scenes/BootScene';
 import StageScene from '../scenes/StageScene';
 
 interface ICreateGameRuntimeProps {
   parent: HTMLDivElement;
-  onRuntimeReady: () => void;
+  bridge: IGameRuntimeBridge;
 }
 
 export default function createGameRuntime({
   parent,
-  onRuntimeReady
+  bridge
 }: ICreateGameRuntimeProps) {
   const game = new Phaser.Game({
     type: Phaser.AUTO,
@@ -25,7 +26,10 @@ export default function createGameRuntime({
     }
   });
 
-  onRuntimeReady();
+  game.registry.set('game-runtime-bridge', bridge);
+
+  const bootScene = game.scene.getScene(BOOT_SCENE_KEY) as BootScene | undefined;
+  bootScene?.notifyRuntimeReady();
 
   return {
     destroy() {

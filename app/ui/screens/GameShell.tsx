@@ -2,33 +2,35 @@ import { useEffect, useRef } from 'react';
 import { useSelector } from '@xstate/react';
 
 import createGameRuntime from '../../game/core/create-game-runtime';
+import createGameRuntimeBridge from '../../game/hud-bridges/game-runtime-bridge';
 import HudPanel from '../components/HudPanel';
 import { sessionActor } from '../../state/machines/session.machine';
+import { selectIsSessionBooting, selectSessionPhase } from '../../state/selectors/session.selectors';
 import useUiStore from '../../state/stores/use-ui-store';
-
-const selectSessionPhase = (
-  state: ReturnType<typeof sessionActor.getSnapshot>
-) =>
-  state.value.toString();
 
 export default function GameShell() {
   const runtimeHostRef = useRef<HTMLDivElement | null>(null);
   const storeIsDebugVisible = useUiStore((state) => state.storeIsDebugVisible);
   const storeSetHasRuntime = useUiStore((state) => state.storeSetHasRuntime);
   const sessionPhase = useSelector(sessionActor, selectSessionPhase);
+  const isSessionBooting = useSelector(sessionActor, selectIsSessionBooting);
 
   useEffect(() => {
     if (!runtimeHostRef.current) return;
 
+    const runtimeBridge = createGameRuntimeBridge();
+    const unsubscribeRuntimeReady = runtimeBridge.onRuntimeReady(() => {
+      storeSetHasRuntime(true);
+      sessionActor.send({ type: 'BOOT_FINISHED' });
+    });
+
     const runtime = createGameRuntime({
       parent: runtimeHostRef.current,
-      onRuntimeReady() {
-        storeSetHasRuntime(true);
-        sessionActor.send({ type: 'BOOT_FINISHED' });
-      }
+      bridge: runtimeBridge
     });
 
     return () => {
+      unsubscribeRuntimeReady();
       storeSetHasRuntime(false);
       runtime.destroy();
     };
@@ -39,6 +41,7 @@ export default function GameShell() {
       <section style={stageShellStyle}>
         <div ref={runtimeHostRef} id='game-runtime-host' style={runtimeHostStyle} />
         <HudPanel sessionPhase={sessionPhase} />
+        {isSessionBooting ? <div style={bootOverlayStyle}>Booting runtime shell...</div> : null}
       </section>
       {storeIsDebugVisible ? (
         <aside style={debugPanelStyle}>
@@ -74,6 +77,19 @@ const stageShellStyle = {
 const runtimeHostStyle = {
   width: '100%',
   height: '100%'
+} as const;
+
+const bootOverlayStyle = {
+  position: 'absolute',
+  inset: 0,
+  display: 'grid',
+  placeItems: 'center',
+  background: 'linear-gradient(180deg, rgba(4, 8, 18, 0.28), rgba(4, 8, 18, 0.64))',
+  color: '#f5f7ff',
+  textTransform: 'uppercase',
+  letterSpacing: '0.14em',
+  fontSize: 12,
+  pointerEvents: 'none'
 } as const;
 
 const debugPanelStyle = {
