@@ -362,8 +362,9 @@ GPT-5 Codex
   Node test runner without adding new dependencies.
 - Added a standard `npm run test` / `npm run verify` path so Story 1.2 regression
   checks run inside normal project validation.
-- Added block-hit cooldown handling so a single overlap does not drain multi-HP
-  blocks across consecutive physics frames.
+- Added contact-separation hit tracking so a single overlap does not drain
+  multi-HP blocks across consecutive physics frames while legitimate re-contacts
+  can still register.
 - Preserved Story 1.1 ownership boundaries and left retry/ad policy out of Scene
   code for Story 1.3 and 1.4.
 
@@ -391,3 +392,5 @@ GPT-5 Codex
   resolver, HUD projection, and unit/build verification; status moved to review.
 - 2026-04-08: Applied code review fixes for block multi-hit overlap protection
   and standardized test execution via `npm run test` / `npm run verify`.
+- 2026-04-08: Replaced fixed collision timeout with separation-based block hit
+  reset to preserve legitimate re-collisions.

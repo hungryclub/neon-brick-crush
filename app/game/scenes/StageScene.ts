@@ -122,6 +122,8 @@ export default class StageScene extends Phaser.Scene {
       return;
     }
 
+    this.releaseSeparatedBlockCollisions();
+
     const ballBody = this.ball.body as Phaser.Physics.Arcade.Body;
 
     if (this.ball.y >= this.launcherPosition.y - BALL_RADIUS && ballBody.velocity.y > 0) {
@@ -362,9 +364,6 @@ export default class StageScene extends Phaser.Scene {
     }
 
     this.activeCollisionBlockIds.add(blockId);
-    this.time.delayedCall(80, () => {
-      this.activeCollisionBlockIds.delete(blockId);
-    });
 
     const nextHp = blockView.cell.hp - 1;
 
@@ -395,6 +394,28 @@ export default class StageScene extends Phaser.Scene {
       x: startX + cell.col * (BLOCK_WIDTH + BLOCK_GAP),
       y: startY + cell.row * (BLOCK_HEIGHT + BLOCK_GAP)
     };
+  }
+
+  private releaseSeparatedBlockCollisions() {
+    const ballBounds = this.ball.getBounds();
+
+    this.activeCollisionBlockIds.forEach((blockId) => {
+      const blockView = this.blockViews.get(blockId);
+
+      if (!blockView) {
+        this.activeCollisionBlockIds.delete(blockId);
+        return;
+      }
+
+      const isStillOverlapping = Phaser.Geom.Intersects.RectangleToRectangle(
+        ballBounds,
+        blockView.rectangle.getBounds()
+      );
+
+      if (!isStillOverlapping) {
+        this.activeCollisionBlockIds.delete(blockId);
+      }
+    });
   }
 
   private syncHud() {
