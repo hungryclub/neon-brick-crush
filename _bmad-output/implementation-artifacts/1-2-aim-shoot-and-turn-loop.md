@@ -342,9 +342,11 @@ GPT-5 Codex
 - Official documentation was cross-checked for XState actors, Phaser input,
   Phaser Arcade Physics, and Zustand selector guidance.
 - `npm run typecheck` succeeded in `app/`.
+- `npm run test` succeeded in `app/`.
 - `node --test tests/unit/aim-shot-controller.test.mjs tests/unit/turn-resolver.test.mjs`
-  succeeded in `app/`.
+  succeeded before the `test` script was standardized in `app/`.
 - `npm run build` succeeded in `app/`.
+- `npm run verify` succeeded in `app/`.
 - Headless Chrome DOM smoke on preview confirmed mounted `#game-runtime-host`,
   Phaser `<canvas>`, and Story 1.2 HUD cards in the built shell.
 
@@ -358,6 +360,10 @@ GPT-5 Codex
   lightweight runtime snapshot data without owning gameplay rules.
 - Added unit coverage for aim-shot math and turn resolution ordering using the
   Node test runner without adding new dependencies.
+- Added a standard `npm run test` / `npm run verify` path so Story 1.2 regression
+  checks run inside normal project validation.
+- Added block-hit cooldown handling so a single overlap does not drain multi-HP
+  blocks across consecutive physics frames.
 - Preserved Story 1.1 ownership boundaries and left retry/ad policy out of Scene
   code for Story 1.3 and 1.4.
 
@@ -370,6 +376,7 @@ GPT-5 Codex
 - `app/game/mechanics/aim-shot-controller.ts`
 - `app/game/scenes/StageScene.ts`
 - `app/game/systems/turn-resolver.ts`
+- `app/package.json`
 - `app/state/stores/use-ui-store.ts`
 - `app/tests/unit/aim-shot-controller.test.mjs`
 - `app/tests/unit/turn-resolver.test.mjs`
@@ -382,3 +389,5 @@ GPT-5 Codex
   as ready-for-dev.
 - 2026-04-08: Implemented Story 1.2 aim/shoot runtime loop, deterministic turn
   resolver, HUD projection, and unit/build verification; status moved to review.
+- 2026-04-08: Applied code review fixes for block multi-hit overlap protection
+  and standardized test execution via `npm run test` / `npm run verify`.

@@ -35,6 +35,8 @@ export default class StageScene extends Phaser.Scene {
 
   private readonly runtimeHud = createInitialRuntimeHudSnapshot();
 
+  private activeCollisionBlockIds = new Set<string>();
+
   private aimGuide!: Phaser.GameObjects.Graphics;
 
   private ball!: Phaser.GameObjects.Arc;
@@ -134,6 +136,7 @@ export default class StageScene extends Phaser.Scene {
       }
 
       this.pointerIsDown = true;
+      this.activeCollisionBlockIds.clear();
       this.shotState = 'aiming';
       this.drawAimGuide(pointer);
       this.syncHud();
@@ -238,6 +241,7 @@ export default class StageScene extends Phaser.Scene {
     this.shotState = 'launched';
     this.runtimeHud.shotState = 'launched';
     this.runtimeHud.canShoot = false;
+    this.activeCollisionBlockIds.clear();
     this.logger.info('stage.turn_started', {
       turnNumber: this.turnNumber,
       velocityX: Math.round(shotVelocity.x),
@@ -292,6 +296,7 @@ export default class StageScene extends Phaser.Scene {
     this.ball.setPosition(this.launcherPosition.x, this.launcherPosition.y);
     ballBody.stop();
     ballBody.reset(this.launcherPosition.x, this.launcherPosition.y);
+    this.activeCollisionBlockIds.clear();
   }
 
   private renderBoard() {
@@ -346,11 +351,20 @@ export default class StageScene extends Phaser.Scene {
       return;
     }
 
+    if (this.activeCollisionBlockIds.has(blockId)) {
+      return;
+    }
+
     const blockView = this.blockViews.get(blockId);
 
     if (!blockView) {
       return;
     }
+
+    this.activeCollisionBlockIds.add(blockId);
+    this.time.delayedCall(80, () => {
+      this.activeCollisionBlockIds.delete(blockId);
+    });
 
     const nextHp = blockView.cell.hp - 1;
 

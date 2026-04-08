@@ -38,3 +38,19 @@ test('resolveTurn reports danger once blocks cross the configured loss row', () 
   assert.equal(result.hasReachedLossLine, true);
   assert.equal(result.dangerLevel, 1);
 });
+
+test('resolveTurn keeps deterministic output for identical inputs', () => {
+  const input = {
+    board: [{ id: 'block-a', col: 4, row: 1, hp: 3 }],
+    turnNumber: 2,
+    lossRow: 6,
+    spawnRow(nextTurnNumber) {
+      return [{ id: `spawn-${nextTurnNumber}`, col: 0, row: 0, hp: 1 }];
+    }
+  };
+
+  const first = resolveTurn(input);
+  const second = resolveTurn(input);
+
+  assert.deepEqual(first, second);
+});
