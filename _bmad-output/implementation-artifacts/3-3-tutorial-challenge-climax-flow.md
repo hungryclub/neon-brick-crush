@@ -1,6 +1,6 @@
 # Story 3.3: 튜토리얼/챌린지/월드 마지막 흐름 구현
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -23,45 +23,45 @@ so that each world has a clear arc.
 
 ## Tasks / Subtasks
 
-- [ ] Define explicit stage-type presentation and rules profiles. (AC: 1, 2)
-  - [ ] Extend normalized stage config or adjacent domain metadata so tutorial,
+- [x] Define explicit stage-type presentation and rules profiles. (AC: 1, 2)
+  - [x] Extend normalized stage config or adjacent domain metadata so tutorial,
         normal, challenge, and climax stages expose runtime-safe profile flags.
-  - [ ] Keep stage-type branching in loader/domain/orchestration layers rather
+  - [x] Keep stage-type branching in loader/domain/orchestration layers rather
         than scattering ad hoc string checks across `StageScene` and React.
-  - [ ] Preserve room for future bonus stages and Epic 4 unlock conditions
+  - [x] Preserve room for future bonus stages and Epic 4 unlock conditions
         without overfitting this story to current content only.
-- [ ] Implement tutorial teach-by-play flow inside the playable stage shell.
+- [x] Implement tutorial teach-by-play flow inside the playable stage shell.
       (AC: 1)
-  - [ ] Add lightweight in-run guidance hooks that surface mechanic teaching
+  - [x] Add lightweight in-run guidance hooks that surface mechanic teaching
         through safe first actions, timing prompts, or contextual cues.
-  - [ ] Avoid long blocking text overlays; the player should learn while still
+  - [x] Avoid long blocking text overlays; the player should learn while still
         interacting with the live stage.
-  - [ ] Keep tutorial help driven by typed stage profile/config instead of
+  - [x] Keep tutorial help driven by typed stage profile/config instead of
         Scene-local hardcoded stage IDs.
-- [ ] Differentiate challenge and climax presentation/rule treatment. (AC: 1, 2)
-  - [ ] Ensure challenge stages emphasize optional mastery and replay goals
+- [x] Differentiate challenge and climax presentation/rule treatment. (AC: 1, 2)
+  - [x] Ensure challenge stages emphasize optional mastery and replay goals
         without breaking the normal clear flow.
-  - [ ] Ensure climax stages read as the world-ending test through stronger
+  - [x] Ensure climax stages read as the world-ending test through stronger
         presentation/result treatment while still reusing the same core runtime.
-  - [ ] Keep gameplay rules and presentation feedback on their established
+  - [x] Keep gameplay rules and presentation feedback on their established
         boundaries: runtime for active stage behavior, React/effects for shell
         treatment and result surfacing.
-- [ ] Extend progression result handling for climax completion and next-content
+- [x] Extend progression result handling for climax completion and next-content
       unlock. (AC: 2)
-  - [ ] Define how clearing a climax stage unlocks the next world or next
+  - [x] Define how clearing a climax stage unlocks the next world or next
         content node without moving unlock policy into Phaser Scene code.
-  - [ ] Preserve replay availability for already-cleared stages, including
+  - [x] Preserve replay availability for already-cleared stages, including
         stars and future perfect-style goals.
-  - [ ] Keep unlock writes inside repository/orchestration boundaries and ensure
+  - [x] Keep unlock writes inside repository/orchestration boundaries and ensure
         the world map reflects the new content on the next render.
-- [ ] Add focused verification for stage-type flow and progression outcomes.
+- [x] Add focused verification for stage-type flow and progression outcomes.
       (AC: 1, 2)
-  - [ ] Add tests for stage profile projection and stage-type-specific flow
+  - [x] Add tests for stage profile projection and stage-type-specific flow
         selection.
-  - [ ] Add at least one test covering climax clear -> next content unlock while
+  - [x] Add at least one test covering climax clear -> next content unlock while
         preserving replayable star goals.
-  - [ ] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
-  - [ ] Manually verify: tutorial stages guide through play, challenge stages
+  - [x] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
+  - [x] Manually verify: tutorial stages guide through play, challenge stages
         present mastery framing, and a climax clear unlocks next content.
 
 ## Dev Notes
@@ -284,13 +284,34 @@ GPT-5 Codex
 
 ### Completion Notes List
 
-- Prepared Story 3.3 as the capstone content-structure story for Epic 3.
-- Framed tutorial/challenge/climax differences as typed profile and progression
-  boundary work, not Scene-local special-case code.
-- Preserved future Epic 4 expansion room by treating climax clear unlock as the
-  current baseline path rather than the final unlock system.
+- Added typed stage presentation/rules/unlock profiles to the loader output so
+  `tutorial`, `challenge`, and `climax` stages arrive at runtime with explicit
+  profile data instead of ad hoc kind branching.
+- Added a second world manifest entry and wired climax completion to unlock the
+  next world and its first stage through the progression repository boundary.
+- Added a stage profile banner plus richer world-map rendering so tutorial,
+  challenge, and climax stages read differently before the player even starts a
+  run.
+- Updated `StageScene` to apply stage-type rule differences through loss-line
+  buffer and gate layout profiles, while tutorial stages surface teach-by-play
+  prompts inside the live stage shell.
+- Verified the new behavior with loader and repository regression tests plus
+  `npm run test`, `npm run typecheck`, and `npm run build`.
 
 ### File List
 
 - _bmad-output/implementation-artifacts/3-3-tutorial-challenge-climax-flow.md
 - _bmad-output/implementation-artifacts/sprint-status.yaml
+- app/assets/loaders/stage-config.loader.ts
+- app/assets/manifests/world-content.manifest.ts
+- app/domain/models/progression-model.ts
+- app/domain/models/stage-model.ts
+- app/game/entities/stage-gates.ts
+- app/game/scenes/StageScene.ts
+- app/platform/persistence/progression.repository.ts
+- app/state/selectors/progression.selectors.ts
+- app/tests/unit/progression.repository.test.mjs
+- app/tests/unit/stage-config.loader.test.mjs
+- app/ui/components/StageProfileBanner.tsx
+- app/ui/components/WorldMapPanel.tsx
+- app/ui/screens/GameShell.tsx

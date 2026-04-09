@@ -1,7 +1,10 @@
 import type { SnapshotFrom } from 'xstate';
 
 import type { IStageProgressState } from '../../domain/models/progression-model';
-import { loadWorldContent } from '../../assets/loaders/stage-config.loader.ts';
+import {
+  loadAllWorldContent,
+  loadWorldStageRuntimeConfigs
+} from '../../assets/loaders/stage-config.loader.ts';
 import { progressionMachine } from '../machines/progression.machine';
 
 type TProgressionSnapshot = SnapshotFrom<typeof progressionMachine>;
@@ -22,23 +25,47 @@ export function selectLatestStageCompletion(snapshot: TProgressionSnapshot) {
   return snapshot.context.lastStageCompletion;
 }
 
-export function selectWorldMapStageCards(snapshot: TProgressionSnapshot) {
-  const activeWorldId = snapshot.context.snapshot?.unlockedWorldIdList[0] ?? 'world-01';
-  const worldResult = loadWorldContent(activeWorldId);
+export function selectWorldMapWorlds(snapshot: TProgressionSnapshot) {
+  const worldResult = loadAllWorldContent();
+  const progressionSnapshot = snapshot.context.snapshot;
 
-  if (worldResult.isErr() || !snapshot.context.snapshot) {
+  if (worldResult.isErr() || !progressionSnapshot) {
     return [];
   }
 
-  return worldResult.value.stageIds.map((stageId) => {
-    const progress = snapshot.context.snapshot?.stageProgressById[stageId] ?? defaultStageProgress();
+  return worldResult.value.map((world) => {
+    const stageRuntimeConfigResults = loadWorldStageRuntimeConfigs(world.id);
+
+    if (stageRuntimeConfigResults.isErr()) {
+      return {
+        isUnlocked: false,
+        stageCards: [],
+        title: world.title,
+        worldId: world.id
+      };
+    }
 
     return {
-      stageId,
-      isCompleted: progress.isCompleted,
-      isUnlocked: progress.isUnlocked,
-      starCount: progress.bestStarCount,
-      worldId: activeWorldId
+      isUnlocked: progressionSnapshot.unlockedWorldIdList.includes(world.id),
+      title: world.title,
+      worldId: world.id,
+      stageCards: stageRuntimeConfigResults.value.map((stageRuntimeConfig) => {
+        const progress =
+          progressionSnapshot.stageProgressById[stageRuntimeConfig.stageId] ?? defaultStageProgress();
+
+        return {
+          objectiveText: stageRuntimeConfig.presentationProfile.objectiveText,
+          stageId: stageRuntimeConfig.stageId,
+          stageKind: stageRuntimeConfig.stageKind,
+          stageTitle: stageRuntimeConfig.stageTitle,
+          shellLabel: stageRuntimeConfig.presentationProfile.shellLabel,
+          accentColor: stageRuntimeConfig.presentationProfile.accentColor,
+          isCompleted: progress.isCompleted,
+          isUnlocked: progress.isUnlocked,
+          starCount: progress.bestStarCount,
+          worldId: world.id
+        };
+      })
     };
   });
 }

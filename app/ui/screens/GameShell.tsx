@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useSelector } from '@xstate/react';
 
 import type { IStageSelection } from '../../domain/models/stage-model';
+import { loadStageRuntimeConfig } from '../../assets/loaders/stage-config.loader.ts';
 import createProgressionRepository from '../../platform/persistence/progression.repository';
 import createGameRuntime from '../../game/core/create-game-runtime';
 import {
@@ -11,6 +12,7 @@ import {
 } from '../../game/hud-bridges/game-runtime-bridge';
 import createGameRuntimeBridge from '../../game/hud-bridges/game-runtime-bridge';
 import HudPanel from '../components/HudPanel';
+import StageProfileBanner from '../components/StageProfileBanner';
 import WorldMapPanel from '../components/WorldMapPanel';
 import { progressionActor } from '../../state/machines/progression.machine';
 import { sessionActor } from '../../state/machines/session.machine';
@@ -18,7 +20,7 @@ import {
   selectActiveStageSelection,
   selectIsProgressionLoading,
   selectLatestStageCompletion,
-  selectWorldMapStageCards
+  selectWorldMapWorlds
 } from '../../state/selectors/progression.selectors';
 import {
   selectCanActivateFever,
@@ -58,7 +60,13 @@ export default function GameShell() {
   const activeStageSelection = useSelector(progressionActor, selectActiveStageSelection);
   const isProgressionLoading = useSelector(progressionActor, selectIsProgressionLoading);
   const latestStageCompletion = useSelector(progressionActor, selectLatestStageCompletion);
-  const worldMapStageCards = useSelector(progressionActor, selectWorldMapStageCards);
+  const worldMapWorldSections = useSelector(progressionActor, selectWorldMapWorlds);
+  const activeStageRuntimeConfig = activeStageSelection
+    ? loadStageRuntimeConfig(activeStageSelection).match(
+        (config) => config,
+        () => null
+      )
+    : null;
 
   useEffect(() => {
     retryCountRef.current = retryCount;
@@ -108,14 +116,22 @@ export default function GameShell() {
           starCount: resolveStageStarCount(retryCountRef.current)
         })
         .then((snapshot) => {
+          const unlockedWorldIds = snapshot.unlockedWorldIdList.filter(
+            (worldId) => !latestUnlockedWorldIdsRef.current.includes(worldId)
+          );
+
           progressionActor.send({
             type: 'STAGE_COMPLETED',
             record: {
               ...activeStageSelection,
-              starCount: resolveStageStarCount(retryCountRef.current)
+              starCount: resolveStageStarCount(retryCountRef.current),
+              stageKind: activeStageRuntimeConfig?.stageKind,
+              stageTitle: activeStageRuntimeConfig?.stageTitle,
+              unlockedWorldIds
             },
             snapshot
           });
+          latestUnlockedWorldIdsRef.current = snapshot.unlockedWorldIdList;
         });
       sessionActor.send({ type: 'RESET_SESSION' });
     });
@@ -145,6 +161,15 @@ export default function GameShell() {
       runtime.destroy();
     };
   }, [activeStageSelection, storeSetHasRuntime, storeSetRuntimeHud]);
+
+  const latestUnlockedWorldIdsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    if (!isProgressionLoading) {
+      const snapshot = progressionActor.getSnapshot().context.snapshot;
+      latestUnlockedWorldIdsRef.current = snapshot?.unlockedWorldIdList ?? [];
+    }
+  }, [isProgressionLoading]);
 
   useEffect(() => {
     if (!isSessionRetrying) {
@@ -176,10 +201,14 @@ export default function GameShell() {
               });
             sessionActor.send({ type: 'RESET_SESSION' });
           }}
-          stageCards={worldMapStageCards}
+          worldSections={worldMapWorldSections}
         />
         <section style={stageShellStyle}>
           <div ref={runtimeHostRef} id='game-runtime-host' style={runtimeHostStyle} />
+          <StageProfileBanner
+            runtimeHud={runtimeHud}
+            stageRuntimeConfig={activeStageRuntimeConfig}
+          />
           <HudPanel
             canActivateFever={canActivateFever}
             feverMeter={feverMeter}
@@ -250,8 +279,10 @@ export default function GameShell() {
                   별 {latestStageCompletion.starCount}개를 획득했습니다.
                 </strong>
                 <p style={failureTextStyle}>
-                  월드맵에 결과가 저장되었습니다. 다른 스테이지를 고르거나 같은
-                  스테이지를 다시 도전할 수 있어요.
+                  {latestStageCompletion.stageKind === 'climax' &&
+                  latestStageCompletion.unlockedWorldIds?.length
+                    ? `월드 마지막을 돌파해 ${latestStageCompletion.unlockedWorldIds.length}개의 새 월드가 해금되었습니다.`
+                    : '월드맵에 결과가 저장되었습니다. 다른 스테이지를 고르거나 같은 스테이지를 다시 도전할 수 있어요.'}
                 </p>
                 <button
                   style={retryButtonStyle}

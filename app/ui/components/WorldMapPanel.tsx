@@ -1,62 +1,106 @@
 import type { IStageSelection } from '../../domain/models/stage-model';
 
 interface IWorldMapStageCard {
+  accentColor: string;
   isCompleted: boolean;
   isUnlocked: boolean;
+  objectiveText: string;
   stageId: string;
+  stageKind: string;
+  stageTitle: string;
+  shellLabel: string;
   starCount: number;
+  worldId: string;
+}
+
+interface IWorldMapWorldSection {
+  isUnlocked: boolean;
+  stageCards: IWorldMapStageCard[];
+  title: string;
   worldId: string;
 }
 
 interface IWorldMapPanelProps {
   activeStageSelection: IStageSelection | null;
   onSelectStage: (selection: IStageSelection) => void;
-  stageCards: IWorldMapStageCard[];
+  worldSections: IWorldMapWorldSection[];
 }
 
 export default function WorldMapPanel({
   activeStageSelection,
   onSelectStage,
-  stageCards
+  worldSections
 }: IWorldMapPanelProps) {
   return (
     <aside style={panelStyle}>
       <div style={headerStyle}>
         <span style={eyebrowStyle}>World Map</span>
-        <strong style={titleStyle}>Neon Alley</strong>
+        <strong style={titleStyle}>Stage Route</strong>
       </div>
       <div style={stageListStyle}>
-        {stageCards.map((stageCard, index) => {
-          const isActive =
-            activeStageSelection?.worldId === stageCard.worldId &&
-            activeStageSelection.stageId === stageCard.stageId;
-
+        {worldSections.map((worldSection) => {
           return (
-            <button
-              key={stageCard.stageId}
-              type='button'
-              disabled={!stageCard.isUnlocked}
-              onClick={() => {
-                onSelectStage({
-                  worldId: stageCard.worldId,
-                  stageId: stageCard.stageId
-                });
-              }}
-              style={{
-                ...stageButtonStyle,
-                ...(stageCard.isUnlocked ? stageButtonUnlockedStyle : stageButtonLockedStyle),
-                ...(isActive ? stageButtonActiveStyle : null)
-              }}
-            >
-              <div style={stageMetaStyle}>
-                <span style={stageLabelStyle}>Stage {index + 1}</span>
-                <span style={stageIdStyle}>{stageCard.stageId}</span>
+            <section key={worldSection.worldId} style={worldSectionStyle}>
+              <div style={worldHeaderStyle}>
+                <span
+                  style={{
+                    ...worldStatusStyle,
+                    ...(worldSection.isUnlocked ? worldStatusUnlockedStyle : worldStatusLockedStyle)
+                  }}
+                >
+                  {worldSection.isUnlocked ? 'Unlocked World' : 'Locked World'}
+                </span>
+                <strong style={worldTitleStyle}>{worldSection.title}</strong>
               </div>
-              <div style={stageFooterStyle}>
-                <span>{stageCard.isCompleted ? 'Completed' : stageCard.isUnlocked ? 'Unlocked' : 'Locked'}</span>
-                <span>{renderStars(stageCard.starCount)}</span>
+              <div style={worldStageListStyle}>
+                {worldSection.stageCards.map((stageCard, index) => {
+                  const isActive =
+                    activeStageSelection?.worldId === stageCard.worldId &&
+                    activeStageSelection.stageId === stageCard.stageId;
+
+                  return (
+                    <button
+                      key={stageCard.stageId}
+                      type='button'
+                      disabled={!stageCard.isUnlocked}
+                      onClick={() => {
+                        onSelectStage({
+                          worldId: stageCard.worldId,
+                          stageId: stageCard.stageId
+                        });
+                      }}
+                      style={{
+                        ...stageButtonStyle,
+                        ...(stageCard.isUnlocked ? stageButtonUnlockedStyle : stageButtonLockedStyle),
+                        ...(isActive ? stageButtonActiveStyle : null),
+                        borderLeft: `4px solid ${stageCard.accentColor}`
+                      }}
+                    >
+                      <div style={stageMetaStyle}>
+                        <span style={stageLabelStyle}>Stage {index + 1}</span>
+                        <strong style={stageTitleStyle}>{stageCard.stageTitle}</strong>
+                        <span style={stageIdStyle}>{stageCard.stageId}</span>
+                      </div>
+                      <div style={stageTagRowStyle}>
+                        <span style={stageKindBadgeStyle}>{stageCard.shellLabel}</span>
+                        <span style={stageKindTextStyle}>{stageCard.stageKind}</span>
+                      </div>
+                      <p style={stageObjectiveStyle}>{stageCard.objectiveText}</p>
+                      <div style={stageFooterStyle}>
+                        <span>
+                          {stageCard.isCompleted
+                            ? 'Completed'
+                            : stageCard.isUnlocked
+                              ? 'Unlocked'
+                              : 'Locked'}
+                        </span>
+                        <span>{renderStars(stageCard.starCount)}</span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-            </button>
+            </section>
           );
         })}
       </div>
@@ -96,6 +140,39 @@ const titleStyle = {
 
 const stageListStyle = {
   display: 'grid',
+  gap: 16
+} as const;
+
+const worldSectionStyle = {
+  display: 'grid',
+  gap: 10
+} as const;
+
+const worldHeaderStyle = {
+  display: 'grid',
+  gap: 4
+} as const;
+
+const worldStatusStyle = {
+  fontSize: 11,
+  letterSpacing: '0.12em',
+  textTransform: 'uppercase'
+} as const;
+
+const worldStatusUnlockedStyle = {
+  color: '#8dffb3'
+} as const;
+
+const worldStatusLockedStyle = {
+  color: 'rgba(245, 247, 255, 0.42)'
+} as const;
+
+const worldTitleStyle = {
+  fontSize: 18
+} as const;
+
+const worldStageListStyle = {
+  display: 'grid',
   gap: 10
 } as const;
 
@@ -126,16 +203,50 @@ const stageButtonActiveStyle = {
 const stageMetaStyle = {
   display: 'grid',
   gap: 4,
-  marginBottom: 10
+  marginBottom: 8
 } as const;
 
 const stageLabelStyle = {
-  fontWeight: 700
+  fontWeight: 700,
+  fontSize: 12,
+  opacity: 0.82
+} as const;
+
+const stageTitleStyle = {
+  fontSize: 16
 } as const;
 
 const stageIdStyle = {
   fontSize: 11,
   opacity: 0.72
+} as const;
+
+const stageTagRowStyle = {
+  display: 'flex',
+  gap: 8,
+  alignItems: 'center',
+  marginBottom: 8,
+  flexWrap: 'wrap'
+} as const;
+
+const stageKindBadgeStyle = {
+  borderRadius: 999,
+  padding: '4px 8px',
+  fontSize: 11,
+  background: 'rgba(255, 255, 255, 0.08)'
+} as const;
+
+const stageKindTextStyle = {
+  fontSize: 11,
+  textTransform: 'uppercase',
+  opacity: 0.72
+} as const;
+
+const stageObjectiveStyle = {
+  margin: '0 0 10px',
+  fontSize: 12,
+  lineHeight: 1.4,
+  opacity: 0.86
 } as const;
 
 const stageFooterStyle = {

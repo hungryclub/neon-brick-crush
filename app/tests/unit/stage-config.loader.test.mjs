@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   DEFAULT_STAGE_SELECTION,
+  loadAllWorldContent,
   loadInitialStageRuntimeConfig,
   loadStageRuntimeConfig,
   loadWorldContent
@@ -45,6 +46,24 @@ test('stage config loader supports challenge and climax stage kinds', () => {
   assert.equal(climaxStageResult.isOk(), true);
   assert.equal(challengeStageResult._unsafeUnwrap().stageKind, 'challenge');
   assert.equal(climaxStageResult._unsafeUnwrap().stageKind, 'climax');
+  assert.equal(challengeStageResult._unsafeUnwrap().rulesProfile.lossRowBufferRows, 1);
+  assert.equal(
+    climaxStageResult._unsafeUnwrap().unlockProfile.nextWorldIdToUnlock,
+    'world-02'
+  );
+});
+
+test('stage config loader projects typed stage presentation profiles', () => {
+  const tutorialStage = loadStageRuntimeConfig({
+    worldId: 'world-01',
+    stageId: 'world-01-stage-01'
+  })._unsafeUnwrap();
+  const worldList = loadAllWorldContent()._unsafeUnwrap();
+
+  assert.equal(tutorialStage.presentationProfile.shellLabel, 'Tutorial Stage');
+  assert.equal(tutorialStage.presentationProfile.teachByPlayCueList.length >= 2, true);
+  assert.equal(tutorialStage.rulesProfile.gateLayout, 'training');
+  assert.equal(worldList.some((world) => world.id === 'world-02'), true);
 });
 
 test('stage config loader returns a typed error when stage content is missing', () => {

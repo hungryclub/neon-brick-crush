@@ -3,6 +3,8 @@ import type { Result } from 'neverthrow';
 import worldContentManifest from '../manifests/world-content.manifest.ts';
 import type {
   IRawStageContentDefinition,
+  IStagePresentationProfile,
+  IStageRulesProfile,
   IStageRuntimeConfig,
   IStageSelection
 } from '../../domain/models/stage-model';
@@ -36,6 +38,16 @@ export function loadWorldContent(
     assetBundleIds: [...world.assetBundleIds],
     stageIds: [...world.stageIds]
   });
+}
+
+export function loadAllWorldContent(): Result<IWorldContentDefinition[], IGameError> {
+  return ok(
+    worldContentManifest.worlds.map((world) => ({
+      ...world,
+      assetBundleIds: [...world.assetBundleIds],
+      stageIds: [...world.stageIds]
+    }))
+  );
 }
 
 export function loadWorldStageRuntimeConfigs(
@@ -97,6 +109,11 @@ export function loadStageRuntimeConfig({
     stageKind: stage.kind,
     boardColumns,
     assetBundleIds: [...new Set([...worldResult.value.assetBundleIds, ...stage.assetBundleIds])],
+    presentationProfile: createStagePresentationProfile(stage),
+    rulesProfile: createStageRulesProfile(stage),
+    unlockProfile: {
+      nextWorldIdToUnlock: stage.nextWorldIdToUnlock ?? null
+    },
     initialBoardPatterns: clonePatterns(stage.initialBoardPatterns),
     spawnPatterns: clonePatterns(stage.spawnPatterns)
   });
@@ -104,6 +121,83 @@ export function loadStageRuntimeConfig({
 
 function clonePatterns(patterns: number[][]) {
   return patterns.map((row) => [...row]);
+}
+
+function createStagePresentationProfile(
+  stage: IRawStageContentDefinition
+): IStagePresentationProfile {
+  if (stage.kind === 'tutorial') {
+    return {
+      accentColor: '#78e3ff',
+      completionHeadline: '배운 흐름을 다음 스테이지에서도 이어가세요.',
+      objectiveText:
+        stage.teachingFocusText ??
+        '안전한 첫 성공을 통해 각도와 기본 규칙을 몸으로 익히세요.',
+      shellLabel: 'Tutorial Stage',
+      teachByPlayCueList: [
+        '런처를 드래그해서 첫 반사를 직접 만들어 보세요.',
+        '좋아요. 이제 다음 줄이 내려오기 전에 같은 감각으로 한 번 더 맞혀보세요.'
+      ]
+    };
+  }
+
+  if (stage.kind === 'challenge') {
+    return {
+      accentColor: '#ffd36f',
+      completionHeadline: '숙련 플레이를 위한 별과 효율 목표가 열려 있습니다.',
+      objectiveText:
+        stage.teachingFocusText ??
+        '짧은 턴 안에 높은 효율과 정교한 루트를 만들어 별을 지켜내세요.',
+      shellLabel: 'Challenge Stage',
+      teachByPlayCueList: ['짧은 턴과 적은 실수로 3성 클리어를 노려 보세요.']
+    };
+  }
+
+  if (stage.kind === 'climax') {
+    return {
+      accentColor: '#ff8aa0',
+      completionHeadline: '월드의 마무리를 통과했습니다.',
+      objectiveText: '지금까지 배운 리듬과 조합을 한 번에 시험하는 월드 마지막 스테이지입니다.',
+      shellLabel: 'World Climax',
+      teachByPlayCueList: ['압박선과 게이트를 함께 읽으며 월드의 최종 테스트를 마무리하세요.']
+    };
+  }
+
+  return {
+    accentColor: '#b8c7ff',
+    completionHeadline: '다음 스테이지를 향한 별을 확보했습니다.',
+    objectiveText: '핵심 루프를 안정적으로 다듬으며 다음 도전에 대비하세요.',
+    shellLabel: 'Standard Stage',
+    teachByPlayCueList: ['현재 월드의 기본 퍼즐 리듬을 안정적으로 익히세요.']
+  };
+}
+
+function createStageRulesProfile(stage: IRawStageContentDefinition): IStageRulesProfile {
+  if (stage.kind === 'tutorial') {
+    return {
+      gateLayout: 'training',
+      lossRowBufferRows: 3
+    };
+  }
+
+  if (stage.kind === 'challenge') {
+    return {
+      gateLayout: 'pressure',
+      lossRowBufferRows: 1
+    };
+  }
+
+  if (stage.kind === 'climax') {
+    return {
+      gateLayout: 'pressure',
+      lossRowBufferRows: 1
+    };
+  }
+
+  return {
+    gateLayout: 'standard',
+    lossRowBufferRows: 2
+  };
 }
 
 function validateStageDefinition(

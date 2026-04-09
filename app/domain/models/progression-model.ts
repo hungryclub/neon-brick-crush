@@ -1,4 +1,4 @@
-import type { IStageSelection } from './stage-model';
+import type { IStageSelection, TStageKind } from './stage-model';
 
 export interface IStageProgressState {
   bestStarCount: number;
@@ -15,4 +15,7 @@ export interface IProgressionSnapshot {
 
 export interface IStageCompletionRecord extends IStageSelection {
   starCount: number;
+  stageKind?: TStageKind;
+  stageTitle?: string;
+  unlockedWorldIds?: string[];
 }

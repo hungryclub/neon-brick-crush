@@ -93,6 +93,8 @@ export default class StageScene extends Phaser.Scene {
 
   private stageRuntimeConfig!: IStageRuntimeConfig;
 
+  private stagePromptLabel!: Phaser.GameObjects.Text;
+
   private readonly launcherPosition = {
     x: 0,
     y: 0
@@ -124,9 +126,11 @@ export default class StageScene extends Phaser.Scene {
     this.lossRow = resolveLossRow({
       boardTop,
       initialBoard: initialBoardState,
-      launcherY
+      launcherY,
+      lossRowBufferRows: stageRuntimeConfig.rulesProfile.lossRowBufferRows
     });
     this.gates = createStageGates({
+      gateLayout: stageRuntimeConfig.rulesProfile.gateLayout,
       launcherY,
       width
     });
@@ -154,11 +158,18 @@ export default class StageScene extends Phaser.Scene {
 
     this.add.circle(this.launcherPosition.x, this.launcherPosition.y, 16, 0x78e3ff, 0.3);
     this.add.circle(this.launcherPosition.x, this.launcherPosition.y, 8, 0xffffff, 0.88);
-    this.add.text(this.launcherPosition.x, this.launcherPosition.y + 28, 'drag to aim / release to shoot', {
-      color: '#c7d4ff',
-      fontFamily: 'Arial',
-      fontSize: '16px'
-    }).setOrigin(0.5, 0);
+    this.stagePromptLabel = this.add
+      .text(
+        this.launcherPosition.x,
+        this.launcherPosition.y + 28,
+        resolveStagePromptText(stageRuntimeConfig, this.turnNumber, this.shotState),
+        {
+          color: '#c7d4ff',
+          fontFamily: 'Arial',
+          fontSize: '16px'
+        }
+      )
+      .setOrigin(0.5, 0);
 
     this.aimGuide = this.add.graphics();
 
@@ -173,11 +184,14 @@ export default class StageScene extends Phaser.Scene {
       worldId: this.stageRuntimeConfig.worldId,
       stageId: this.stageRuntimeConfig.stageId,
       stageKind: this.stageRuntimeConfig.stageKind,
-      stageTitle: this.stageRuntimeConfig.stageTitle
+      stageTitle: this.stageRuntimeConfig.stageTitle,
+      gateLayout: this.stageRuntimeConfig.rulesProfile.gateLayout,
+      lossRowBufferRows: this.stageRuntimeConfig.rulesProfile.lossRowBufferRows
     });
     this.syncHud();
     this.time.delayedCall(0, () => {
       this.syncHud();
+      this.updateStagePrompt();
     });
   }
 
@@ -206,6 +220,7 @@ export default class StageScene extends Phaser.Scene {
       this.activeCollisionBlockIds.clear();
       this.shotState = 'aiming';
       this.drawAimGuide(pointer);
+      this.updateStagePrompt();
       this.syncHud();
     });
 
@@ -215,6 +230,7 @@ export default class StageScene extends Phaser.Scene {
       }
 
       this.drawAimGuide(pointer);
+      this.updateStagePrompt();
     });
 
     this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
@@ -319,6 +335,7 @@ export default class StageScene extends Phaser.Scene {
       this.shotState = 'idle';
       this.runtimeHud.shotState = 'idle';
       this.runtimeHud.canShoot = true;
+      this.updateStagePrompt();
       this.syncHud();
       return;
     }
@@ -343,6 +360,7 @@ export default class StageScene extends Phaser.Scene {
       velocityX: Math.round(shotVelocity.x),
       velocityY: Math.round(shotVelocity.y)
     });
+    this.updateStagePrompt();
     this.syncHud();
   }
 
@@ -363,6 +381,7 @@ export default class StageScene extends Phaser.Scene {
       pointerY: Math.round(pointer.y),
       turnNumber: this.turnNumber
     });
+    this.updateStagePrompt();
     this.syncHud();
   }
 
@@ -386,6 +405,7 @@ export default class StageScene extends Phaser.Scene {
       turnNumber: this.turnNumber,
       remainingBlocks: this.boardState.length
     });
+    this.updateStagePrompt();
     this.syncHud();
     runtimeBridge?.signalStageFailed();
   }
@@ -416,6 +436,7 @@ export default class StageScene extends Phaser.Scene {
       turnNumber: this.turnNumber,
       remainingBlocks: this.boardState.length
     });
+    this.updateStagePrompt();
     this.syncHud();
     runtimeBridge?.signalStageResetCompleted();
   }
@@ -485,6 +506,7 @@ export default class StageScene extends Phaser.Scene {
     this.runtimeHud.shotState = 'idle';
     this.runtimeHud.destroyedBlocksThisTurn = 0;
     this.runtimeHud.canShoot = !resolution.hasReachedLossLine;
+    this.updateStagePrompt();
     this.syncHud();
 
     if (resolution.hasReachedLossLine) {
@@ -514,6 +536,7 @@ export default class StageScene extends Phaser.Scene {
       stageId: this.stageRuntimeConfig.stageId,
       turnNumber: this.turnNumber
     });
+    this.updateStagePrompt();
     this.syncHud();
     runtimeBridge?.signalStageCleared();
   }
@@ -782,6 +805,16 @@ export default class StageScene extends Phaser.Scene {
       ...(this.runtimeHud satisfies IRuntimeHudSnapshot)
     });
   }
+
+  private updateStagePrompt() {
+    if (!this.stagePromptLabel) {
+      return;
+    }
+
+    this.stagePromptLabel.setText(
+      resolveStagePromptText(this.stageRuntimeConfig, this.turnNumber, this.shotState)
+    );
+  }
 }
 
 function resolveBlockColor(hp: number) {
@@ -799,11 +832,13 @@ function resolveBlockColor(hp: number) {
 function resolveLossRow({
   boardTop,
   initialBoard,
-  launcherY
+  launcherY,
+  lossRowBufferRows
 }: {
   boardTop: number;
   initialBoard: IStageBoardCell[];
   launcherY: number;
+  lossRowBufferRows: number;
 }) {
   const maxPlayableRow =
     Math.floor((launcherY - boardTop) / (BLOCK_HEIGHT + BLOCK_GAP)) - 1;
@@ -811,11 +846,35 @@ function resolveLossRow({
     return Math.max(highestRow, cell.row);
   }, 0);
 
-  return Math.max(maxPlayableRow, highestInitialRow + 2, 1);
+  return Math.max(maxPlayableRow, highestInitialRow + lossRowBufferRows, 1);
 }
 
 function cloneBoard(board: IStageBoardCell[]) {
   return board.map((cell) => ({
     ...cell
   }));
+}
+
+function resolveStagePromptText(
+  stageRuntimeConfig: IStageRuntimeConfig,
+  turnNumber: number,
+  shotState: TRuntimeShotState
+) {
+  if (stageRuntimeConfig.stageKind === 'tutorial') {
+    if (turnNumber <= 1 && shotState === 'idle') {
+      return 'drag to aim / release to learn the first bounce';
+    }
+
+    return 'keep playing: repeat the angle before the next row drops';
+  }
+
+  if (stageRuntimeConfig.stageKind === 'challenge') {
+    return 'precision route: protect your star run with efficient shots';
+  }
+
+  if (stageRuntimeConfig.stageKind === 'climax') {
+    return 'world finale: hold the lane and finish the last lattice';
+  }
+
+  return 'drag to aim / release to shoot';
 }

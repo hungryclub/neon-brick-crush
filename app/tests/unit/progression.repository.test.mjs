@@ -17,6 +17,21 @@ test('progression repository persists stars and unlocks the next stage', async (
   assert.equal(updatedSnapshot.stageProgressById['world-01-stage-02'].isUnlocked, true);
 });
 
+test('progression repository unlocks the next world when a climax stage is cleared', async () => {
+  const repository = createProgressionRepository();
+
+  const updatedSnapshot = await repository.saveStageCompletion({
+    worldId: 'world-01',
+    stageId: 'world-01-stage-04',
+    starCount: 2
+  });
+
+  assert.equal(updatedSnapshot.unlockedWorldIdList.includes('world-02'), true);
+  assert.equal(updatedSnapshot.stageProgressById['world-02-stage-01'].isUnlocked, true);
+  assert.equal(updatedSnapshot.stageProgressById['world-01-stage-04'].bestStarCount, 2);
+  assert.equal(updatedSnapshot.stageProgressById['world-01-stage-04'].isCompleted, true);
+});
+
 test('progression repository unlock fallback does not copy completion or stars onto a new stage', async () => {
   const repository = createProgressionRepository();
 
@@ -27,12 +42,12 @@ test('progression repository unlock fallback does not copy completion or stars o
   });
 
   const updatedSnapshot = await repository.saveStageCompletion({
-    worldId: 'world-99',
-    stageId: 'world-99-stage-01',
+    worldId: 'world-02',
+    stageId: 'world-02-stage-01',
     starCount: 3
   });
 
-  assert.deepEqual(updatedSnapshot.stageProgressById['world-99-stage-02'], {
+  assert.deepEqual(updatedSnapshot.stageProgressById['world-02-stage-02'], {
     bestStarCount: 0,
     isCompleted: false,
     isUnlocked: true

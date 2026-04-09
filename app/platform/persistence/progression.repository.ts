@@ -3,9 +3,13 @@ import type {
   IStageCompletionRecord
 } from '../../domain/models/progression-model';
 import type { IStageSelection } from '../../domain/models/stage-model';
+import {
+  loadStageRuntimeConfig,
+  loadWorldContent
+} from '../../assets/loaders/stage-config.loader.ts';
 
 let progressionSnapshot: IProgressionSnapshot = {
-  version: 2,
+  version: 3,
   unlockedWorldIdList: ['world-01'],
   stageProgressById: {
     'world-01-stage-01': {
@@ -24,6 +28,16 @@ let progressionSnapshot: IProgressionSnapshot = {
       isUnlocked: false
     },
     'world-01-stage-04': {
+      bestStarCount: 0,
+      isCompleted: false,
+      isUnlocked: false
+    },
+    'world-02-stage-01': {
+      bestStarCount: 0,
+      isCompleted: false,
+      isUnlocked: false
+    },
+    'world-02-stage-02': {
       bestStarCount: 0,
       isCompleted: false,
       isUnlocked: false
@@ -63,12 +77,13 @@ export default function createProgressionRepository(): IProgressionRepository {
         return structuredClone(progressionSnapshot);
       }
 
+      const stageRuntimeConfigResult = loadStageRuntimeConfig(record);
       const currentStageState = progressionSnapshot.stageProgressById[record.stageId] ?? {
         bestStarCount: 0,
         isCompleted: false,
         isUnlocked: false
       };
-      const nextSnapshot: IProgressionSnapshot = {
+      let nextSnapshot: IProgressionSnapshot = {
         ...progressionSnapshot,
         lastPlayedStageSelection: {
           worldId: record.worldId,
@@ -83,16 +98,24 @@ export default function createProgressionRepository(): IProgressionRepository {
           }
         }
       };
-      const nextStageId = resolveNextStageId(record.stageId);
+      const nextStageSelection = resolveNextStageSelection(record);
 
-      if (nextStageId) {
+      if (nextStageSelection) {
         nextSnapshot.stageProgressById = {
           ...nextSnapshot.stageProgressById,
-          [nextStageId]: {
-            ...(nextSnapshot.stageProgressById[nextStageId] ?? createEmptyStageProgress()),
+          [nextStageSelection.stageId]: {
+            ...(nextSnapshot.stageProgressById[nextStageSelection.stageId] ?? createEmptyStageProgress()),
             isUnlocked: true
           }
         };
+      }
+
+      if (stageRuntimeConfigResult.isOk()) {
+        const nextWorldId = stageRuntimeConfigResult.value.unlockProfile.nextWorldIdToUnlock;
+
+        if (nextWorldId) {
+          nextSnapshot = unlockWorldEntry(nextSnapshot, nextWorldId);
+        }
       }
 
       progressionSnapshot = nextSnapshot;
@@ -102,14 +125,55 @@ export default function createProgressionRepository(): IProgressionRepository {
   };
 }
 
-function resolveNextStageId(stageId: string) {
-  const match = stageId.match(/^(.*-stage-)(\d+)$/);
+function resolveNextStageSelection(selection: IStageSelection) {
+  const worldResult = loadWorldContent(selection.worldId);
 
-  if (!match) {
+  if (worldResult.isErr()) {
     return null;
   }
 
-  return `${match[1]}${String(Number(match[2]) + 1).padStart(match[2].length, '0')}`;
+  const currentIndex = worldResult.value.stageIds.indexOf(selection.stageId);
+
+  if (currentIndex === -1 || currentIndex >= worldResult.value.stageIds.length - 1) {
+    return null;
+  }
+
+  return {
+    worldId: selection.worldId,
+    stageId: worldResult.value.stageIds[currentIndex + 1]
+  };
+}
+
+function unlockWorldEntry(snapshot: IProgressionSnapshot, worldId: string) {
+  const worldResult = loadWorldContent(worldId);
+
+  if (worldResult.isErr()) {
+    return snapshot;
+  }
+
+  const nextWorldUnlockedIds = snapshot.unlockedWorldIdList.includes(worldId)
+    ? snapshot.unlockedWorldIdList
+    : [...snapshot.unlockedWorldIdList, worldId];
+  const firstStageId = worldResult.value.stageIds[0];
+
+  if (!firstStageId) {
+    return {
+      ...snapshot,
+      unlockedWorldIdList: nextWorldUnlockedIds
+    };
+  }
+
+  return {
+    ...snapshot,
+    unlockedWorldIdList: nextWorldUnlockedIds,
+    stageProgressById: {
+      ...snapshot.stageProgressById,
+      [firstStageId]: {
+        ...(snapshot.stageProgressById[firstStageId] ?? createEmptyStageProgress()),
+        isUnlocked: true
+      }
+    }
+  };
 }
 
 function createEmptyStageProgress() {
