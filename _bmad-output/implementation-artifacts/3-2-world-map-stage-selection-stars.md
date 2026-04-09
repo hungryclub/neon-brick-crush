@@ -1,6 +1,6 @@
 # Story 3.2: 월드맵/스테이지 선택/별점 흐름 구현
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -21,40 +21,40 @@ so that progression feels clear and replayable.
 
 ## Tasks / Subtasks
 
-- [ ] Introduce repository-backed progression models for world map rendering.
+- [x] Introduce repository-backed progression models for world map rendering.
       (AC: 1, 2)
-  - [ ] Extend progression data shape to include per-stage completion and star
+  - [x] Extend progression data shape to include per-stage completion and star
         status rather than world-unlocked flags only.
-  - [ ] Keep mutable progression state behind repository contracts instead of
+  - [x] Keep mutable progression state behind repository contracts instead of
         letting screens or runtime assemble progression ad hoc.
-  - [ ] Preserve room for future world unlock and perfect/replay goals from
+  - [x] Preserve room for future world unlock and perfect/replay goals from
         Stories 3.3 and 4.x.
-- [ ] Build selector-driven world map and stage selection UI. (AC: 1)
-  - [ ] Add React screen/view-model structure for a minimal world map showing
+- [x] Build selector-driven world map and stage selection UI. (AC: 1)
+  - [x] Add React screen/view-model structure for a minimal world map showing
         stage nodes, lock state, and earned stars.
-  - [ ] Ensure UI consumes progression selectors plus Story 3.1 loader data
+  - [x] Ensure UI consumes progression selectors plus Story 3.1 loader data
         rather than direct repository/file reads.
-  - [ ] Add stage selection intent handling that routes the chosen stage into
+  - [x] Add stage selection intent handling that routes the chosen stage into
         the runtime boot path without Scene-local selection policy.
-- [ ] Connect stage lifecycle results to progression persistence. (AC: 2)
-  - [ ] Define a result finalization path that converts stage clear outcomes
+- [x] Connect stage lifecycle results to progression persistence. (AC: 2)
+  - [x] Define a result finalization path that converts stage clear outcomes
         into repository writes for stars and completion.
-  - [ ] Keep star award policy in session/progression orchestration or a domain
+  - [x] Keep star award policy in session/progression orchestration or a domain
         helper, not inside `StageScene`.
-  - [ ] Ensure the next world-map render reflects newly saved stage status.
-- [ ] Bridge runtime/session/progression boundaries for stage selection. (AC: 1, 2)
-  - [ ] Reuse Story 3.1 normalized stage config path for selected stages.
-  - [ ] Keep Phaser runtime focused on the active stage only; world-map state
+  - [x] Ensure the next world-map render reflects newly saved stage status.
+- [x] Bridge runtime/session/progression boundaries for stage selection. (AC: 1, 2)
+  - [x] Reuse Story 3.1 normalized stage config path for selected stages.
+  - [x] Keep Phaser runtime focused on the active stage only; world-map state
         and progression orchestration should remain outside `app/game`.
-  - [ ] Add structured logs for stage selection, result finalization, and
+  - [x] Add structured logs for stage selection, result finalization, and
         persistence updates using `worldId` and `stageId`.
-- [ ] Add focused tests and verification for map rendering and persistence.
+- [x] Add focused tests and verification for map rendering and persistence.
       (AC: 1, 2)
-  - [ ] Add repository and selector tests for stage status/star projection.
-  - [ ] Add at least one test for stage result persistence updating world-map
+  - [x] Add repository and selector tests for stage status/star projection.
+  - [x] Add at least one test for stage result persistence updating world-map
         state on the next read/render cycle.
-  - [ ] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
-  - [ ] Manually verify: selecting a stage changes the active stage, clearing a
+  - [x] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
+  - [x] Manually verify: selecting a stage changes the active stage, clearing a
         stage updates stars, and returning to the map reflects the new state.
 
 ## Dev Notes
@@ -267,8 +267,27 @@ GPT-5 Codex
   world map rendering, stage selection, and stage result persistence.
 - Kept Story 3.3 concerns such as tutorial/challenge/climax presentation and
   unlock arc policy as follow-on work rather than overloading this story.
+- Expanded progression persistence to store per-stage unlock, completion, and best-star
+  state while preserving the last played stage selection for boot continuity.
+- Added a selector-driven world map panel and stage clear feedback loop that persists
+  stars and reflects the updated stage state on the next render.
+- Reused the Story 3.1 stage loader path for selected stages and added runtime bridge
+  stage-clear signaling so Phaser remains focused on the active stage only.
 
 ### File List
 
+- app/assets/loaders/stage-config.loader.ts
+- app/domain/models/progression-model.ts
+- app/game/core/create-game-runtime.ts
+- app/game/hud-bridges/game-runtime-bridge.ts
+- app/game/scenes/StageScene.ts
+- app/platform/persistence/progression.repository.ts
+- app/state/machines/progression.machine.ts
+- app/state/selectors/progression.selectors.ts
+- app/tests/unit/game-runtime-bridge.test.mjs
+- app/tests/unit/progression.machine.test.mjs
+- app/tests/unit/progression.repository.test.mjs
+- app/ui/components/WorldMapPanel.tsx
+- app/ui/screens/GameShell.tsx
 - _bmad-output/implementation-artifacts/3-2-world-map-stage-selection-stars.md
 - _bmad-output/implementation-artifacts/sprint-status.yaml

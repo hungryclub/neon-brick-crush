@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { useSelector } from '@xstate/react';
 
+import type { IStageSelection } from '../../domain/models/stage-model';
+import createProgressionRepository from '../../platform/persistence/progression.repository';
 import createGameRuntime from '../../game/core/create-game-runtime';
 import {
   createInitialRuntimeHudSnapshot,
@@ -9,7 +11,15 @@ import {
 } from '../../game/hud-bridges/game-runtime-bridge';
 import createGameRuntimeBridge from '../../game/hud-bridges/game-runtime-bridge';
 import HudPanel from '../components/HudPanel';
+import WorldMapPanel from '../components/WorldMapPanel';
+import { progressionActor } from '../../state/machines/progression.machine';
 import { sessionActor } from '../../state/machines/session.machine';
+import {
+  selectActiveStageSelection,
+  selectIsProgressionLoading,
+  selectLatestStageCompletion,
+  selectWorldMapStageCards
+} from '../../state/selectors/progression.selectors';
 import {
   selectCanActivateFever,
   selectCanUseRewardedRetry,
@@ -26,6 +36,7 @@ import {
 import useUiStore from '../../state/stores/use-ui-store';
 
 export default function GameShell() {
+  const progressionRepositoryRef = useRef(createProgressionRepository());
   const runtimeBridgeRef = useRef<IGameRuntimeBridge | null>(null);
   const runtimeHostRef = useRef<HTMLDivElement | null>(null);
   const storeIsDebugVisible = useUiStore((state) => state.storeIsDebugVisible);
@@ -43,6 +54,26 @@ export default function GameShell() {
   const isSessionRetrying = useSelector(sessionActor, selectIsSessionRetrying);
   const rewardedRetryFeedback = useSelector(sessionActor, selectRewardedRetryFeedback);
   const retryCount = useSelector(sessionActor, selectRetryCount);
+  const activeStageSelection = useSelector(progressionActor, selectActiveStageSelection);
+  const isProgressionLoading = useSelector(progressionActor, selectIsProgressionLoading);
+  const latestStageCompletion = useSelector(progressionActor, selectLatestStageCompletion);
+  const worldMapStageCards = useSelector(progressionActor, selectWorldMapStageCards);
+
+  useEffect(() => {
+    let isDisposed = false;
+
+    progressionRepositoryRef.current.load().then((snapshot) => {
+      if (isDisposed) {
+        return;
+      }
+
+      progressionActor.send({ type: 'PROGRESSION_LOADED', snapshot });
+    });
+
+    return () => {
+      isDisposed = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!runtimeHostRef.current) return;
@@ -61,6 +92,28 @@ export default function GameShell() {
     const unsubscribeStageFailed = runtimeBridge.onStageFailed(() => {
       sessionActor.send({ type: 'STAGE_FAILED' });
     });
+    const unsubscribeStageCleared = runtimeBridge.onStageCleared(() => {
+      if (!activeStageSelection) {
+        return;
+      }
+
+      progressionRepositoryRef.current
+        .saveStageCompletion({
+          ...activeStageSelection,
+          starCount: resolveStageStarCount(retryCount)
+        })
+        .then((snapshot) => {
+          progressionActor.send({
+            type: 'STAGE_COMPLETED',
+            record: {
+              ...activeStageSelection,
+              starCount: resolveStageStarCount(retryCount)
+            },
+            snapshot
+          });
+        });
+      sessionActor.send({ type: 'RESET_SESSION' });
+    });
     const unsubscribeStageResetCompleted = runtimeBridge.onStageResetCompleted(() => {
       sessionActor.send({ type: 'RETRY_RESTORED' });
     });
@@ -70,13 +123,15 @@ export default function GameShell() {
 
     const runtime = createGameRuntime({
       parent: runtimeHostRef.current,
-      bridge: runtimeBridge
+      bridge: runtimeBridge,
+      stageSelection: activeStageSelection
     });
 
     return () => {
       unsubscribeRuntimeReady();
       unsubscribeRuntimeHud();
       unsubscribeStageFailed();
+      unsubscribeStageCleared();
       unsubscribeStageResetCompleted();
       unsubscribeTurnResolved();
       runtimeBridgeRef.current = null;
@@ -84,7 +139,7 @@ export default function GameShell() {
       storeSetRuntimeHud(createInitialRuntimeHudSnapshot());
       runtime.destroy();
     };
-  }, [storeSetHasRuntime, storeSetRuntimeHud]);
+  }, [activeStageSelection, retryCount, storeSetHasRuntime, storeSetRuntimeHud]);
 
   useEffect(() => {
     if (!isSessionRetrying) {
@@ -104,68 +159,108 @@ export default function GameShell() {
 
   return (
     <main style={layoutStyle}>
-      <section style={stageShellStyle}>
-        <div ref={runtimeHostRef} id='game-runtime-host' style={runtimeHostStyle} />
-        <HudPanel
-          canActivateFever={canActivateFever}
-          feverMeter={feverMeter}
-          isFeverActive={isFeverActive}
-          runtimeHud={runtimeHud}
-          sessionPhase={sessionPhase}
-        />
-        <button
-          style={{
-            ...feverButtonStyle,
-            ...(canActivateFever ? feverButtonReadyStyle : feverButtonDisabledStyle),
-            ...(isFeverActive ? feverButtonActiveStyle : null)
+      <section style={shellLayoutStyle}>
+        <WorldMapPanel
+          activeStageSelection={activeStageSelection}
+          onSelectStage={(selection: IStageSelection) => {
+            progressionRepositoryRef.current
+              .saveLastPlayedStageSelection(selection)
+              .then((snapshot) => {
+                progressionActor.send({ type: 'PROGRESSION_LOADED', snapshot });
+                progressionActor.send({ type: 'SELECT_STAGE', selection });
+              });
+            sessionActor.send({ type: 'RESET_SESSION' });
           }}
-          type='button'
-          disabled={!canActivateFever || isSessionFailed || isFeverActive}
-          onClick={handleFeverActivation}
-        >
-          {isFeverActive ? 'Fever Active' : canActivateFever ? 'Activate Fever' : 'Build Fever'}
-        </button>
-        {isSessionBooting ? <div style={bootOverlayStyle}>Booting runtime shell...</div> : null}
-        {isSessionFailed ? (
-          <div style={failureOverlayStyle}>
-            <div style={failureCardStyle}>
-              <span style={failureEyebrowStyle}>Stage Failed</span>
-              <strong style={failureTitleStyle}>즉시 다시 도전할 수 있어요.</strong>
-              <p style={failureTextStyle}>
-                압박선에 닿았습니다. 전체 앱을 다시 여는 대신 지금 상태에서 바로
-                스테이지를 복구합니다.
-              </p>
-              <button
-                style={retryButtonStyle}
-                type='button'
-                onClick={() => {
-                  sessionActor.send({ type: 'REQUEST_RETRY' });
-                }}
-              >
-                Instant Retry
-              </button>
-              {canUseRewardedRetry ? (
+          stageCards={worldMapStageCards}
+        />
+        <section style={stageShellStyle}>
+          <div ref={runtimeHostRef} id='game-runtime-host' style={runtimeHostStyle} />
+          <HudPanel
+            canActivateFever={canActivateFever}
+            feverMeter={feverMeter}
+            isFeverActive={isFeverActive}
+            runtimeHud={runtimeHud}
+            sessionPhase={sessionPhase}
+          />
+          <button
+            style={{
+              ...feverButtonStyle,
+              ...(canActivateFever ? feverButtonReadyStyle : feverButtonDisabledStyle),
+              ...(isFeverActive ? feverButtonActiveStyle : null)
+            }}
+            type='button'
+            disabled={!canActivateFever || isSessionFailed || isFeverActive}
+            onClick={handleFeverActivation}
+          >
+            {isFeverActive ? 'Fever Active' : canActivateFever ? 'Activate Fever' : 'Build Fever'}
+          </button>
+          {isSessionBooting || isProgressionLoading ? (
+            <div style={bootOverlayStyle}>Booting runtime shell...</div>
+          ) : null}
+          {isSessionFailed ? (
+            <div style={failureOverlayStyle}>
+              <div style={failureCardStyle}>
+                <span style={failureEyebrowStyle}>Stage Failed</span>
+                <strong style={failureTitleStyle}>즉시 다시 도전할 수 있어요.</strong>
+                <p style={failureTextStyle}>
+                  압박선에 닿았습니다. 전체 앱을 다시 여는 대신 지금 상태에서 바로
+                  스테이지를 복구합니다.
+                </p>
                 <button
-                  style={{
-                    ...secondaryRetryButtonStyle,
-                    ...(isRewardedRetryPending ? disabledButtonStyle : null)
-                  }}
+                  style={retryButtonStyle}
                   type='button'
-                  disabled={isRewardedRetryPending}
                   onClick={() => {
-                    sessionActor.send({ type: 'REQUEST_REWARDED_RETRY' });
+                    sessionActor.send({ type: 'REQUEST_RETRY' });
                   }}
                 >
-                  {isRewardedRetryPending ? 'Watching Ad...' : 'Rewarded Retry'}
+                  Instant Retry
                 </button>
-              ) : null}
-              {rewardedRetryFeedback ? (
-                <p style={failureNoticeStyle}>{rewardedRetryFeedback}</p>
-              ) : null}
-              <span style={failureMetaStyle}>retry count: {retryCount}</span>
+                {canUseRewardedRetry ? (
+                  <button
+                    style={{
+                      ...secondaryRetryButtonStyle,
+                      ...(isRewardedRetryPending ? disabledButtonStyle : null)
+                    }}
+                    type='button'
+                    disabled={isRewardedRetryPending}
+                    onClick={() => {
+                      sessionActor.send({ type: 'REQUEST_REWARDED_RETRY' });
+                    }}
+                  >
+                    {isRewardedRetryPending ? 'Watching Ad...' : 'Rewarded Retry'}
+                  </button>
+                ) : null}
+                {rewardedRetryFeedback ? (
+                  <p style={failureNoticeStyle}>{rewardedRetryFeedback}</p>
+                ) : null}
+                <span style={failureMetaStyle}>retry count: {retryCount}</span>
+              </div>
             </div>
-          </div>
-        ) : null}
+          ) : null}
+          {latestStageCompletion ? (
+            <div style={successOverlayStyle}>
+              <div style={successCardStyle}>
+                <span style={failureEyebrowStyle}>Stage Cleared</span>
+                <strong style={failureTitleStyle}>
+                  별 {latestStageCompletion.starCount}개를 획득했습니다.
+                </strong>
+                <p style={failureTextStyle}>
+                  월드맵에 결과가 저장되었습니다. 다른 스테이지를 고르거나 같은
+                  스테이지를 다시 도전할 수 있어요.
+                </p>
+                <button
+                  style={retryButtonStyle}
+                  type='button'
+                  onClick={() => {
+                    progressionActor.send({ type: 'RETURN_TO_MAP' });
+                  }}
+                >
+                  Back To Map
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </section>
       </section>
       {storeIsDebugVisible ? (
         <aside style={debugPanelStyle}>
@@ -174,10 +269,23 @@ export default function GameShell() {
           <span>turn: {runtimeHud.turnNumber}</span>
           <span>shot: {runtimeHud.shotState}</span>
           <span>retryCount: {retryCount}</span>
+          <span>stage: {activeStageSelection?.stageId ?? 'none'}</span>
         </aside>
       ) : null}
     </main>
   );
+}
+
+function resolveStageStarCount(retryCount: number) {
+  if (retryCount === 0) {
+    return 3;
+  }
+
+  if (retryCount === 1) {
+    return 2;
+  }
+
+  return 1;
 }
 
 const layoutStyle = {
@@ -191,14 +299,22 @@ const layoutStyle = {
   fontFamily: "'Trebuchet MS', 'Segoe UI', sans-serif"
 } as const;
 
+const shellLayoutStyle = {
+  width: 'min(100vw, 1240px)',
+  display: 'grid',
+  gridTemplateColumns: '280px minmax(0, 1fr)',
+  borderRadius: '24px',
+  overflow: 'hidden',
+  border: '1px solid rgba(120, 227, 255, 0.18)',
+  boxShadow: '0 20px 80px rgba(0, 0, 0, 0.45)'
+} as const;
+
 const stageShellStyle = {
-  width: 'min(100vw, 960px)',
+  width: '100%',
   aspectRatio: '16 / 9',
   position: 'relative',
   overflow: 'hidden',
-  borderRadius: '24px',
-  border: '1px solid rgba(120, 227, 255, 0.28)',
-  boxShadow: '0 20px 80px rgba(0, 0, 0, 0.45)'
+  minHeight: 0
 } as const;
 
 const runtimeHostStyle = {
@@ -257,6 +373,14 @@ const failureOverlayStyle = {
   background: 'linear-gradient(180deg, rgba(8, 10, 22, 0.32), rgba(8, 10, 22, 0.76))'
 } as const;
 
+const successOverlayStyle = {
+  position: 'absolute',
+  inset: 0,
+  display: 'grid',
+  placeItems: 'center',
+  background: 'linear-gradient(180deg, rgba(7, 16, 24, 0.22), rgba(7, 16, 24, 0.76))'
+} as const;
+
 const failureCardStyle = {
   width: 'min(84%, 360px)',
   display: 'grid',
@@ -267,6 +391,11 @@ const failureCardStyle = {
   border: '1px solid rgba(255, 120, 199, 0.35)',
   boxShadow: '0 18px 60px rgba(0, 0, 0, 0.38)',
   textAlign: 'center'
+} as const;
+
+const successCardStyle = {
+  ...failureCardStyle,
+  border: '1px solid rgba(120, 227, 255, 0.35)'
 } as const;
 
 const failureEyebrowStyle = {

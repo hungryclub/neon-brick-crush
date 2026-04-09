@@ -38,6 +38,27 @@ export function loadWorldContent(
   });
 }
 
+export function loadWorldStageRuntimeConfigs(
+  worldId: string
+): Result<IStageRuntimeConfig[], IGameError> {
+  const worldResult = loadWorldContent(worldId);
+
+  if (worldResult.isErr()) {
+    return err(worldResult.error);
+  }
+
+  const stageResults = worldResult.value.stageIds.map((stageId) =>
+    loadStageRuntimeConfig({ worldId, stageId })
+  );
+  const firstError = stageResults.find((result) => result.isErr());
+
+  if (firstError?.isErr()) {
+    return err(firstError.error);
+  }
+
+  return ok(stageResults.map((result) => result._unsafeUnwrap()));
+}
+
 export function loadInitialStageRuntimeConfig(): Result<IStageRuntimeConfig, IGameError> {
   return loadStageRuntimeConfig(DEFAULT_STAGE_SELECTION);
 }

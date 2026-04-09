@@ -1,7 +1,11 @@
 import Phaser from 'phaser';
 
-import { loadInitialStageRuntimeConfig } from '../../assets/loaders/stage-config.loader';
+import {
+  loadInitialStageRuntimeConfig,
+  loadStageRuntimeConfig
+} from '../../assets/loaders/stage-config.loader';
 import createLogger from '../../shared/logging/create-logger';
+import type { IStageSelection } from '../../domain/models/stage-model';
 import type { IGameRuntimeBridge } from '../hud-bridges/game-runtime-bridge';
 import {
   GAME_RUNTIME_BRIDGE_REGISTRY_KEY,
@@ -13,14 +17,18 @@ import StageScene from '../scenes/StageScene';
 interface ICreateGameRuntimeProps {
   parent: HTMLDivElement;
   bridge: IGameRuntimeBridge;
+  stageSelection?: IStageSelection | null;
 }
 
 export default function createGameRuntime({
   parent,
-  bridge
+  bridge,
+  stageSelection = null
 }: ICreateGameRuntimeProps) {
   const logger = createLogger();
-  const stageRuntimeConfigResult = loadInitialStageRuntimeConfig();
+  const stageRuntimeConfigResult = stageSelection
+    ? loadStageRuntimeConfig(stageSelection)
+    : loadInitialStageRuntimeConfig();
 
   if (stageRuntimeConfigResult.isErr()) {
     logger.error('runtime.stage_config_load_failed', {

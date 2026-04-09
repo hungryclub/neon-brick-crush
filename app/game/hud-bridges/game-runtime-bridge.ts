@@ -1,6 +1,7 @@
 type RuntimeReadyListener = () => void;
 type RuntimeHudListener = (snapshot: IRuntimeHudSnapshot) => void;
 type RuntimeStageFailedListener = () => void;
+type RuntimeStageClearedListener = () => void;
 type RuntimeStageResetCompletedListener = () => void;
 type RuntimeStageResetRequestedListener = () => void;
 type RuntimeTurnResolvedListener = (payload: ITurnResolvedPayload) => void;
@@ -45,6 +46,8 @@ export interface IGameRuntimeBridge {
   onRuntimeHudChanged: (listener: RuntimeHudListener) => () => void;
   signalStageFailed: () => void;
   onStageFailed: (listener: RuntimeStageFailedListener) => () => void;
+  signalStageCleared: () => void;
+  onStageCleared: (listener: RuntimeStageClearedListener) => () => void;
   requestStageReset: () => void;
   onStageResetRequested: (listener: RuntimeStageResetRequestedListener) => () => void;
   signalStageResetCompleted: () => void;
@@ -59,6 +62,7 @@ export default function createGameRuntimeBridge(): IGameRuntimeBridge {
   const runtimeReadyListeners = new Set<RuntimeReadyListener>();
   const runtimeHudListeners = new Set<RuntimeHudListener>();
   const runtimeStageFailedListeners = new Set<RuntimeStageFailedListener>();
+  const runtimeStageClearedListeners = new Set<RuntimeStageClearedListener>();
   const runtimeStageResetRequestedListeners = new Set<RuntimeStageResetRequestedListener>();
   const runtimeStageResetCompletedListeners = new Set<RuntimeStageResetCompletedListener>();
   const runtimeTurnResolvedListeners = new Set<RuntimeTurnResolvedListener>();
@@ -93,6 +97,16 @@ export default function createGameRuntimeBridge(): IGameRuntimeBridge {
 
       return () => {
         runtimeStageFailedListeners.delete(listener);
+      };
+    },
+    signalStageCleared() {
+      runtimeStageClearedListeners.forEach((listener) => listener());
+    },
+    onStageCleared(listener) {
+      runtimeStageClearedListeners.add(listener);
+
+      return () => {
+        runtimeStageClearedListeners.delete(listener);
       };
     },
     requestStageReset() {

@@ -83,6 +83,8 @@ export default class StageScene extends Phaser.Scene {
 
   private isStageFailed = false;
 
+  private isStageCleared = false;
+
   private shotState: TRuntimeShotState = 'idle';
 
   private turnNumber = 1;
@@ -394,6 +396,7 @@ export default class StageScene extends Phaser.Scene {
     ) as IGameRuntimeBridge | undefined;
 
     this.isStageFailed = false;
+    this.isStageCleared = false;
     this.pointerIsDown = false;
     this.shotState = 'idle';
     this.turnNumber = 1;
@@ -487,6 +490,32 @@ export default class StageScene extends Phaser.Scene {
     if (resolution.hasReachedLossLine) {
       this.handleStageFailure();
     }
+  }
+
+  private handleStageClear() {
+    if (this.isStageCleared) {
+      return;
+    }
+
+    const runtimeBridge = this.registry.get(
+      GAME_RUNTIME_BRIDGE_REGISTRY_KEY
+    ) as IGameRuntimeBridge | undefined;
+    const ballBody = this.ball.body as Phaser.Physics.Arcade.Body;
+
+    this.isStageCleared = true;
+    this.pointerIsDown = false;
+    this.shotState = 'idle';
+    this.aimGuide.clear();
+    ballBody.stop();
+    this.runtimeHud.shotState = 'idle';
+    this.runtimeHud.canShoot = false;
+    this.logger.info('stage.cleared', {
+      worldId: this.stageRuntimeConfig.worldId,
+      stageId: this.stageRuntimeConfig.stageId,
+      turnNumber: this.turnNumber
+    });
+    this.syncHud();
+    runtimeBridge?.signalStageCleared();
   }
 
   private resetBall() {
@@ -611,6 +640,11 @@ export default class StageScene extends Phaser.Scene {
       this.runtimeHud.destroyedBlocksThisTurn = this.destroyedBlocksThisTurn;
       this.runtimeHud.remainingBlocks = this.boardState.length;
       this.syncHud();
+
+      if (this.boardState.length === 0) {
+        this.handleStageClear();
+      }
+
       return;
     }
 

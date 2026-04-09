@@ -6,6 +6,7 @@ import createGameRuntimeBridge from '../../game/hud-bridges/game-runtime-bridge.
 test('game runtime bridge forwards failure and reset lifecycle signals', () => {
   const runtimeBridge = createGameRuntimeBridge();
   let failedCount = 0;
+  let clearedCount = 0;
   let resetRequestedCount = 0;
   let resetCompletedCount = 0;
   let turnResolvedPayload = null;
@@ -13,6 +14,9 @@ test('game runtime bridge forwards failure and reset lifecycle signals', () => {
 
   runtimeBridge.onStageFailed(() => {
     failedCount += 1;
+  });
+  runtimeBridge.onStageCleared(() => {
+    clearedCount += 1;
   });
   runtimeBridge.onStageResetRequested(() => {
     resetRequestedCount += 1;
@@ -28,6 +32,7 @@ test('game runtime bridge forwards failure and reset lifecycle signals', () => {
   });
 
   runtimeBridge.signalStageFailed();
+  runtimeBridge.signalStageCleared();
   runtimeBridge.requestStageReset();
   runtimeBridge.signalStageResetCompleted();
   runtimeBridge.signalTurnResolved({
@@ -38,6 +43,7 @@ test('game runtime bridge forwards failure and reset lifecycle signals', () => {
   runtimeBridge.requestFeverActivation();
 
   assert.equal(failedCount, 1);
+  assert.equal(clearedCount, 1);
   assert.equal(resetRequestedCount, 1);
   assert.equal(resetCompletedCount, 1);
   assert.deepEqual(turnResolvedPayload, {
