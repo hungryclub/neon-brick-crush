@@ -1,6 +1,6 @@
 # Story 2.1: 게이트 modifier 파이프라인 구현
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -22,40 +22,40 @@ so that I can plan higher-skill shots.
 
 ## Tasks / Subtasks
 
-- [ ] Introduce a gate-aware modifier pipeline around the current turn resolver.
+- [x] Introduce a gate-aware modifier pipeline around the current turn resolver.
       (AC: 1, 2)
-  - [ ] Split the existing turn resolution into explicit phases that preserve the
+  - [x] Split the existing turn resolution into explicit phases that preserve the
         fixed order `base -> gate -> fever -> finalize`.
-  - [ ] Keep modifier logic in resolver/mechanics modules, not in
+  - [x] Keep modifier logic in resolver/mechanics modules, not in
         `StageScene.ts`.
-  - [ ] Preserve deterministic output for identical inputs so unit tests remain
+  - [x] Preserve deterministic output for identical inputs so unit tests remain
         stable.
-- [ ] Add the first gate effect as a pipeline-applied modifier. (AC: 1)
-  - [ ] Define a minimal gate contract and context shape that the resolver can
+- [x] Add the first gate effect as a pipeline-applied modifier. (AC: 1)
+  - [x] Define a minimal gate contract and context shape that the resolver can
         consume without Phaser object references.
-  - [ ] Ensure gate application is data-driven enough to extend for later worlds
+  - [x] Ensure gate application is data-driven enough to extend for later worlds
         and gate types.
-  - [ ] Prevent Scene-local ad hoc branching that changes modifier order.
-- [ ] Route gate feedback through a dedicated result/feedback layer. (AC: 2)
-  - [ ] Extend turn result output so finalized gate interactions emit explicit
+  - [x] Prevent Scene-local ad hoc branching that changes modifier order.
+- [x] Route gate feedback through a dedicated result/feedback layer. (AC: 2)
+  - [x] Extend turn result output so finalized gate interactions emit explicit
         feedback events or payloads.
-  - [ ] Keep the base turn resolver framework-light by returning plain data,
+  - [x] Keep the base turn resolver framework-light by returning plain data,
         leaving Scene to only render/apply the emitted feedback.
-  - [ ] Prepare hooks for later VFX/SFX integration without requiring real
+  - [x] Prepare hooks for later VFX/SFX integration without requiring real
         assets in this story.
-- [ ] Wire the runtime to consume finalized gate results safely. (AC: 1, 2)
-  - [ ] Update `StageScene.ts` to pass gate context into the resolver through a
+- [x] Wire the runtime to consume finalized gate results safely. (AC: 1, 2)
+  - [x] Update `StageScene.ts` to pass gate context into the resolver through a
         single entry path.
-  - [ ] Ensure Scene consumes finalized output only and does not re-run gate
+  - [x] Ensure Scene consumes finalized output only and does not re-run gate
         logic after resolve.
-  - [ ] Keep HUD/runtime bridge updates consistent with the resolved turn result.
-- [ ] Add focused tests and verification for gate ordering and feedback output.
+  - [x] Keep HUD/runtime bridge updates consistent with the resolved turn result.
+- [x] Add focused tests and verification for gate ordering and feedback output.
       (AC: 1, 2)
-  - [ ] Add unit tests for fixed modifier order and deterministic gate results.
-  - [ ] Add at least one test proving finalized gate feedback is emitted as data
+  - [x] Add unit tests for fixed modifier order and deterministic gate results.
+  - [x] Add at least one test proving finalized gate feedback is emitted as data
         rather than Scene-owned branching.
-  - [ ] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
-  - [ ] Manually verify: a gate-routed shot produces the expected outcome and no
+  - [x] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
+  - [x] Manually verify: a gate-routed shot produces the expected outcome and no
         Scene-side modifier reordering is needed.
 
 ## Dev Notes
@@ -243,6 +243,11 @@ GPT-5 Codex
   section, project context rules, and current `app/game` runtime structure.
 - Existing code review confirmed current turn resolution is framework-light and
   suitable for pipeline extraction before fever is introduced.
+- `npm run test`, `npm run typecheck`, and `npm run build` all passed after
+  adding the gate modifier pipeline, Scene gate wiring, and feedback payloads.
+- The first gate effect is implemented as a `spawn-clear` modifier that removes
+  the highest-priority spawned top-row block when the shot path intersects a
+  gate zone.
 
 ### Completion Notes List
 
@@ -250,4 +255,17 @@ GPT-5 Codex
   resolver purity, and feedback payload boundaries.
 - Fixed the implementation guardrails so future fever work can plug into the
   same resolver path without Scene-side reordering.
+- Added `stage-gates`, `gate-modifier-pipeline`, and turn resolver trace/feedback
+  data so `StageScene` now consumes finalized output rather than recomputing gate
+  behavior.
+- Rendered gate zones in the runtime and hooked feedback playback to emitted
+  resolver events as lightweight VFX placeholders.
 
+### File List
+
+- app/game/entities/stage-gates.ts
+- app/game/mechanics/gate-modifier-pipeline.ts
+- app/game/mechanics/gate-modifier-pipeline.js
+- app/game/systems/turn-resolver.ts
+- app/game/scenes/StageScene.ts
+- app/tests/unit/turn-resolver.test.mjs

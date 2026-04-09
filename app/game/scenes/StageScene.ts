@@ -7,6 +7,11 @@ import {
   type IStageBoardCell
 } from '../entities/stage-board';
 import {
+  createStageGates,
+  type IShotPath,
+  type IStageGate
+} from '../entities/stage-gates';
+import {
   resolveAimPreview,
   resolveShotVelocity
 } from '../mechanics/aim-shot-controller';
@@ -30,6 +35,12 @@ interface IBlockView {
   rectangle: Phaser.GameObjects.Rectangle;
 }
 
+interface IGateView {
+  gate: IStageGate;
+  label: Phaser.GameObjects.Text;
+  rectangle: Phaser.GameObjects.Rectangle;
+}
+
 export default class StageScene extends Phaser.Scene {
   private initialBoardState: IStageBoardCell[] = [];
 
@@ -49,7 +60,13 @@ export default class StageScene extends Phaser.Scene {
 
   private dangerLine!: Phaser.GameObjects.Rectangle;
 
+  private gateViews = new Map<string, IGateView>();
+
+  private gates: IStageGate[] = [];
+
   private lossRow = 6;
+
+  private lastShotPath: IShotPath | null = null;
 
   private pointerIsDown = false;
 
@@ -84,6 +101,10 @@ export default class StageScene extends Phaser.Scene {
       initialBoard: initialBoardState,
       launcherY
     });
+    this.gates = createStageGates({
+      launcherY,
+      width
+    });
 
     this.physics.world.setBounds(0, 0, width, height);
     this.physics.world.setBoundsCollision(true, true, true, false);
@@ -116,6 +137,7 @@ export default class StageScene extends Phaser.Scene {
 
     this.aimGuide = this.add.graphics();
 
+    this.renderGates();
     this.createBall();
     this.initialBoardState = cloneBoard(initialBoardState);
     this.boardState = cloneBoard(initialBoardState);
@@ -252,6 +274,7 @@ export default class StageScene extends Phaser.Scene {
 
   private launchShot(pointer: Phaser.Input.Pointer) {
     const shotVelocity = resolveShotVelocity(this.launcherPosition, pointer);
+    const preview = resolveAimPreview(this.launcherPosition, pointer);
 
     this.aimGuide.clear();
     this.runtimeHud.aimAngle = null;
@@ -266,6 +289,16 @@ export default class StageScene extends Phaser.Scene {
 
     const ballBody = this.ball.body as Phaser.Physics.Arcade.Body;
 
+    this.lastShotPath = {
+      start: {
+        x: this.launcherPosition.x,
+        y: this.launcherPosition.y
+      },
+      end: {
+        x: preview.pointer.x,
+        y: preview.pointer.y
+      }
+    };
     ballBody.enable = true;
     ballBody.setVelocity(shotVelocity.x, shotVelocity.y);
     this.shotState = 'launched';
@@ -332,6 +365,7 @@ export default class StageScene extends Phaser.Scene {
     this.shotState = 'idle';
     this.turnNumber = 1;
     this.destroyedBlocksThisTurn = 0;
+    this.lastShotPath = null;
     this.activeCollisionBlockIds.clear();
     this.aimGuide.clear();
     this.boardState = cloneBoard(this.initialBoardState);
@@ -357,6 +391,8 @@ export default class StageScene extends Phaser.Scene {
 
     const resolution = resolveTurn({
       board: this.boardState,
+      gates: this.gates,
+      shotPath: this.lastShotPath,
       turnNumber: this.turnNumber,
       lossRow: this.lossRow,
       spawnRow: createSpawnRow
@@ -370,15 +406,19 @@ export default class StageScene extends Phaser.Scene {
 
     this.renderBoard();
     this.resetBall();
+    this.playTurnFeedback(resolution.feedbackEvents);
 
     this.logger.info('stage.turn_resolved', {
       turnNumber: this.turnNumber,
       remainingBlocks: this.boardState.length,
       destroyedBlocksThisTurn: this.destroyedBlocksThisTurn,
-      hasReachedLossLine: resolution.hasReachedLossLine
+      hasReachedLossLine: resolution.hasReachedLossLine,
+      modifierTrace: resolution.modifierTrace.map((entry) => `${entry.phase}:${entry.applied}`),
+      feedbackEvents: resolution.feedbackEvents.map((event) => event.type)
     });
 
     this.destroyedBlocksThisTurn = 0;
+    this.lastShotPath = null;
     this.shotState = 'idle';
     this.runtimeHud.shotState = 'idle';
     this.runtimeHud.destroyedBlocksThisTurn = 0;
@@ -444,6 +484,44 @@ export default class StageScene extends Phaser.Scene {
       this.runtimeHud.hasReachedLossLine ? 0.78 : 0.18 + this.runtimeHud.dangerLevel * 0.5
     );
     this.syncHud();
+  }
+
+  private renderGates() {
+    this.gateViews.forEach((gateView) => {
+      gateView.rectangle.destroy();
+      gateView.label.destroy();
+    });
+    this.gateViews.clear();
+
+    this.gates.forEach((gate) => {
+      const rectangle = this.add.rectangle(
+        gate.bounds.x + gate.bounds.width / 2,
+        gate.bounds.y + gate.bounds.height / 2,
+        gate.bounds.width,
+        gate.bounds.height,
+        gate.color,
+        0.2
+      );
+      rectangle.setStrokeStyle(2, gate.color, 0.72);
+
+      const label = this.add.text(
+        gate.bounds.x + gate.bounds.width / 2,
+        gate.bounds.y + gate.bounds.height / 2,
+        gate.label,
+        {
+          color: '#dff6ff',
+          fontFamily: 'Arial Black',
+          fontSize: '14px'
+        }
+      );
+      label.setOrigin(0.5);
+
+      this.gateViews.set(gate.id, {
+        gate,
+        label,
+        rectangle
+      });
+    });
   }
 
   private handleBlockHit(blockId: string) {
@@ -513,6 +591,32 @@ export default class StageScene extends Phaser.Scene {
       if (!isStillOverlapping) {
         this.activeCollisionBlockIds.delete(blockId);
       }
+    });
+  }
+
+  private playTurnFeedback(feedbackEvents: Array<{ type: 'gate.triggered'; gateId: string }>) {
+    feedbackEvents.forEach((event) => {
+      if (event.type !== 'gate.triggered') {
+        return;
+      }
+
+      const gateView = this.gateViews.get(event.gateId);
+
+      if (!gateView) {
+        return;
+      }
+
+      gateView.rectangle.setFillStyle(gateView.gate.color, 0.44);
+      gateView.label.setScale(1.08);
+      this.logger.info('stage.gate_feedback_emitted', {
+        eventType: event.type,
+        gateId: event.gateId,
+        gateKind: gateView.gate.kind
+      });
+      this.time.delayedCall(160, () => {
+        gateView.rectangle.setFillStyle(gateView.gate.color, 0.2);
+        gateView.label.setScale(1);
+      });
     });
   }
 
