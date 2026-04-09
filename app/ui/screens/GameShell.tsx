@@ -37,6 +37,7 @@ import useUiStore from '../../state/stores/use-ui-store';
 
 export default function GameShell() {
   const progressionRepositoryRef = useRef(createProgressionRepository());
+  const retryCountRef = useRef(0);
   const runtimeBridgeRef = useRef<IGameRuntimeBridge | null>(null);
   const runtimeHostRef = useRef<HTMLDivElement | null>(null);
   const storeIsDebugVisible = useUiStore((state) => state.storeIsDebugVisible);
@@ -58,6 +59,10 @@ export default function GameShell() {
   const isProgressionLoading = useSelector(progressionActor, selectIsProgressionLoading);
   const latestStageCompletion = useSelector(progressionActor, selectLatestStageCompletion);
   const worldMapStageCards = useSelector(progressionActor, selectWorldMapStageCards);
+
+  useEffect(() => {
+    retryCountRef.current = retryCount;
+  }, [retryCount]);
 
   useEffect(() => {
     let isDisposed = false;
@@ -100,14 +105,14 @@ export default function GameShell() {
       progressionRepositoryRef.current
         .saveStageCompletion({
           ...activeStageSelection,
-          starCount: resolveStageStarCount(retryCount)
+          starCount: resolveStageStarCount(retryCountRef.current)
         })
         .then((snapshot) => {
           progressionActor.send({
             type: 'STAGE_COMPLETED',
             record: {
               ...activeStageSelection,
-              starCount: resolveStageStarCount(retryCount)
+              starCount: resolveStageStarCount(retryCountRef.current)
             },
             snapshot
           });
@@ -139,7 +144,7 @@ export default function GameShell() {
       storeSetRuntimeHud(createInitialRuntimeHudSnapshot());
       runtime.destroy();
     };
-  }, [activeStageSelection, retryCount, storeSetHasRuntime, storeSetRuntimeHud]);
+  }, [activeStageSelection, storeSetHasRuntime, storeSetRuntimeHud]);
 
   useEffect(() => {
     if (!isSessionRetrying) {

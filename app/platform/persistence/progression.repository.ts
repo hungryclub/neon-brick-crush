@@ -89,7 +89,7 @@ export default function createProgressionRepository(): IProgressionRepository {
         nextSnapshot.stageProgressById = {
           ...nextSnapshot.stageProgressById,
           [nextStageId]: {
-            ...(nextSnapshot.stageProgressById[nextStageId] ?? currentStageState),
+            ...(nextSnapshot.stageProgressById[nextStageId] ?? createEmptyStageProgress()),
             isUnlocked: true
           }
         };
@@ -110,4 +110,12 @@ function resolveNextStageId(stageId: string) {
   }
 
   return `${match[1]}${String(Number(match[2]) + 1).padStart(match[2].length, '0')}`;
+}
+
+function createEmptyStageProgress() {
+  return {
+    bestStarCount: 0,
+    isCompleted: false,
+    isUnlocked: false
+  };
 }
