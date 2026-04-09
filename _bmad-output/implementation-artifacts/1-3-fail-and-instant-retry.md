@@ -1,6 +1,6 @@
 # Story 1.3: 실패/즉시 재도전 루프 구현
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -63,6 +63,10 @@ so that the game keeps a short, addictive rhythm.
   - [x] Manually verify: fail reached, failure UI appears, instant retry works,
         stage resets without full reload, and the player can shoot again
         immediately.
+
+### Review Findings
+
+- [x] [Review][Patch] Runtime bridge is registered after Phaser scenes start, so `StageScene` misses HUD/failure/reset listeners and Story 1.3 flow never actually wires up. [`app/game/core/create-game-runtime.ts:16`]
 
 ## Dev Notes
 

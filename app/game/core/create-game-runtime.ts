@@ -23,10 +23,13 @@ export default function createGameRuntime({
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH
+    },
+    callbacks: {
+      preBoot(game) {
+        game.registry.set('game-runtime-bridge', bridge);
+      }
     }
   });
-
-  game.registry.set('game-runtime-bridge', bridge);
 
   const bootScene = game.scene.getScene(BOOT_SCENE_KEY) as BootScene | undefined;
   bootScene?.notifyRuntimeReady();
