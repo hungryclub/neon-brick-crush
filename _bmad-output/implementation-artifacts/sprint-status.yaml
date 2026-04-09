@@ -10,7 +10,7 @@ development_status:
   1-4-rewarded-ad-retry-flow: done
   epic-2: in-progress
   2-1-gate-modifier-pipeline: done
-  2-2-fever-meter-and-manual-activation: review
+  2-2-fever-meter-and-manual-activation: done
   2-3-gate-fever-combo-feedback: backlog
   epic-3: backlog
   3-1-world-stage-data-and-loading: backlog

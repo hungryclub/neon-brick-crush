@@ -1,6 +1,6 @@
 # Story 2.2: 피버 게이지와 수동 발동 구현
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -248,6 +248,9 @@ GPT-5 Codex
 - Runtime now emits turn summary payloads for fever charge, while XState owns
   readiness/activation and dispatches only resolved activation commands back to
   the Scene.
+- Review patch moved fever bridge delivery out of a React effect and into the
+  same intent-handling control flow that observes the post-session snapshot, so
+  runtime command dispatch no longer depends on a later render pass.
 
 ### Completion Notes List
 
@@ -259,6 +262,8 @@ GPT-5 Codex
   commands, plus session selectors and HUD/button presentation for fever state.
 - Wired the fever pipeline slot to a lightweight runtime effect so activation is
   observable in play without moving policy into Scene code.
+- Tightened the activation boundary so session policy resolution and runtime
+  command delivery are coupled more explicitly.
 
 ### File List
 

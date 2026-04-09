@@ -94,13 +94,13 @@ export default function GameShell() {
     runtimeBridgeRef.current?.requestStageReset();
   }, [isSessionRetrying]);
 
-  useEffect(() => {
-    if (!isFeverActive) {
-      return;
-    }
+  function handleFeverActivation() {
+    sessionActor.send({ type: 'REQUEST_FEVER_ACTIVATION' });
 
-    runtimeBridgeRef.current?.requestFeverActivation();
-  }, [isFeverActive]);
+    if (sessionActor.getSnapshot().context.isFeverActive) {
+      runtimeBridgeRef.current?.requestFeverActivation();
+    }
+  }
 
   return (
     <main style={layoutStyle}>
@@ -121,9 +121,7 @@ export default function GameShell() {
           }}
           type='button'
           disabled={!canActivateFever || isSessionFailed || isFeverActive}
-          onClick={() => {
-            sessionActor.send({ type: 'REQUEST_FEVER_ACTIVATION' });
-          }}
+          onClick={handleFeverActivation}
         >
           {isFeverActive ? 'Fever Active' : canActivateFever ? 'Activate Fever' : 'Build Fever'}
         </button>
