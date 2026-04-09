@@ -52,10 +52,12 @@ test('resolveTurn applies gate modifier before finalize and emits feedback data'
   const result = resolveTurn({
     board: [{ id: 'block-a', col: 1, row: 1, hp: 1 }],
     gates: [gate],
-    shotPath: {
-      start: { x: gate.bounds.x + gate.bounds.width / 2, y: 634 },
-      end: { x: gate.bounds.x + gate.bounds.width / 2, y: 120 }
-    },
+    shotPath: [
+      {
+        start: { x: gate.bounds.x + gate.bounds.width / 2, y: 634 },
+        end: { x: gate.bounds.x + gate.bounds.width / 2, y: 120 }
+      }
+    ],
     turnNumber: 2,
     lossRow: 6,
     spawnRow() {
@@ -83,6 +85,37 @@ test('resolveTurn applies gate modifier before finalize and emits feedback data'
     result.modifierTrace.map((entry) => entry.applied),
     [true, true, false, true]
   );
+});
+
+test('resolveTurn can trigger a gate from a later shot-path segment', () => {
+  const [gate] = createStageGates({
+    launcherY: 634,
+    width: 960
+  });
+  const gateCenterX = gate.bounds.x + gate.bounds.width / 2;
+  const gateCenterY = gate.bounds.y + gate.bounds.height / 2;
+  const result = resolveTurn({
+    board: [{ id: 'block-a', col: 2, row: 1, hp: 1 }],
+    gates: [gate],
+    shotPath: [
+      {
+        start: { x: 800, y: 634 },
+        end: { x: 880, y: 420 }
+      },
+      {
+        start: { x: 880, y: 420 },
+        end: { x: gateCenterX, y: gateCenterY }
+      }
+    ],
+    turnNumber: 4,
+    lossRow: 6,
+    spawnRow() {
+      return [{ id: 'spawn-late', col: 3, row: 0, hp: 2 }];
+    }
+  });
+
+  assert.equal(result.board.some((cell) => cell.id === 'spawn-late'), false);
+  assert.equal(result.feedbackEvents[0]?.gateId, gate.id);
 });
 
 test('resolveTurn keeps deterministic output for identical inputs', () => {

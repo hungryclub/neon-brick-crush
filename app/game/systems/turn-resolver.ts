@@ -1,5 +1,5 @@
 import type { IStageBoardCell } from '../entities/stage-board';
-import type { IShotPath, IStageGate } from '../entities/stage-gates';
+import type { IStageGate, TShotPath } from '../entities/stage-gates';
 import {
   appendModifierTrace,
   applyFeverModifiers,
@@ -12,7 +12,7 @@ import {
 export interface ITurnResolutionInput {
   board: IStageBoardCell[];
   gates?: IStageGate[];
-  shotPath?: IShotPath | null;
+  shotPath?: TShotPath | null;
   turnNumber: number;
   lossRow: number;
   spawnRow: (turnNumber: number) => IStageBoardCell[];

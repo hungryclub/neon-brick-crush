@@ -15,7 +15,7 @@ export interface IStageGate {
   bounds: IStageGateBounds;
 }
 
-export interface IShotPath {
+export interface IShotPathSegment {
   start: {
     x: number;
     y: number;
@@ -25,6 +25,8 @@ export interface IShotPath {
     y: number;
   };
 }
+
+export type TShotPath = IShotPathSegment[];
 
 export function createStageGates({
   width,

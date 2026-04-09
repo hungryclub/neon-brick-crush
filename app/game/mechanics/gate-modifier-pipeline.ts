@@ -1,4 +1,4 @@
-import type { IShotPath, IStageGate } from '../entities/stage-gates';
+import type { IShotPathSegment, IStageGate, TShotPath } from '../entities/stage-gates';
 import type { IStageBoardCell } from '../entities/stage-board';
 
 export type TTurnModifierPhase = 'base' | 'gate' | 'fever' | 'finalize';
@@ -17,7 +17,7 @@ export interface ITurnModifierTraceEntry {
 
 export interface ITurnModifierContext {
   gates?: IStageGate[];
-  shotPath?: IShotPath | null;
+  shotPath?: TShotPath | null;
 }
 
 export interface IBaseTurnState {
@@ -106,10 +106,12 @@ function resolveTriggeredGate(context: ITurnModifierContext) {
 
   return (
     context.gates.find((gate) =>
-      doesLineIntersectRect({
-        rect: gate.bounds,
-        segment: context.shotPath as IShotPath
-      })
+      (context.shotPath as TShotPath).some((segment) =>
+        doesLineIntersectRect({
+          rect: gate.bounds,
+          segment
+        })
+      )
     ) ?? null
   );
 }
@@ -140,7 +142,7 @@ function doesLineIntersectRect({
     width: number;
     height: number;
   };
-  segment: IShotPath;
+  segment: IShotPathSegment;
 }) {
   const minX = rect.x;
   const maxX = rect.x + rect.width;

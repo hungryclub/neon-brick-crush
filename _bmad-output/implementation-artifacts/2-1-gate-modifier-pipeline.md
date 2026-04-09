@@ -1,6 +1,6 @@
 # Story 2.1: 게이트 modifier 파이프라인 구현
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -248,6 +248,9 @@ GPT-5 Codex
 - The first gate effect is implemented as a `spawn-clear` modifier that removes
   the highest-priority spawned top-row block when the shot path intersects a
   gate zone.
+- Review patch updated gate triggering to consume accumulated in-turn path
+  segments instead of only the initial launch vector, so later bounce-driven
+  gate intersections are now represented in the resolver input.
 
 ### Completion Notes List
 
@@ -260,6 +263,8 @@ GPT-5 Codex
   behavior.
 - Rendered gate zones in the runtime and hooked feedback playback to emitted
   resolver events as lightweight VFX placeholders.
+- Hardened path tracking in `StageScene` so gate evaluation reflects the whole
+  observed turn trajectory rather than just the opening aim segment.
 
 ### File List
 
