@@ -7,6 +7,10 @@ import {
   type IStageBoardCell
 } from '../entities/stage-board';
 import {
+  createTurnFeedbackPlan,
+  type TTurnFeedbackCommand
+} from '../effects/turn-feedback-emitter.js';
+import {
   createStageGates,
   type IShotPathSegment,
   type IStageGate
@@ -417,7 +421,11 @@ export default class StageScene extends Phaser.Scene {
 
     this.renderBoard();
     this.resetBall();
-    this.playTurnFeedback(resolution.feedbackEvents);
+    const feedbackPlan = createTurnFeedbackPlan({
+      branch: resolution.comboBranch,
+      feedbackEvents: resolution.feedbackEvents
+    });
+    this.playTurnFeedbackPlan(feedbackPlan.commands);
     runtimeBridge?.signalTurnResolved({
       destroyedBlocksThisTurn: this.destroyedBlocksThisTurn,
       feverApplied: resolution.feedbackEvents.some((event) => event.type === 'fever.activated'),
@@ -429,6 +437,7 @@ export default class StageScene extends Phaser.Scene {
       turnNumber: this.turnNumber,
       remainingBlocks: this.boardState.length,
       destroyedBlocksThisTurn: this.destroyedBlocksThisTurn,
+      comboBranch: resolution.comboBranch,
       feverApplied: resolution.feedbackEvents.some((event) => event.type === 'fever.activated'),
       hasReachedLossLine: resolution.hasReachedLossLine,
       modifierTrace: resolution.modifierTrace.map((entry) => `${entry.phase}:${entry.applied}`),
@@ -646,42 +655,49 @@ export default class StageScene extends Phaser.Scene {
     this.lastTrackedBallPosition = currentPoint;
   }
 
-  private playTurnFeedback(
-    feedbackEvents: Array<
-      | { type: 'gate.triggered'; gateId: string }
-      | { type: 'fever.activated'; affectedCellId: string | null }
-    >
-  ) {
-    feedbackEvents.forEach((event) => {
-      if (event.type === 'fever.activated') {
-        this.cameras.main.flash(180, 255, 120, 220, false);
-        this.logger.info('stage.fever_feedback_emitted', {
-          affectedCellId: event.affectedCellId,
-          turnNumber: this.turnNumber
+  private playTurnFeedbackPlan(commands: TTurnFeedbackCommand[]) {
+    commands.forEach((command) => {
+      if (command.type === 'gate-pulse') {
+        const gateView = this.gateViews.get(command.gateId);
+
+        if (!gateView) {
+          return;
+        }
+
+        gateView.rectangle.setFillStyle(gateView.gate.color, 0.44);
+        gateView.label.setScale(1.08);
+        this.time.delayedCall(160, () => {
+          gateView.rectangle.setFillStyle(gateView.gate.color, 0.2);
+          gateView.label.setScale(1);
         });
         return;
       }
 
-      if (event.type !== 'gate.triggered') {
+      if (command.type === 'camera-flash') {
+        this.cameras.main.flash(
+          command.duration,
+          command.color[0],
+          command.color[1],
+          command.color[2],
+          false
+        );
         return;
       }
 
-      const gateView = this.gateViews.get(event.gateId);
-
-      if (!gateView) {
+      if (command.type === 'camera-shake') {
+        this.cameras.main.shake(command.duration, command.intensity, false);
         return;
       }
 
-      gateView.rectangle.setFillStyle(gateView.gate.color, 0.44);
-      gateView.label.setScale(1.08);
-      this.logger.info('stage.gate_feedback_emitted', {
-        eventType: event.type,
-        gateId: event.gateId,
-        gateKind: gateView.gate.kind
-      });
-      this.time.delayedCall(160, () => {
-        gateView.rectangle.setFillStyle(gateView.gate.color, 0.2);
-        gateView.label.setScale(1);
+      this.logger.info('stage.feedback_command_emitted', {
+        commandType: command.type,
+        context:
+          command.type === 'sfx-cue'
+            ? command.cue
+            : command.type === 'haptic-pulse'
+              ? command.intensity
+              : null,
+        turnNumber: this.turnNumber
       });
     });
   }

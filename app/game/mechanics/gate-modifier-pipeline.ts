@@ -15,6 +15,8 @@ export interface IFeverFeedbackEvent {
   affectedCellId: string | null;
 }
 
+export type TTurnComboBranch = 'base' | 'gate-only' | 'fever-only' | 'gate-fever-combo';
+
 export interface ITurnModifierTraceEntry {
   phase: TTurnModifierPhase;
   applied: boolean;
@@ -32,12 +34,14 @@ export interface IBaseTurnState {
 }
 
 export interface IResolvedTurnState extends IBaseTurnState {
+  comboBranch: TTurnComboBranch;
   feedbackEvents: Array<ITurnFeedbackEvent | IFeverFeedbackEvent>;
   modifierTrace: ITurnModifierTraceEntry[];
 }
 
 export function createInitialResolvedTurnState(baseState: IBaseTurnState): IResolvedTurnState {
   return {
+    comboBranch: 'base',
     ...baseState,
     feedbackEvents: [],
     modifierTrace: []
@@ -78,6 +82,7 @@ export function applyGateModifiers(
 
   return {
     board: state.board.filter((cell) => cell.id !== affectedCell.id),
+    comboBranch: state.comboBranch === 'fever-only' ? 'gate-fever-combo' : 'gate-only',
     turnNumber: state.turnNumber,
     feedbackEvents: [
       ...state.feedbackEvents,
@@ -120,6 +125,7 @@ export function applyFeverModifiers(
 
   return {
     board: state.board.filter((cell) => cell.id !== affectedCell.id),
+    comboBranch: state.comboBranch === 'gate-only' ? 'gate-fever-combo' : 'fever-only',
     turnNumber: state.turnNumber,
     feedbackEvents: [
       ...state.feedbackEvents,

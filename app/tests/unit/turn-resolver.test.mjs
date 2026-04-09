@@ -28,6 +28,7 @@ test('resolveTurn descends board cells and spawns a new top row deterministicall
     result.modifierTrace.map((entry) => entry.phase),
     ['base', 'gate', 'fever', 'finalize']
   );
+  assert.equal(result.comboBranch, 'base');
 });
 
 test('resolveTurn reports danger once blocks cross the configured loss row', () => {
@@ -85,6 +86,7 @@ test('resolveTurn applies gate modifier before finalize and emits feedback data'
     result.modifierTrace.map((entry) => entry.applied),
     [true, true, false, true]
   );
+  assert.equal(result.comboBranch, 'gate-only');
 });
 
 test('resolveTurn can trigger a gate from a later shot-path segment', () => {
@@ -116,6 +118,38 @@ test('resolveTurn can trigger a gate from a later shot-path segment', () => {
 
   assert.equal(result.board.some((cell) => cell.id === 'spawn-late'), false);
   assert.equal(result.feedbackEvents[0]?.gateId, gate.id);
+});
+
+test('resolveTurn records gate-fever combo branch when both modifiers apply', () => {
+  const [gate] = createStageGates({
+    launcherY: 634,
+    width: 960
+  });
+  const result = resolveTurn({
+    board: [{ id: 'block-a', col: 1, row: 1, hp: 2 }],
+    feverActive: true,
+    gates: [gate],
+    shotPath: [
+      {
+        start: { x: gate.bounds.x + gate.bounds.width / 2, y: 634 },
+        end: { x: gate.bounds.x + gate.bounds.width / 2, y: 120 }
+      }
+    ],
+    turnNumber: 3,
+    lossRow: 6,
+    spawnRow() {
+      return [
+        { id: 'spawn-a', col: 0, row: 0, hp: 1 },
+        { id: 'spawn-b', col: 1, row: 0, hp: 3 }
+      ];
+    }
+  });
+
+  assert.equal(result.comboBranch, 'gate-fever-combo');
+  assert.deepEqual(
+    result.feedbackEvents.map((event) => event.type),
+    ['gate.triggered', 'fever.activated']
+  );
 });
 
 test('resolveTurn keeps deterministic output for identical inputs', () => {

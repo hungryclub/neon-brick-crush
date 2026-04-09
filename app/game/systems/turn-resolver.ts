@@ -6,6 +6,7 @@ import {
   applyGateModifiers,
   createInitialResolvedTurnState,
   type IFeverFeedbackEvent,
+  type TTurnComboBranch,
   type ITurnFeedbackEvent,
   type ITurnModifierTraceEntry
 } from '../mechanics/gate-modifier-pipeline.js';
@@ -22,6 +23,7 @@ export interface ITurnResolutionInput {
 
 export interface ITurnResolutionResult {
   board: IStageBoardCell[];
+  comboBranch: TTurnComboBranch;
   feedbackEvents: Array<ITurnFeedbackEvent | IFeverFeedbackEvent>;
   hasReachedLossLine: boolean;
   dangerLevel: number;
@@ -71,6 +73,7 @@ export function resolveTurn({
 
   return {
     board: finalizedBoard,
+    comboBranch: finalizedState.comboBranch,
     feedbackEvents: finalizedState.feedbackEvents,
     hasReachedLossLine: maxRow >= safeLossRow,
     dangerLevel: Math.max(0, Math.min(maxRow / safeLossRow, 1)),

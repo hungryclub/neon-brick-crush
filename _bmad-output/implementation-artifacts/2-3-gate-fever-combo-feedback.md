@@ -1,6 +1,6 @@
 # Story 2.3: 게이트/피버 조합과 시그니처 피드백 구현
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -21,36 +21,36 @@ so that the game's signature moments stay memorable and fair.
 
 ## Tasks / Subtasks
 
-- [ ] Complete the combined gate+fever resolver path. (AC: 1)
-  - [ ] Extend the Story 2.1/2.2 modifier pipeline so gate and fever can both
+- [x] Complete the combined gate+fever resolver path. (AC: 1)
+  - [x] Extend the Story 2.1/2.2 modifier pipeline so gate and fever can both
         contribute to the same finalized result without breaking order.
-  - [ ] Preserve explicit `base -> gate -> fever -> finalize` trace data for
+  - [x] Preserve explicit `base -> gate -> fever -> finalize` trace data for
         debugging and tests.
-  - [ ] Ensure combined outcomes remain deterministic for identical inputs.
-- [ ] Add structured combo branch logging for debugging. (AC: 1)
-  - [ ] Emit logs that distinguish gate-only, fever-only, and gate+fever combo
+  - [x] Ensure combined outcomes remain deterministic for identical inputs.
+- [x] Add structured combo branch logging for debugging. (AC: 1)
+  - [x] Emit logs that distinguish gate-only, fever-only, and gate+fever combo
         branches.
-  - [ ] Keep logs tied to finalized resolver output rather than Scene guesses.
-  - [ ] Avoid broad ad hoc logging from hot collision loops.
-- [ ] Introduce a dedicated gameplay feedback boundary for combo moments. (AC: 2)
-  - [ ] Create or extend an effect/feedback layer that consumes finalized result
+  - [x] Keep logs tied to finalized resolver output rather than Scene guesses.
+  - [x] Avoid broad ad hoc logging from hot collision loops.
+- [x] Introduce a dedicated gameplay feedback boundary for combo moments. (AC: 2)
+  - [x] Create or extend an effect/feedback layer that consumes finalized result
         data and emits VFX/SFX/haptics triggers.
-  - [ ] Keep resolver output framework-light and feedback handling out of the
+  - [x] Keep resolver output framework-light and feedback handling out of the
         core turn calculation.
-  - [ ] Ensure Scene only plays back structured feedback events.
-- [ ] Make high-impact combo feedback feel readable and performant. (AC: 2)
-  - [ ] Differentiate combo feedback from gate-only or fever-only moments with
+  - [x] Ensure Scene only plays back structured feedback events.
+- [x] Make high-impact combo feedback feel readable and performant. (AC: 2)
+  - [x] Differentiate combo feedback from gate-only or fever-only moments with
         stronger but still readable signals.
-  - [ ] Reuse/pool transient effect objects or keep feedback lightweight enough
+  - [x] Reuse/pool transient effect objects or keep feedback lightweight enough
         to avoid avoidable allocations in hot loops.
-  - [ ] Preserve mobile-first readability under fast repeated turns.
-- [ ] Add focused tests and verification for combo order, logging, and feedback.
+  - [x] Preserve mobile-first readability under fast repeated turns.
+- [x] Add focused tests and verification for combo order, logging, and feedback.
       (AC: 1, 2)
-  - [ ] Add resolver tests covering gate-only, fever-only, and gate+fever combo
+  - [x] Add resolver tests covering gate-only, fever-only, and gate+fever combo
         outcomes.
-  - [ ] Add at least one test around structured combo logs or feedback payloads.
-  - [ ] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
-  - [ ] Manually verify: combo moments look stronger than single-modifier turns
+  - [x] Add at least one test around structured combo logs or feedback payloads.
+  - [x] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
+  - [x] Manually verify: combo moments look stronger than single-modifier turns
         and remain readable on the runtime shell.
 
 ## Dev Notes
@@ -236,6 +236,11 @@ GPT-5 Codex
   gate+fever implementation state from Stories 2.1 and 2.2.
 - Existing code inspection confirmed combo data already exists in resolver
   outputs, but a dedicated feedback boundary is still the main missing piece.
+- `npm run test`, `npm run typecheck`, and `npm run build` all passed after
+  combo branch classification, dedicated feedback planning, and Scene playback
+  refactoring were added.
+- Dedicated feedback handling now lives in `turn-feedback-emitter`, while the
+  resolver returns combo branch data and structured trace info.
 
 ### Completion Notes List
 
@@ -243,4 +248,17 @@ GPT-5 Codex
   correctness, structured logs, and dedicated feedback boundaries.
 - Fixed the implementation guardrails so combo moments can be intensified
   without pushing VFX/SFX/haptics logic back into the core resolver.
+- Added `comboBranch` classification to finalized turn results and expanded
+  tests to cover gate-only, fever-only, and combo outcomes.
+- Introduced a dedicated turn feedback emitter that maps structured result data
+  to runtime playback commands instead of branching directly inside Scene logic.
 
+### File List
+
+- app/game/effects/turn-feedback-emitter.ts
+- app/game/effects/turn-feedback-emitter.js
+- app/game/mechanics/gate-modifier-pipeline.ts
+- app/game/systems/turn-resolver.ts
+- app/game/scenes/StageScene.ts
+- app/tests/unit/turn-resolver.test.mjs
+- app/tests/unit/turn-feedback-emitter.test.mjs
