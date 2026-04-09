@@ -106,7 +106,7 @@ export function createSessionMachine({
             return context.isFeverActive;
           }
 
-          return event.payload.feverApplied ? false : context.isFeverActive;
+          return context.isFeverActive ? false : context.isFeverActive;
         }
       }),
       activateFever: assign({

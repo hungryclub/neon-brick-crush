@@ -11,7 +11,7 @@ development_status:
   epic-2: in-progress
   2-1-gate-modifier-pipeline: done
   2-2-fever-meter-and-manual-activation: done
-  2-3-gate-fever-combo-feedback: review
+  2-3-gate-fever-combo-feedback: done
   epic-3: backlog
   3-1-world-stage-data-and-loading: backlog
   3-2-world-map-stage-selection-stars: backlog

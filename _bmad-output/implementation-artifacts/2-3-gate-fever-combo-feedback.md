@@ -1,6 +1,6 @@
 # Story 2.3: 게이트/피버 조합과 시그니처 피드백 구현
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -252,6 +252,10 @@ GPT-5 Codex
   tests to cover gate-only, fever-only, and combo outcomes.
 - Introduced a dedicated turn feedback emitter that maps structured result data
   to runtime playback commands instead of branching directly inside Scene logic.
+- Fixed the fever lifecycle handoff so session state now clears an active fever
+  after any resolved fever turn, even when no eligible fever target remained.
+- Added a regression test for the "fever intent but no target" turn outcome so
+  XState and runtime stay aligned on fever ownership.
 
 ### File List
 

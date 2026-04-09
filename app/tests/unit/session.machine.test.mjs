@@ -172,3 +172,33 @@ test('session machine activates fever only when the meter is ready and clears it
   assert.equal(actor.getSnapshot().context.isFeverActive, false);
   assert.equal(actor.getSnapshot().context.feverMeter, 30);
 });
+
+test('session machine clears active fever even when the fever phase finds no target', () => {
+  const actor = createActor(createSessionMachine()).start();
+
+  actor.send({ type: 'BOOT_FINISHED' });
+  actor.send({
+    type: 'TURN_RESOLVED',
+    payload: {
+      destroyedBlocksThisTurn: 4,
+      feverApplied: false,
+      gateTriggeredCount: 0
+    }
+  });
+  actor.send({ type: 'REQUEST_FEVER_ACTIVATION' });
+
+  assert.equal(actor.getSnapshot().context.isFeverActive, true);
+  assert.equal(actor.getSnapshot().context.feverMeter, 0);
+
+  actor.send({
+    type: 'TURN_RESOLVED',
+    payload: {
+      destroyedBlocksThisTurn: 0,
+      feverApplied: false,
+      gateTriggeredCount: 1
+    }
+  });
+
+  assert.equal(actor.getSnapshot().context.isFeverActive, false);
+  assert.equal(actor.getSnapshot().context.feverMeter, 10);
+});
