@@ -7,7 +7,13 @@ type TRetryAdOutcome =
   | { status: 'denied'; reason: 'AD_LOAD_FAILED' }
   | { status: 'cancelled' };
 
+const FEVER_CHARGE_PER_BLOCK = 30;
+const FEVER_CHARGE_PER_GATE = 10;
+const FEVER_METER_MAX = 100;
+
 interface ISessionContext {
+  feverMeter: number;
+  isFeverActive: boolean;
   hasConsumedRewardedRetry: boolean;
   retryCount: number;
 }
@@ -15,7 +21,16 @@ interface ISessionContext {
 type TSessionEvent =
   | { type: 'BOOT_FINISHED' }
   | { type: 'STAGE_FAILED' }
+  | {
+      type: 'TURN_RESOLVED';
+      payload: {
+        destroyedBlocksThisTurn: number;
+        feverApplied: boolean;
+        gateTriggeredCount: number;
+      };
+    }
   | { type: 'REQUEST_RETRY' }
+  | { type: 'REQUEST_FEVER_ACTIVATION' }
   | { type: 'REQUEST_REWARDED_RETRY' }
   | { type: 'RETRY_RESTORED' }
   | { type: 'RESET_SESSION' };
@@ -57,6 +72,8 @@ export function createSessionMachine({
       requestRewardedRetry: fromPromise(async () => requestRewardedRetry())
     },
     guards: {
+      canActivateFever: ({ context }) =>
+        context.feverMeter >= FEVER_METER_MAX && !context.isFeverActive,
       canUseRewardedRetry: ({ context }) => !context.hasConsumedRewardedRetry,
       rewardedRetryGranted: ({ event }) =>
         'output' in event &&
@@ -71,19 +88,51 @@ export function createSessionMachine({
       incrementRetryCount: assign({
         retryCount: ({ context }) => context.retryCount + 1
       }),
+      resolveFeverTurn: assign({
+        feverMeter: ({ context, event }) => {
+          if (event.type !== 'TURN_RESOLVED') {
+            return context.feverMeter;
+          }
+
+          const addedCharge =
+            event.payload.destroyedBlocksThisTurn * FEVER_CHARGE_PER_BLOCK +
+            event.payload.gateTriggeredCount * FEVER_CHARGE_PER_GATE;
+          const nextMeter = Math.min(context.feverMeter + addedCharge, FEVER_METER_MAX);
+
+          return context.isFeverActive ? nextMeter : nextMeter;
+        },
+        isFeverActive: ({ context, event }) => {
+          if (event.type !== 'TURN_RESOLVED') {
+            return context.isFeverActive;
+          }
+
+          return event.payload.feverApplied ? false : context.isFeverActive;
+        }
+      }),
+      activateFever: assign({
+        feverMeter: 0,
+        isFeverActive: true
+      }),
       consumeRewardedRetry: assign({
         hasConsumedRewardedRetry: true,
         retryCount: ({ context }) => context.retryCount + 1
       }),
       resetSessionProgress: assign({
+        feverMeter: 0,
+        isFeverActive: false,
         hasConsumedRewardedRetry: false,
         retryCount: 0
+      }),
+      clearActiveFever: assign({
+        isFeverActive: false
       })
     }
   }).createMachine({
     id: 'session',
     initial: 'booting',
     context: {
+      feverMeter: 0,
+      isFeverActive: false,
       hasConsumedRewardedRetry: false,
       retryCount: 0
     },
@@ -98,7 +147,15 @@ export function createSessionMachine({
       playing: {
         on: {
           STAGE_FAILED: {
-            target: 'failed.offer'
+            target: 'failed.offer',
+            actions: 'clearActiveFever'
+          },
+          TURN_RESOLVED: {
+            actions: 'resolveFeverTurn'
+          },
+          REQUEST_FEVER_ACTIVATION: {
+            guard: 'canActivateFever',
+            actions: 'activateFever'
           },
           RESET_SESSION: {
             target: 'playing',

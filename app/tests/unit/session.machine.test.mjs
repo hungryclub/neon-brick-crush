@@ -114,3 +114,61 @@ test('session machine can reset session progress back to baseline', () => {
   assert.equal(actor.getSnapshot().context.retryCount, 0);
   assert.equal(actor.getSnapshot().context.hasConsumedRewardedRetry, false);
 });
+
+test('session machine charges fever meter from turn results up to ready state', () => {
+  const actor = createActor(createSessionMachine()).start();
+
+  actor.send({ type: 'BOOT_FINISHED' });
+  actor.send({
+    type: 'TURN_RESOLVED',
+    payload: {
+      destroyedBlocksThisTurn: 2,
+      feverApplied: false,
+      gateTriggeredCount: 1
+    }
+  });
+  actor.send({
+    type: 'TURN_RESOLVED',
+    payload: {
+      destroyedBlocksThisTurn: 2,
+      feverApplied: false,
+      gateTriggeredCount: 0
+    }
+  });
+
+  assert.equal(actor.getSnapshot().context.feverMeter, 100);
+  assert.equal(actor.getSnapshot().context.isFeverActive, false);
+});
+
+test('session machine activates fever only when the meter is ready and clears it after use', () => {
+  const actor = createActor(createSessionMachine()).start();
+
+  actor.send({ type: 'BOOT_FINISHED' });
+  actor.send({ type: 'REQUEST_FEVER_ACTIVATION' });
+  assert.equal(actor.getSnapshot().context.isFeverActive, false);
+
+  actor.send({
+    type: 'TURN_RESOLVED',
+    payload: {
+      destroyedBlocksThisTurn: 4,
+      feverApplied: false,
+      gateTriggeredCount: 0
+    }
+  });
+  actor.send({ type: 'REQUEST_FEVER_ACTIVATION' });
+
+  assert.equal(actor.getSnapshot().context.feverMeter, 0);
+  assert.equal(actor.getSnapshot().context.isFeverActive, true);
+
+  actor.send({
+    type: 'TURN_RESOLVED',
+    payload: {
+      destroyedBlocksThisTurn: 1,
+      feverApplied: true,
+      gateTriggeredCount: 0
+    }
+  });
+
+  assert.equal(actor.getSnapshot().context.isFeverActive, false);
+  assert.equal(actor.getSnapshot().context.feverMeter, 30);
+});

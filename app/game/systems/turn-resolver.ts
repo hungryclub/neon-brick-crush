@@ -5,12 +5,14 @@ import {
   applyFeverModifiers,
   applyGateModifiers,
   createInitialResolvedTurnState,
+  type IFeverFeedbackEvent,
   type ITurnFeedbackEvent,
   type ITurnModifierTraceEntry
 } from '../mechanics/gate-modifier-pipeline.js';
 
 export interface ITurnResolutionInput {
   board: IStageBoardCell[];
+  feverActive?: boolean;
   gates?: IStageGate[];
   shotPath?: TShotPath | null;
   turnNumber: number;
@@ -20,7 +22,7 @@ export interface ITurnResolutionInput {
 
 export interface ITurnResolutionResult {
   board: IStageBoardCell[];
-  feedbackEvents: ITurnFeedbackEvent[];
+  feedbackEvents: Array<ITurnFeedbackEvent | IFeverFeedbackEvent>;
   hasReachedLossLine: boolean;
   dangerLevel: number;
   modifierTrace: ITurnModifierTraceEntry[];
@@ -29,6 +31,7 @@ export interface ITurnResolutionResult {
 
 export function resolveTurn({
   board,
+  feverActive,
   gates,
   shotPath,
   turnNumber,
@@ -46,10 +49,16 @@ export function resolveTurn({
         }
       ),
       {
+        feverActive,
         gates,
         shotPath
       }
-    )
+    ),
+    {
+      feverActive,
+      gates,
+      shotPath
+    }
   );
   const finalizedBoard = feverApplied.board;
   const maxRow = finalizedBoard.reduce((highestRow, cell) => {

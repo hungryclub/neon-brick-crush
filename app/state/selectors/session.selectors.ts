@@ -24,6 +24,22 @@ export function selectRetryCount(snapshot: SessionSnapshot) {
   return snapshot.context.retryCount;
 }
 
+export function selectFeverMeter(snapshot: SessionSnapshot) {
+  return snapshot.context.feverMeter;
+}
+
+export function selectIsFeverReady(snapshot: SessionSnapshot) {
+  return snapshot.context.feverMeter >= 100;
+}
+
+export function selectIsFeverActive(snapshot: SessionSnapshot) {
+  return snapshot.context.isFeverActive;
+}
+
+export function selectCanActivateFever(snapshot: SessionSnapshot) {
+  return selectIsFeverReady(snapshot) && !snapshot.context.isFeverActive;
+}
+
 export function selectIsRewardedRetryPending(snapshot: SessionSnapshot) {
   return snapshot.matches({ failed: 'requestingRewardedRetry' });
 }

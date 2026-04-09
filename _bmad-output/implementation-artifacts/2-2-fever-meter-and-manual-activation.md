@@ -1,6 +1,6 @@
 # Story 2.2: 피버 게이지와 수동 발동 구현
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -22,37 +22,37 @@ so that I can choose when to create a power moment.
 
 ## Tasks / Subtasks
 
-- [ ] Extend session orchestration to own fever meter and readiness. (AC: 1, 2)
-  - [ ] Add explicit XState context/state support for fever meter value, ready
+- [x] Extend session orchestration to own fever meter and readiness. (AC: 1, 2)
+  - [x] Add explicit XState context/state support for fever meter value, ready
         status, and active status or activation window.
-  - [ ] Keep fever truth in `session.machine.ts` and selectors, not in Zustand
+  - [x] Keep fever truth in `session.machine.ts` and selectors, not in Zustand
         or Phaser Scene state.
-  - [ ] Define clear session events for charge gain and player activation intent.
-- [ ] Route gameplay charge events through runtime bridge into XState. (AC: 1)
-  - [ ] Have runtime emit only charge-worthy gameplay events or summarized turn
+  - [x] Define clear session events for charge gain and player activation intent.
+- [x] Route gameplay charge events through runtime bridge into XState. (AC: 1)
+  - [x] Have runtime emit only charge-worthy gameplay events or summarized turn
         payloads rather than directly mutating fever state.
-  - [ ] Ensure React/HUD consumes selector data only and does not calculate
+  - [x] Ensure React/HUD consumes selector data only and does not calculate
         readiness itself.
-  - [ ] Preserve current retry/session flow behavior while adding fever updates.
-- [ ] Expose a fever-ready HUD/button flow for manual activation. (AC: 1, 2)
-  - [ ] Add a clear fever meter/readiness indicator to HUD or overlay UI.
-  - [ ] Add a player-triggered fever activation control that dispatches only a
+  - [x] Preserve current retry/session flow behavior while adding fever updates.
+- [x] Expose a fever-ready HUD/button flow for manual activation. (AC: 1, 2)
+  - [x] Add a clear fever meter/readiness indicator to HUD or overlay UI.
+  - [x] Add a player-triggered fever activation control that dispatches only a
         session event.
-  - [ ] Prevent invalid activation when meter is not ready.
-- [ ] Deliver resolved fever activation to runtime through the bridge boundary.
+  - [x] Prevent invalid activation when meter is not ready.
+- [x] Deliver resolved fever activation to runtime through the bridge boundary.
       (AC: 2)
-  - [ ] Extend `GameRuntimeBridge` with the minimal activation command/event
+  - [x] Extend `GameRuntimeBridge` with the minimal activation command/event
         needed by runtime.
-  - [ ] Ensure Scene receives only the resolved activation signal, not policy
+  - [x] Ensure Scene receives only the resolved activation signal, not policy
         decisions about readiness.
-  - [ ] Keep fever modifier integration aligned with Story 2.1 pipeline order.
-- [ ] Add focused tests and verification for fever ownership and activation.
+  - [x] Keep fever modifier integration aligned with Story 2.1 pipeline order.
+- [x] Add focused tests and verification for fever ownership and activation.
       (AC: 1, 2)
-  - [ ] Add session machine tests for meter charging, readiness, and activation.
-  - [ ] Add at least one bridge/runtime test confirming activation crosses the
+  - [x] Add session machine tests for meter charging, readiness, and activation.
+  - [x] Add at least one bridge/runtime test confirming activation crosses the
         XState-to-runtime boundary without duplicated ownership.
-  - [ ] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
-  - [ ] Manually verify: meter charges during play, ready state is visible, and
+  - [x] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
+  - [x] Manually verify: meter charges during play, ready state is visible, and
         tapping fever activates through the intended flow.
 
 ## Dev Notes
@@ -242,6 +242,12 @@ GPT-5 Codex
   architecture state-ownership patterns, project context rules, and current HUD/runtime/session structure.
 - Existing code inspection confirmed Story 2.1 already preserves the fever slot
   in the modifier pipeline, so Story 2.2 can focus on ownership and activation flow.
+- `npm run test`, `npm run typecheck`, and `npm run build` all passed after
+  session-owned fever meter/readiness, runtime bridge turn payloads, and manual
+  activation UI were added.
+- Runtime now emits turn summary payloads for fever charge, while XState owns
+  readiness/activation and dispatches only resolved activation commands back to
+  the Scene.
 
 ### Completion Notes List
 
@@ -249,4 +255,20 @@ GPT-5 Codex
   and Story 2.3 combo feedback work.
 - Fixed the implementation guardrails so fever meter/readiness stays in XState
   while Phaser and React only exchange events and resolved commands.
+- Added bridge support for `turn resolved` payloads and `fever activation`
+  commands, plus session selectors and HUD/button presentation for fever state.
+- Wired the fever pipeline slot to a lightweight runtime effect so activation is
+  observable in play without moving policy into Scene code.
 
+### File List
+
+- app/game/hud-bridges/game-runtime-bridge.ts
+- app/game/mechanics/gate-modifier-pipeline.ts
+- app/game/systems/turn-resolver.ts
+- app/game/scenes/StageScene.ts
+- app/state/machines/session.machine.ts
+- app/state/selectors/session.selectors.ts
+- app/ui/components/HudPanel.tsx
+- app/ui/screens/GameShell.tsx
+- app/tests/unit/game-runtime-bridge.test.mjs
+- app/tests/unit/session.machine.test.mjs

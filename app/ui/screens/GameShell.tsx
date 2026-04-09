@@ -11,7 +11,10 @@ import createGameRuntimeBridge from '../../game/hud-bridges/game-runtime-bridge'
 import HudPanel from '../components/HudPanel';
 import { sessionActor } from '../../state/machines/session.machine';
 import {
+  selectCanActivateFever,
   selectCanUseRewardedRetry,
+  selectFeverMeter,
+  selectIsFeverActive,
   selectIsSessionBooting,
   selectIsSessionFailed,
   selectIsRewardedRetryPending,
@@ -29,7 +32,10 @@ export default function GameShell() {
   const storeSetHasRuntime = useUiStore((state) => state.storeSetHasRuntime);
   const storeSetRuntimeHud = useUiStore((state) => state.storeSetRuntimeHud);
   const runtimeHud = useUiStore((state) => state.storeRuntimeHud);
+  const canActivateFever = useSelector(sessionActor, selectCanActivateFever);
   const canUseRewardedRetry = useSelector(sessionActor, selectCanUseRewardedRetry);
+  const feverMeter = useSelector(sessionActor, selectFeverMeter);
+  const isFeverActive = useSelector(sessionActor, selectIsFeverActive);
   const isSessionFailed = useSelector(sessionActor, selectIsSessionFailed);
   const isRewardedRetryPending = useSelector(sessionActor, selectIsRewardedRetryPending);
   const sessionPhase = useSelector(sessionActor, selectSessionPhase);
@@ -58,6 +64,9 @@ export default function GameShell() {
     const unsubscribeStageResetCompleted = runtimeBridge.onStageResetCompleted(() => {
       sessionActor.send({ type: 'RETRY_RESTORED' });
     });
+    const unsubscribeTurnResolved = runtimeBridge.onTurnResolved((payload) => {
+      sessionActor.send({ type: 'TURN_RESOLVED', payload });
+    });
 
     const runtime = createGameRuntime({
       parent: runtimeHostRef.current,
@@ -69,6 +78,7 @@ export default function GameShell() {
       unsubscribeRuntimeHud();
       unsubscribeStageFailed();
       unsubscribeStageResetCompleted();
+      unsubscribeTurnResolved();
       runtimeBridgeRef.current = null;
       storeSetHasRuntime(false);
       storeSetRuntimeHud(createInitialRuntimeHudSnapshot());
@@ -84,11 +94,39 @@ export default function GameShell() {
     runtimeBridgeRef.current?.requestStageReset();
   }, [isSessionRetrying]);
 
+  useEffect(() => {
+    if (!isFeverActive) {
+      return;
+    }
+
+    runtimeBridgeRef.current?.requestFeverActivation();
+  }, [isFeverActive]);
+
   return (
     <main style={layoutStyle}>
       <section style={stageShellStyle}>
         <div ref={runtimeHostRef} id='game-runtime-host' style={runtimeHostStyle} />
-        <HudPanel runtimeHud={runtimeHud} sessionPhase={sessionPhase} />
+        <HudPanel
+          canActivateFever={canActivateFever}
+          feverMeter={feverMeter}
+          isFeverActive={isFeverActive}
+          runtimeHud={runtimeHud}
+          sessionPhase={sessionPhase}
+        />
+        <button
+          style={{
+            ...feverButtonStyle,
+            ...(canActivateFever ? feverButtonReadyStyle : feverButtonDisabledStyle),
+            ...(isFeverActive ? feverButtonActiveStyle : null)
+          }}
+          type='button'
+          disabled={!canActivateFever || isSessionFailed || isFeverActive}
+          onClick={() => {
+            sessionActor.send({ type: 'REQUEST_FEVER_ACTIVATION' });
+          }}
+        >
+          {isFeverActive ? 'Fever Active' : canActivateFever ? 'Activate Fever' : 'Build Fever'}
+        </button>
         {isSessionBooting ? <div style={bootOverlayStyle}>Booting runtime shell...</div> : null}
         {isSessionFailed ? (
           <div style={failureOverlayStyle}>
@@ -168,6 +206,36 @@ const stageShellStyle = {
 const runtimeHostStyle = {
   width: '100%',
   height: '100%'
+} as const;
+
+const feverButtonStyle = {
+  position: 'absolute',
+  right: 18,
+  bottom: 18,
+  zIndex: 2,
+  borderRadius: 999,
+  padding: '14px 18px',
+  fontWeight: 700,
+  border: '1px solid rgba(255, 255, 255, 0.15)',
+  transition: 'transform 120ms ease, opacity 120ms ease'
+} as const;
+
+const feverButtonDisabledStyle = {
+  background: 'rgba(14, 18, 30, 0.78)',
+  color: 'rgba(245, 247, 255, 0.55)',
+  cursor: 'not-allowed'
+} as const;
+
+const feverButtonReadyStyle = {
+  background: 'linear-gradient(135deg, #ffe680, #ff7d6b)',
+  color: '#1a1020',
+  cursor: 'pointer'
+} as const;
+
+const feverButtonActiveStyle = {
+  background: 'linear-gradient(135deg, #fff1a6, #ff8aa0)',
+  color: '#180d1a',
+  cursor: 'wait'
 } as const;
 
 const bootOverlayStyle = {

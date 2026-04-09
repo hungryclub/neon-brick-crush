@@ -64,6 +64,8 @@ export default class StageScene extends Phaser.Scene {
 
   private gates: IStageGate[] = [];
 
+  private isFeverActive = false;
+
   private lossRow = 6;
 
   private lastTrackedBallPosition: { x: number; y: number } | null = null;
@@ -213,6 +215,12 @@ export default class StageScene extends Phaser.Scene {
     runtimeBridge?.onStageResetRequested(() => {
       this.resetStageToBaseline();
     });
+    runtimeBridge?.onFeverActivationRequested(() => {
+      this.isFeverActive = true;
+      this.logger.info('stage.fever_activation_requested', {
+        turnNumber: this.turnNumber
+      });
+    });
   }
 
   private canAim(pointer: Phaser.Input.Pointer) {
@@ -361,6 +369,7 @@ export default class StageScene extends Phaser.Scene {
     this.shotState = 'idle';
     this.turnNumber = 1;
     this.destroyedBlocksThisTurn = 0;
+    this.isFeverActive = false;
     this.lastTrackedBallPosition = null;
     this.shotPathSegments = [];
     this.activeCollisionBlockIds.clear();
@@ -382,12 +391,17 @@ export default class StageScene extends Phaser.Scene {
       return;
     }
 
+    const runtimeBridge = this.registry.get(
+      'game-runtime-bridge'
+    ) as IGameRuntimeBridge | undefined;
+
     this.shotState = 'resolving';
     this.runtimeHud.shotState = 'resolving';
     this.syncHud();
 
     const resolution = resolveTurn({
       board: this.boardState,
+      feverActive: this.isFeverActive,
       gates: this.gates,
       shotPath: this.shotPathSegments,
       turnNumber: this.turnNumber,
@@ -404,17 +418,25 @@ export default class StageScene extends Phaser.Scene {
     this.renderBoard();
     this.resetBall();
     this.playTurnFeedback(resolution.feedbackEvents);
+    runtimeBridge?.signalTurnResolved({
+      destroyedBlocksThisTurn: this.destroyedBlocksThisTurn,
+      feverApplied: resolution.feedbackEvents.some((event) => event.type === 'fever.activated'),
+      gateTriggeredCount: resolution.feedbackEvents.filter((event) => event.type === 'gate.triggered')
+        .length
+    });
 
     this.logger.info('stage.turn_resolved', {
       turnNumber: this.turnNumber,
       remainingBlocks: this.boardState.length,
       destroyedBlocksThisTurn: this.destroyedBlocksThisTurn,
+      feverApplied: resolution.feedbackEvents.some((event) => event.type === 'fever.activated'),
       hasReachedLossLine: resolution.hasReachedLossLine,
       modifierTrace: resolution.modifierTrace.map((entry) => `${entry.phase}:${entry.applied}`),
       feedbackEvents: resolution.feedbackEvents.map((event) => event.type)
     });
 
     this.destroyedBlocksThisTurn = 0;
+    this.isFeverActive = false;
     this.lastTrackedBallPosition = null;
     this.shotPathSegments = [];
     this.shotState = 'idle';
@@ -624,8 +646,22 @@ export default class StageScene extends Phaser.Scene {
     this.lastTrackedBallPosition = currentPoint;
   }
 
-  private playTurnFeedback(feedbackEvents: Array<{ type: 'gate.triggered'; gateId: string }>) {
+  private playTurnFeedback(
+    feedbackEvents: Array<
+      | { type: 'gate.triggered'; gateId: string }
+      | { type: 'fever.activated'; affectedCellId: string | null }
+    >
+  ) {
     feedbackEvents.forEach((event) => {
+      if (event.type === 'fever.activated') {
+        this.cameras.main.flash(180, 255, 120, 220, false);
+        this.logger.info('stage.fever_feedback_emitted', {
+          affectedCellId: event.affectedCellId,
+          turnNumber: this.turnNumber
+        });
+        return;
+      }
+
       if (event.type !== 'gate.triggered') {
         return;
       }

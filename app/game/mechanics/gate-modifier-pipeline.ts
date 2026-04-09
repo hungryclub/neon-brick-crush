@@ -10,12 +10,18 @@ export interface ITurnFeedbackEvent {
   affectedCellId: string | null;
 }
 
+export interface IFeverFeedbackEvent {
+  type: 'fever.activated';
+  affectedCellId: string | null;
+}
+
 export interface ITurnModifierTraceEntry {
   phase: TTurnModifierPhase;
   applied: boolean;
 }
 
 export interface ITurnModifierContext {
+  feverActive?: boolean;
   gates?: IStageGate[];
   shotPath?: TShotPath | null;
 }
@@ -26,7 +32,7 @@ export interface IBaseTurnState {
 }
 
 export interface IResolvedTurnState extends IBaseTurnState {
-  feedbackEvents: ITurnFeedbackEvent[];
+  feedbackEvents: Array<ITurnFeedbackEvent | IFeverFeedbackEvent>;
   modifierTrace: ITurnModifierTraceEntry[];
 }
 
@@ -92,11 +98,44 @@ export function applyGateModifiers(
   };
 }
 
-export function applyFeverModifiers(state: IResolvedTurnState): IResolvedTurnState {
-  return appendModifierTrace(state, {
-    phase: 'fever',
-    applied: false
-  });
+export function applyFeverModifiers(
+  state: IResolvedTurnState,
+  context: ITurnModifierContext
+): IResolvedTurnState {
+  if (!context.feverActive) {
+    return appendModifierTrace(state, {
+      phase: 'fever',
+      applied: false
+    });
+  }
+
+  const affectedCell = resolveFeverTargetCell(state.board);
+
+  if (!affectedCell) {
+    return appendModifierTrace(state, {
+      phase: 'fever',
+      applied: false
+    });
+  }
+
+  return {
+    board: state.board.filter((cell) => cell.id !== affectedCell.id),
+    turnNumber: state.turnNumber,
+    feedbackEvents: [
+      ...state.feedbackEvents,
+      {
+        type: 'fever.activated',
+        affectedCellId: affectedCell.id
+      }
+    ],
+    modifierTrace: [
+      ...state.modifierTrace,
+      {
+        phase: 'fever',
+        applied: true
+      }
+    ]
+  };
 }
 
 function resolveTriggeredGate(context: ITurnModifierContext) {
@@ -126,6 +165,24 @@ function resolveGateTargetCell(board: IStageBoardCell[]) {
   return [...topRowCells].sort((left, right) => {
     if (right.hp !== left.hp) {
       return right.hp - left.hp;
+    }
+
+    return left.col - right.col;
+  })[0];
+}
+
+function resolveFeverTargetCell(board: IStageBoardCell[]) {
+  if (board.length === 0) {
+    return null;
+  }
+
+  return [...board].sort((left, right) => {
+    if (right.hp !== left.hp) {
+      return right.hp - left.hp;
+    }
+
+    if (right.row !== left.row) {
+      return right.row - left.row;
     }
 
     return left.col - right.col;

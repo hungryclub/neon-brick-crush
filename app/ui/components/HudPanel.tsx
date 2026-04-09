@@ -1,14 +1,24 @@
 import type { IRuntimeHudSnapshot } from '../../game/hud-bridges/game-runtime-bridge';
 
 interface IHudPanelProps {
+  canActivateFever: boolean;
+  feverMeter: number;
+  isFeverActive: boolean;
   runtimeHud: IRuntimeHudSnapshot;
   sessionPhase: string;
 }
 
-export default function HudPanel({ runtimeHud, sessionPhase }: IHudPanelProps) {
+export default function HudPanel({
+  canActivateFever,
+  feverMeter,
+  isFeverActive,
+  runtimeHud,
+  sessionPhase
+}: IHudPanelProps) {
   const aimAngleLabel =
     runtimeHud.aimAngle === null ? 'ready' : `${Math.round(runtimeHud.aimAngle)}deg`;
   const dangerPercent = Math.round(runtimeHud.dangerLevel * 100);
+  const feverPercent = `${Math.round((feverMeter / 100) * 100)}%`;
 
   return (
     <div style={panelStyle}>
@@ -33,6 +43,15 @@ export default function HudPanel({ runtimeHud, sessionPhase }: IHudPanelProps) {
         <div style={meterStyle}>
           <span>Danger</span>
           <strong>{dangerPercent}%</strong>
+        </div>
+        <div
+          style={{
+            ...meterStyle,
+            ...(isFeverActive ? feverActiveStyle : canActivateFever ? feverReadyStyle : null)
+          }}
+        >
+          <span>Fever</span>
+          <strong>{isFeverActive ? 'active' : canActivateFever ? 'ready' : feverPercent}</strong>
         </div>
         <div
           style={{
@@ -92,4 +111,14 @@ const meterStyle = {
 const lossStateStyle = {
   background: 'rgba(255, 96, 96, 0.26)',
   border: '1px solid rgba(255, 148, 148, 0.38)'
+} as const;
+
+const feverReadyStyle = {
+  background: 'rgba(120, 227, 255, 0.24)',
+  border: '1px solid rgba(120, 227, 255, 0.44)'
+} as const;
+
+const feverActiveStyle = {
+  background: 'rgba(255, 164, 96, 0.28)',
+  border: '1px solid rgba(255, 204, 120, 0.5)'
 } as const;

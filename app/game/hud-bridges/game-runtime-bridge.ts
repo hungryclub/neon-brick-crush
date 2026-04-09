@@ -3,8 +3,16 @@ type RuntimeHudListener = (snapshot: IRuntimeHudSnapshot) => void;
 type RuntimeStageFailedListener = () => void;
 type RuntimeStageResetCompletedListener = () => void;
 type RuntimeStageResetRequestedListener = () => void;
+type RuntimeTurnResolvedListener = (payload: ITurnResolvedPayload) => void;
+type RuntimeFeverActivationRequestedListener = () => void;
 
 export type TRuntimeShotState = 'idle' | 'aiming' | 'launched' | 'resolving';
+
+export interface ITurnResolvedPayload {
+  destroyedBlocksThisTurn: number;
+  feverApplied: boolean;
+  gateTriggeredCount: number;
+}
 
 export interface IRuntimeHudSnapshot {
   aimAngle: number | null;
@@ -41,6 +49,10 @@ export interface IGameRuntimeBridge {
   onStageResetRequested: (listener: RuntimeStageResetRequestedListener) => () => void;
   signalStageResetCompleted: () => void;
   onStageResetCompleted: (listener: RuntimeStageResetCompletedListener) => () => void;
+  signalTurnResolved: (payload: ITurnResolvedPayload) => void;
+  onTurnResolved: (listener: RuntimeTurnResolvedListener) => () => void;
+  requestFeverActivation: () => void;
+  onFeverActivationRequested: (listener: RuntimeFeverActivationRequestedListener) => () => void;
 }
 
 export default function createGameRuntimeBridge(): IGameRuntimeBridge {
@@ -49,6 +61,8 @@ export default function createGameRuntimeBridge(): IGameRuntimeBridge {
   const runtimeStageFailedListeners = new Set<RuntimeStageFailedListener>();
   const runtimeStageResetRequestedListeners = new Set<RuntimeStageResetRequestedListener>();
   const runtimeStageResetCompletedListeners = new Set<RuntimeStageResetCompletedListener>();
+  const runtimeTurnResolvedListeners = new Set<RuntimeTurnResolvedListener>();
+  const runtimeFeverActivationRequestedListeners = new Set<RuntimeFeverActivationRequestedListener>();
 
   return {
     signalRuntimeReady() {
@@ -99,6 +113,26 @@ export default function createGameRuntimeBridge(): IGameRuntimeBridge {
 
       return () => {
         runtimeStageResetCompletedListeners.delete(listener);
+      };
+    },
+    signalTurnResolved(payload) {
+      runtimeTurnResolvedListeners.forEach((listener) => listener(payload));
+    },
+    onTurnResolved(listener) {
+      runtimeTurnResolvedListeners.add(listener);
+
+      return () => {
+        runtimeTurnResolvedListeners.delete(listener);
+      };
+    },
+    requestFeverActivation() {
+      runtimeFeverActivationRequestedListeners.forEach((listener) => listener());
+    },
+    onFeverActivationRequested(listener) {
+      runtimeFeverActivationRequestedListeners.add(listener);
+
+      return () => {
+        runtimeFeverActivationRequestedListeners.delete(listener);
       };
     }
   };

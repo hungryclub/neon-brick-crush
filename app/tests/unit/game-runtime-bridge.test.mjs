@@ -8,6 +8,8 @@ test('game runtime bridge forwards failure and reset lifecycle signals', () => {
   let failedCount = 0;
   let resetRequestedCount = 0;
   let resetCompletedCount = 0;
+  let turnResolvedPayload = null;
+  let feverActivationRequestedCount = 0;
 
   runtimeBridge.onStageFailed(() => {
     failedCount += 1;
@@ -18,12 +20,30 @@ test('game runtime bridge forwards failure and reset lifecycle signals', () => {
   runtimeBridge.onStageResetCompleted(() => {
     resetCompletedCount += 1;
   });
+  runtimeBridge.onTurnResolved((payload) => {
+    turnResolvedPayload = payload;
+  });
+  runtimeBridge.onFeverActivationRequested(() => {
+    feverActivationRequestedCount += 1;
+  });
 
   runtimeBridge.signalStageFailed();
   runtimeBridge.requestStageReset();
   runtimeBridge.signalStageResetCompleted();
+  runtimeBridge.signalTurnResolved({
+    destroyedBlocksThisTurn: 3,
+    feverApplied: true,
+    gateTriggeredCount: 1
+  });
+  runtimeBridge.requestFeverActivation();
 
   assert.equal(failedCount, 1);
   assert.equal(resetRequestedCount, 1);
   assert.equal(resetCompletedCount, 1);
+  assert.deepEqual(turnResolvedPayload, {
+    destroyedBlocksThisTurn: 3,
+    feverApplied: true,
+    gateTriggeredCount: 1
+  });
+  assert.equal(feverActivationRequestedCount, 1);
 });
