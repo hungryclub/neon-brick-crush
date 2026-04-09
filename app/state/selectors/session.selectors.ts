@@ -17,9 +17,29 @@ export function selectIsSessionFailed(snapshot: SessionSnapshot) {
 }
 
 export function selectIsSessionRetrying(snapshot: SessionSnapshot) {
-  return snapshot.matches('retrying');
+  return snapshot.matches('retrying') || snapshot.matches('rewardedRetrying');
 }
 
 export function selectRetryCount(snapshot: SessionSnapshot) {
   return snapshot.context.retryCount;
+}
+
+export function selectIsRewardedRetryPending(snapshot: SessionSnapshot) {
+  return snapshot.matches({ failed: 'requestingRewardedRetry' });
+}
+
+export function selectCanUseRewardedRetry(snapshot: SessionSnapshot) {
+  return !snapshot.context.hasConsumedRewardedRetry;
+}
+
+export function selectRewardedRetryFeedback(snapshot: SessionSnapshot) {
+  if (snapshot.matches({ failed: 'denied' })) {
+    return '광고 재도전 준비에 실패했습니다. 일반 재도전으로 계속할 수 있어요.';
+  }
+
+  if (snapshot.matches({ failed: 'cancelled' })) {
+    return '광고 시청이 취소되었습니다. 다른 선택으로 이어갈 수 있어요.';
+  }
+
+  return null;
 }

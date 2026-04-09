@@ -11,9 +11,12 @@ import createGameRuntimeBridge from '../../game/hud-bridges/game-runtime-bridge'
 import HudPanel from '../components/HudPanel';
 import { sessionActor } from '../../state/machines/session.machine';
 import {
+  selectCanUseRewardedRetry,
   selectIsSessionBooting,
   selectIsSessionFailed,
+  selectIsRewardedRetryPending,
   selectIsSessionRetrying,
+  selectRewardedRetryFeedback,
   selectRetryCount,
   selectSessionPhase
 } from '../../state/selectors/session.selectors';
@@ -26,10 +29,13 @@ export default function GameShell() {
   const storeSetHasRuntime = useUiStore((state) => state.storeSetHasRuntime);
   const storeSetRuntimeHud = useUiStore((state) => state.storeSetRuntimeHud);
   const runtimeHud = useUiStore((state) => state.storeRuntimeHud);
+  const canUseRewardedRetry = useSelector(sessionActor, selectCanUseRewardedRetry);
   const isSessionFailed = useSelector(sessionActor, selectIsSessionFailed);
+  const isRewardedRetryPending = useSelector(sessionActor, selectIsRewardedRetryPending);
   const sessionPhase = useSelector(sessionActor, selectSessionPhase);
   const isSessionBooting = useSelector(sessionActor, selectIsSessionBooting);
   const isSessionRetrying = useSelector(sessionActor, selectIsSessionRetrying);
+  const rewardedRetryFeedback = useSelector(sessionActor, selectRewardedRetryFeedback);
   const retryCount = useSelector(sessionActor, selectRetryCount);
 
   useEffect(() => {
@@ -102,6 +108,24 @@ export default function GameShell() {
               >
                 Instant Retry
               </button>
+              {canUseRewardedRetry ? (
+                <button
+                  style={{
+                    ...secondaryRetryButtonStyle,
+                    ...(isRewardedRetryPending ? disabledButtonStyle : null)
+                  }}
+                  type='button'
+                  disabled={isRewardedRetryPending}
+                  onClick={() => {
+                    sessionActor.send({ type: 'REQUEST_REWARDED_RETRY' });
+                  }}
+                >
+                  {isRewardedRetryPending ? 'Watching Ad...' : 'Rewarded Retry'}
+                </button>
+              ) : null}
+              {rewardedRetryFeedback ? (
+                <p style={failureNoticeStyle}>{rewardedRetryFeedback}</p>
+              ) : null}
               <span style={failureMetaStyle}>retry count: {retryCount}</span>
             </div>
           </div>
@@ -205,6 +229,28 @@ const retryButtonStyle = {
   color: '#08101f',
   fontWeight: 700,
   cursor: 'pointer'
+} as const;
+
+const secondaryRetryButtonStyle = {
+  borderRadius: 999,
+  padding: '14px 18px',
+  background: 'rgba(120, 227, 255, 0.08)',
+  color: '#d8efff',
+  border: '1px solid rgba(120, 227, 255, 0.32)',
+  fontWeight: 700,
+  cursor: 'pointer'
+} as const;
+
+const disabledButtonStyle = {
+  opacity: 0.6,
+  cursor: 'wait'
+} as const;
+
+const failureNoticeStyle = {
+  margin: 0,
+  color: '#ffd3e5',
+  fontSize: 13,
+  lineHeight: 1.45
 } as const;
 
 const failureMetaStyle = {
