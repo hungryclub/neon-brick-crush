@@ -4,27 +4,39 @@ import { useSelector } from '@xstate/react';
 import createGameRuntime from '../../game/core/create-game-runtime';
 import {
   createInitialRuntimeHudSnapshot,
+  type IGameRuntimeBridge,
   type IRuntimeHudSnapshot
 } from '../../game/hud-bridges/game-runtime-bridge';
 import createGameRuntimeBridge from '../../game/hud-bridges/game-runtime-bridge';
 import HudPanel from '../components/HudPanel';
 import { sessionActor } from '../../state/machines/session.machine';
-import { selectIsSessionBooting, selectSessionPhase } from '../../state/selectors/session.selectors';
+import {
+  selectIsSessionBooting,
+  selectIsSessionFailed,
+  selectIsSessionRetrying,
+  selectRetryCount,
+  selectSessionPhase
+} from '../../state/selectors/session.selectors';
 import useUiStore from '../../state/stores/use-ui-store';
 
 export default function GameShell() {
+  const runtimeBridgeRef = useRef<IGameRuntimeBridge | null>(null);
   const runtimeHostRef = useRef<HTMLDivElement | null>(null);
   const storeIsDebugVisible = useUiStore((state) => state.storeIsDebugVisible);
   const storeSetHasRuntime = useUiStore((state) => state.storeSetHasRuntime);
   const storeSetRuntimeHud = useUiStore((state) => state.storeSetRuntimeHud);
   const runtimeHud = useUiStore((state) => state.storeRuntimeHud);
+  const isSessionFailed = useSelector(sessionActor, selectIsSessionFailed);
   const sessionPhase = useSelector(sessionActor, selectSessionPhase);
   const isSessionBooting = useSelector(sessionActor, selectIsSessionBooting);
+  const isSessionRetrying = useSelector(sessionActor, selectIsSessionRetrying);
+  const retryCount = useSelector(sessionActor, selectRetryCount);
 
   useEffect(() => {
     if (!runtimeHostRef.current) return;
 
     const runtimeBridge = createGameRuntimeBridge();
+    runtimeBridgeRef.current = runtimeBridge;
     const unsubscribeRuntimeReady = runtimeBridge.onRuntimeReady(() => {
       storeSetHasRuntime(true);
       sessionActor.send({ type: 'BOOT_FINISHED' });
@@ -34,6 +46,12 @@ export default function GameShell() {
         storeSetRuntimeHud(snapshot);
       }
     );
+    const unsubscribeStageFailed = runtimeBridge.onStageFailed(() => {
+      sessionActor.send({ type: 'STAGE_FAILED' });
+    });
+    const unsubscribeStageResetCompleted = runtimeBridge.onStageResetCompleted(() => {
+      sessionActor.send({ type: 'RETRY_RESTORED' });
+    });
 
     const runtime = createGameRuntime({
       parent: runtimeHostRef.current,
@@ -43,11 +61,22 @@ export default function GameShell() {
     return () => {
       unsubscribeRuntimeReady();
       unsubscribeRuntimeHud();
+      unsubscribeStageFailed();
+      unsubscribeStageResetCompleted();
+      runtimeBridgeRef.current = null;
       storeSetHasRuntime(false);
       storeSetRuntimeHud(createInitialRuntimeHudSnapshot());
       runtime.destroy();
     };
   }, [storeSetHasRuntime, storeSetRuntimeHud]);
+
+  useEffect(() => {
+    if (!isSessionRetrying) {
+      return;
+    }
+
+    runtimeBridgeRef.current?.requestStageReset();
+  }, [isSessionRetrying]);
 
   return (
     <main style={layoutStyle}>
@@ -55,6 +84,28 @@ export default function GameShell() {
         <div ref={runtimeHostRef} id='game-runtime-host' style={runtimeHostStyle} />
         <HudPanel runtimeHud={runtimeHud} sessionPhase={sessionPhase} />
         {isSessionBooting ? <div style={bootOverlayStyle}>Booting runtime shell...</div> : null}
+        {isSessionFailed ? (
+          <div style={failureOverlayStyle}>
+            <div style={failureCardStyle}>
+              <span style={failureEyebrowStyle}>Stage Failed</span>
+              <strong style={failureTitleStyle}>즉시 다시 도전할 수 있어요.</strong>
+              <p style={failureTextStyle}>
+                압박선에 닿았습니다. 전체 앱을 다시 여는 대신 지금 상태에서 바로
+                스테이지를 복구합니다.
+              </p>
+              <button
+                style={retryButtonStyle}
+                type='button'
+                onClick={() => {
+                  sessionActor.send({ type: 'REQUEST_RETRY' });
+                }}
+              >
+                Instant Retry
+              </button>
+              <span style={failureMetaStyle}>retry count: {retryCount}</span>
+            </div>
+          </div>
+        ) : null}
       </section>
       {storeIsDebugVisible ? (
         <aside style={debugPanelStyle}>
@@ -62,6 +113,7 @@ export default function GameShell() {
           <span>session: {sessionPhase}</span>
           <span>turn: {runtimeHud.turnNumber}</span>
           <span>shot: {runtimeHud.shotState}</span>
+          <span>retryCount: {retryCount}</span>
         </aside>
       ) : null}
     </main>
@@ -105,6 +157,59 @@ const bootOverlayStyle = {
   letterSpacing: '0.14em',
   fontSize: 12,
   pointerEvents: 'none'
+} as const;
+
+const failureOverlayStyle = {
+  position: 'absolute',
+  inset: 0,
+  display: 'grid',
+  placeItems: 'center',
+  background: 'linear-gradient(180deg, rgba(8, 10, 22, 0.32), rgba(8, 10, 22, 0.76))'
+} as const;
+
+const failureCardStyle = {
+  width: 'min(84%, 360px)',
+  display: 'grid',
+  gap: 12,
+  padding: '24px 22px',
+  borderRadius: 24,
+  background: 'rgba(18, 20, 38, 0.92)',
+  border: '1px solid rgba(255, 120, 199, 0.35)',
+  boxShadow: '0 18px 60px rgba(0, 0, 0, 0.38)',
+  textAlign: 'center'
+} as const;
+
+const failureEyebrowStyle = {
+  color: '#ff89bf',
+  letterSpacing: '0.14em',
+  textTransform: 'uppercase',
+  fontSize: 11
+} as const;
+
+const failureTitleStyle = {
+  fontSize: 24
+} as const;
+
+const failureTextStyle = {
+  margin: 0,
+  color: 'rgba(245, 247, 255, 0.78)',
+  lineHeight: 1.5,
+  fontSize: 14
+} as const;
+
+const retryButtonStyle = {
+  border: 'none',
+  borderRadius: 999,
+  padding: '14px 18px',
+  background: 'linear-gradient(135deg, #78e3ff, #ff67b0)',
+  color: '#08101f',
+  fontWeight: 700,
+  cursor: 'pointer'
+} as const;
+
+const failureMetaStyle = {
+  color: 'rgba(245, 247, 255, 0.62)',
+  fontSize: 12
 } as const;
 
 const debugPanelStyle = {

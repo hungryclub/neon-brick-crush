@@ -31,6 +31,8 @@ interface IBlockView {
 }
 
 export default class StageScene extends Phaser.Scene {
+  private initialBoardState: IStageBoardCell[] = [];
+
   private readonly logger = createLogger();
 
   private readonly runtimeHud = createInitialRuntimeHudSnapshot();
@@ -50,6 +52,8 @@ export default class StageScene extends Phaser.Scene {
   private lossRow = 6;
 
   private pointerIsDown = false;
+
+  private isStageFailed = false;
 
   private shotState: TRuntimeShotState = 'idle';
 
@@ -113,9 +117,11 @@ export default class StageScene extends Phaser.Scene {
     this.aimGuide = this.add.graphics();
 
     this.createBall();
-    this.boardState = initialBoardState;
+    this.initialBoardState = cloneBoard(initialBoardState);
+    this.boardState = cloneBoard(initialBoardState);
     this.renderBoard();
     this.bindInput();
+    this.bindRuntimeCommands();
     this.syncHud();
     this.time.delayedCall(0, () => {
       this.syncHud();
@@ -174,8 +180,18 @@ export default class StageScene extends Phaser.Scene {
     });
   }
 
+  private bindRuntimeCommands() {
+    const runtimeBridge = this.registry.get(
+      'game-runtime-bridge'
+    ) as IGameRuntimeBridge | undefined;
+
+    runtimeBridge?.onStageResetRequested(() => {
+      this.resetStageToBaseline();
+    });
+  }
+
   private canAim(pointer: Phaser.Input.Pointer) {
-    if (this.shotState !== 'idle') {
+    if (this.shotState !== 'idle' || this.isStageFailed) {
       return false;
     }
 
@@ -284,6 +300,52 @@ export default class StageScene extends Phaser.Scene {
     this.syncHud();
   }
 
+  private handleStageFailure() {
+    if (this.isStageFailed) {
+      return;
+    }
+
+    const runtimeBridge = this.registry.get(
+      'game-runtime-bridge'
+    ) as IGameRuntimeBridge | undefined;
+
+    this.isStageFailed = true;
+    this.pointerIsDown = false;
+    this.aimGuide.clear();
+    this.runtimeHud.canShoot = false;
+    this.runtimeHud.shotState = 'idle';
+    this.logger.warn('stage.failed', {
+      turnNumber: this.turnNumber,
+      remainingBlocks: this.boardState.length
+    });
+    this.syncHud();
+    runtimeBridge?.signalStageFailed();
+  }
+
+  private resetStageToBaseline() {
+    const runtimeBridge = this.registry.get(
+      'game-runtime-bridge'
+    ) as IGameRuntimeBridge | undefined;
+
+    this.isStageFailed = false;
+    this.pointerIsDown = false;
+    this.shotState = 'idle';
+    this.turnNumber = 1;
+    this.destroyedBlocksThisTurn = 0;
+    this.activeCollisionBlockIds.clear();
+    this.aimGuide.clear();
+    this.boardState = cloneBoard(this.initialBoardState);
+    Object.assign(this.runtimeHud, createInitialRuntimeHudSnapshot());
+    this.renderBoard();
+    this.resetBall();
+    this.logger.info('stage.retry_restored', {
+      turnNumber: this.turnNumber,
+      remainingBlocks: this.boardState.length
+    });
+    this.syncHud();
+    runtimeBridge?.signalStageResetCompleted();
+  }
+
   private resolveCurrentTurn() {
     if (this.shotState !== 'launched') {
       return;
@@ -320,8 +382,12 @@ export default class StageScene extends Phaser.Scene {
     this.shotState = 'idle';
     this.runtimeHud.shotState = 'idle';
     this.runtimeHud.destroyedBlocksThisTurn = 0;
-    this.runtimeHud.canShoot = true;
+    this.runtimeHud.canShoot = !resolution.hasReachedLossLine;
     this.syncHud();
+
+    if (resolution.hasReachedLossLine) {
+      this.handleStageFailure();
+    }
   }
 
   private resetBall() {
@@ -493,4 +559,10 @@ function resolveLossRow({
   }, 0);
 
   return Math.max(maxPlayableRow, highestInitialRow + 2, 1);
+}
+
+function cloneBoard(board: IStageBoardCell[]) {
+  return board.map((cell) => ({
+    ...cell
+  }));
 }

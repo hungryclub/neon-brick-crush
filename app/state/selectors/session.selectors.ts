@@ -11,3 +11,15 @@ export function selectSessionPhase(snapshot: SessionSnapshot) {
 export function selectIsSessionBooting(snapshot: SessionSnapshot) {
   return snapshot.matches('booting');
 }
+
+export function selectIsSessionFailed(snapshot: SessionSnapshot) {
+  return snapshot.matches('failed');
+}
+
+export function selectIsSessionRetrying(snapshot: SessionSnapshot) {
+  return snapshot.matches('retrying');
+}
+
+export function selectRetryCount(snapshot: SessionSnapshot) {
+  return snapshot.context.retryCount;
+}

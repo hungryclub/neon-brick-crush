@@ -1,5 +1,8 @@
 type RuntimeReadyListener = () => void;
 type RuntimeHudListener = (snapshot: IRuntimeHudSnapshot) => void;
+type RuntimeStageFailedListener = () => void;
+type RuntimeStageResetCompletedListener = () => void;
+type RuntimeStageResetRequestedListener = () => void;
 
 export type TRuntimeShotState = 'idle' | 'aiming' | 'launched' | 'resolving';
 
@@ -32,11 +35,20 @@ export interface IGameRuntimeBridge {
   onRuntimeReady: (listener: RuntimeReadyListener) => () => void;
   signalRuntimeHudChanged: (snapshot: IRuntimeHudSnapshot) => void;
   onRuntimeHudChanged: (listener: RuntimeHudListener) => () => void;
+  signalStageFailed: () => void;
+  onStageFailed: (listener: RuntimeStageFailedListener) => () => void;
+  requestStageReset: () => void;
+  onStageResetRequested: (listener: RuntimeStageResetRequestedListener) => () => void;
+  signalStageResetCompleted: () => void;
+  onStageResetCompleted: (listener: RuntimeStageResetCompletedListener) => () => void;
 }
 
 export default function createGameRuntimeBridge(): IGameRuntimeBridge {
   const runtimeReadyListeners = new Set<RuntimeReadyListener>();
   const runtimeHudListeners = new Set<RuntimeHudListener>();
+  const runtimeStageFailedListeners = new Set<RuntimeStageFailedListener>();
+  const runtimeStageResetRequestedListeners = new Set<RuntimeStageResetRequestedListener>();
+  const runtimeStageResetCompletedListeners = new Set<RuntimeStageResetCompletedListener>();
 
   return {
     signalRuntimeReady() {
@@ -57,6 +69,36 @@ export default function createGameRuntimeBridge(): IGameRuntimeBridge {
 
       return () => {
         runtimeHudListeners.delete(listener);
+      };
+    },
+    signalStageFailed() {
+      runtimeStageFailedListeners.forEach((listener) => listener());
+    },
+    onStageFailed(listener) {
+      runtimeStageFailedListeners.add(listener);
+
+      return () => {
+        runtimeStageFailedListeners.delete(listener);
+      };
+    },
+    requestStageReset() {
+      runtimeStageResetRequestedListeners.forEach((listener) => listener());
+    },
+    onStageResetRequested(listener) {
+      runtimeStageResetRequestedListeners.add(listener);
+
+      return () => {
+        runtimeStageResetRequestedListeners.delete(listener);
+      };
+    },
+    signalStageResetCompleted() {
+      runtimeStageResetCompletedListeners.forEach((listener) => listener());
+    },
+    onStageResetCompleted(listener) {
+      runtimeStageResetCompletedListeners.add(listener);
+
+      return () => {
+        runtimeStageResetCompletedListeners.delete(listener);
       };
     }
   };
