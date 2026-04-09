@@ -1,6 +1,6 @@
 import type { Result } from 'neverthrow';
 
-import worldContentManifest from '../manifests/world-content.manifest.js';
+import worldContentManifest from '../manifests/world-content.manifest.ts';
 import type {
   IRawStageContentDefinition,
   IStageRuntimeConfig,
@@ -11,8 +11,8 @@ import {
   STAGE_CONFIG_INVALID,
   STAGE_CONFIG_NOT_FOUND,
   type IGameError
-} from '../../domain/errors/game-error.js';
-import { err, ok } from '../../shared/result/result.js';
+} from '../../domain/errors/game-error.ts';
+import { err, ok } from '../../shared/result/result.ts';
 
 export const DEFAULT_STAGE_SELECTION: IStageSelection = {
   worldId: 'world-01',

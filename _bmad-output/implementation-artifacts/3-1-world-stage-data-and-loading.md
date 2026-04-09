@@ -266,14 +266,14 @@ GPT-5 Codex
   logs with `worldId`, `stageId`, and `stageKind` at load and stage boundaries.
 - Added loader-focused unit tests covering default load success, missing-stage
   typed failure, supported stage kinds, and board creation from normalized config.
+- Review patch removed parallel runtime `.js` copies so the loader now reads the
+  typed source modules directly, reducing content-boundary drift risk.
 
 ### File List
 
 - app/assets/loaders/stage-config.loader.ts
 - app/assets/manifests/world-content.manifest.ts
-- app/assets/manifests/world-content.manifest.js
 - app/domain/errors/game-error.ts
-- app/domain/errors/game-error.js
 - app/domain/models/stage-model.ts
 - app/domain/models/world-model.ts
 - app/game/core/create-game-runtime.ts
@@ -281,7 +281,8 @@ GPT-5 Codex
 - app/game/entities/stage-board.ts
 - app/game/scenes/BootScene.ts
 - app/game/scenes/StageScene.ts
-- app/shared/result/result.js
+- app/shared/result/result.ts
+- app/tsconfig.json
 - app/tests/unit/stage-config.loader.test.mjs
 - _bmad-output/implementation-artifacts/3-1-world-stage-data-and-loading.md
 - _bmad-output/implementation-artifacts/sprint-status.yaml
