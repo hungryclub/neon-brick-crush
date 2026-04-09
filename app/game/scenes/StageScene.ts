@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 
+import type { IStageRuntimeConfig } from '../../domain/models/stage-model';
 import createLogger from '../../shared/logging/create-logger';
 import {
   createSpawnRow,
@@ -25,14 +26,16 @@ import {
   type IRuntimeHudSnapshot,
   type TRuntimeShotState
 } from '../hud-bridges/game-runtime-bridge';
+import {
+  GAME_RUNTIME_BRIDGE_REGISTRY_KEY,
+  STAGE_RUNTIME_CONFIG_REGISTRY_KEY
+} from '../core/runtime-registry-keys';
 import { resolveTurn } from '../systems/turn-resolver';
 
 const BALL_RADIUS = 10;
 const BLOCK_WIDTH = 142;
 const BLOCK_HEIGHT = 54;
 const BLOCK_GAP = 12;
-const BOARD_COLUMNS = 7;
-
 interface IBlockView {
   cell: IStageBoardCell;
   label: Phaser.GameObjects.Text;
@@ -86,6 +89,8 @@ export default class StageScene extends Phaser.Scene {
 
   private destroyedBlocksThisTurn = 0;
 
+  private stageRuntimeConfig!: IStageRuntimeConfig;
+
   private readonly launcherPosition = {
     x: 0,
     y: 0
@@ -100,7 +105,17 @@ export default class StageScene extends Phaser.Scene {
     const height = this.scale.height;
     const boardTop = 112;
     const launcherY = height - 86;
-    const initialBoardState = createInitialStageBoard();
+    const stageRuntimeConfig = this.registry.get(
+      STAGE_RUNTIME_CONFIG_REGISTRY_KEY
+    ) as IStageRuntimeConfig | undefined;
+
+    if (!stageRuntimeConfig) {
+      throw new Error('Stage runtime config is missing from the registry.');
+    }
+
+    this.stageRuntimeConfig = stageRuntimeConfig;
+
+    const initialBoardState = createInitialStageBoard(stageRuntimeConfig);
 
     this.launcherPosition.x = width / 2;
     this.launcherPosition.y = launcherY;
@@ -152,6 +167,12 @@ export default class StageScene extends Phaser.Scene {
     this.renderBoard();
     this.bindInput();
     this.bindRuntimeCommands();
+    this.logger.info('stage.bootstrapped', {
+      worldId: this.stageRuntimeConfig.worldId,
+      stageId: this.stageRuntimeConfig.stageId,
+      stageKind: this.stageRuntimeConfig.stageKind,
+      stageTitle: this.stageRuntimeConfig.stageTitle
+    });
     this.syncHud();
     this.time.delayedCall(0, () => {
       this.syncHud();
@@ -213,7 +234,7 @@ export default class StageScene extends Phaser.Scene {
 
   private bindRuntimeCommands() {
     const runtimeBridge = this.registry.get(
-      'game-runtime-bridge'
+      GAME_RUNTIME_BRIDGE_REGISTRY_KEY
     ) as IGameRuntimeBridge | undefined;
 
     runtimeBridge?.onStageResetRequested(() => {
@@ -314,6 +335,8 @@ export default class StageScene extends Phaser.Scene {
     this.runtimeHud.canShoot = false;
     this.activeCollisionBlockIds.clear();
     this.logger.info('stage.turn_started', {
+      worldId: this.stageRuntimeConfig.worldId,
+      stageId: this.stageRuntimeConfig.stageId,
       turnNumber: this.turnNumber,
       velocityX: Math.round(shotVelocity.x),
       velocityY: Math.round(shotVelocity.y)
@@ -347,7 +370,7 @@ export default class StageScene extends Phaser.Scene {
     }
 
     const runtimeBridge = this.registry.get(
-      'game-runtime-bridge'
+      GAME_RUNTIME_BRIDGE_REGISTRY_KEY
     ) as IGameRuntimeBridge | undefined;
 
     this.isStageFailed = true;
@@ -356,6 +379,8 @@ export default class StageScene extends Phaser.Scene {
     this.runtimeHud.canShoot = false;
     this.runtimeHud.shotState = 'idle';
     this.logger.warn('stage.failed', {
+      worldId: this.stageRuntimeConfig.worldId,
+      stageId: this.stageRuntimeConfig.stageId,
       turnNumber: this.turnNumber,
       remainingBlocks: this.boardState.length
     });
@@ -365,7 +390,7 @@ export default class StageScene extends Phaser.Scene {
 
   private resetStageToBaseline() {
     const runtimeBridge = this.registry.get(
-      'game-runtime-bridge'
+      GAME_RUNTIME_BRIDGE_REGISTRY_KEY
     ) as IGameRuntimeBridge | undefined;
 
     this.isStageFailed = false;
@@ -383,6 +408,8 @@ export default class StageScene extends Phaser.Scene {
     this.renderBoard();
     this.resetBall();
     this.logger.info('stage.retry_restored', {
+      worldId: this.stageRuntimeConfig.worldId,
+      stageId: this.stageRuntimeConfig.stageId,
       turnNumber: this.turnNumber,
       remainingBlocks: this.boardState.length
     });
@@ -396,7 +423,7 @@ export default class StageScene extends Phaser.Scene {
     }
 
     const runtimeBridge = this.registry.get(
-      'game-runtime-bridge'
+      GAME_RUNTIME_BRIDGE_REGISTRY_KEY
     ) as IGameRuntimeBridge | undefined;
 
     this.shotState = 'resolving';
@@ -410,7 +437,7 @@ export default class StageScene extends Phaser.Scene {
       shotPath: this.shotPathSegments,
       turnNumber: this.turnNumber,
       lossRow: this.lossRow,
-      spawnRow: createSpawnRow
+      spawnRow: (turnNumber) => createSpawnRow(turnNumber, this.stageRuntimeConfig)
     });
 
     this.boardState = resolution.board;
@@ -434,6 +461,9 @@ export default class StageScene extends Phaser.Scene {
     });
 
     this.logger.info('stage.turn_resolved', {
+      worldId: this.stageRuntimeConfig.worldId,
+      stageId: this.stageRuntimeConfig.stageId,
+      stageKind: this.stageRuntimeConfig.stageKind,
       turnNumber: this.turnNumber,
       remainingBlocks: this.boardState.length,
       destroyedBlocksThisTurn: this.destroyedBlocksThisTurn,
@@ -591,7 +621,8 @@ export default class StageScene extends Phaser.Scene {
 
   private resolveBlockPosition(cell: IStageBoardCell) {
     const totalWidth =
-      BOARD_COLUMNS * BLOCK_WIDTH + (BOARD_COLUMNS - 1) * BLOCK_GAP;
+      this.stageRuntimeConfig.boardColumns * BLOCK_WIDTH +
+      (this.stageRuntimeConfig.boardColumns - 1) * BLOCK_GAP;
     const startX = (this.scale.width - totalWidth) / 2 + BLOCK_WIDTH / 2;
     const startY = 120 + BLOCK_HEIGHT / 2;
 
@@ -690,6 +721,8 @@ export default class StageScene extends Phaser.Scene {
       }
 
       this.logger.info('stage.feedback_command_emitted', {
+        worldId: this.stageRuntimeConfig.worldId,
+        stageId: this.stageRuntimeConfig.stageId,
         commandType: command.type,
         context:
           command.type === 'sfx-cue'
@@ -704,7 +737,7 @@ export default class StageScene extends Phaser.Scene {
 
   private syncHud() {
     const runtimeBridge = this.registry.get(
-      'game-runtime-bridge'
+      GAME_RUNTIME_BRIDGE_REGISTRY_KEY
     ) as IGameRuntimeBridge | undefined;
 
     if (!runtimeBridge) {

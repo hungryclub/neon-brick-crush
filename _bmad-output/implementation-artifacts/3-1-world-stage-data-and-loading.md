@@ -1,6 +1,6 @@
 # Story 3.1: 월드/스테이지 데이터 모델과 로딩 구현
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -21,41 +21,41 @@ so that content can scale without brittle hardcoding.
 
 ## Tasks / Subtasks
 
-- [ ] Define typed world/stage domain models and loader contracts. (AC: 1, 2)
-  - [ ] Add explicit model types for world metadata, stage metadata, stage type,
+- [x] Define typed world/stage domain models and loader contracts. (AC: 1, 2)
+  - [x] Add explicit model types for world metadata, stage metadata, stage type,
         and normalized runtime stage configuration.
-  - [ ] Keep file/data shape decoding separate from runtime-facing normalized
+  - [x] Keep file/data shape decoding separate from runtime-facing normalized
         config so Scene code never depends on raw asset layout.
-  - [ ] Represent tutorial, normal, challenge, and climax as typed stage kinds
+  - [x] Represent tutorial, normal, challenge, and climax as typed stage kinds
         instead of ad hoc string checks spread across runtime code.
-- [ ] Introduce typed config loader and manifest entry points for content access.
+- [x] Introduce typed config loader and manifest entry points for content access.
       (AC: 1)
-  - [ ] Create loader modules under `app/assets/loaders` or `app/config` that
+  - [x] Create loader modules under `app/assets/loaders` or `app/config` that
         expose typed APIs for world and stage lookup.
-  - [ ] Route static asset/data discovery through manifest modules rather than
+  - [x] Route static asset/data discovery through manifest modules rather than
         direct Scene/file reads.
-  - [ ] Keep recoverable lookup/load failures on typed result paths consistent
+  - [x] Keep recoverable lookup/load failures on typed result paths consistent
         with the architecture guidance.
-- [ ] Normalize loaded stage payloads before runtime boot. (AC: 2)
-  - [ ] Add a normalization step that transforms raw stage content into the
+- [x] Normalize loaded stage payloads before runtime boot. (AC: 2)
+  - [x] Add a normalization step that transforms raw stage content into the
         minimal stage config consumed by runtime bootstrapping.
-  - [ ] Ensure `StageScene` or runtime boot code receives only normalized stage
+  - [x] Ensure `StageScene` or runtime boot code receives only normalized stage
         config and not raw world/stage asset documents.
-  - [ ] Preserve extension points for future stage presentation differences such
+  - [x] Preserve extension points for future stage presentation differences such
         as tutorial/challenge/climax rules and UI treatment.
-- [ ] Wire initial world/stage loading into the current app boot path. (AC: 1, 2)
-  - [ ] Choose a minimal entry world/stage flow that fits the current shell
+- [x] Wire initial world/stage loading into the current app boot path. (AC: 1, 2)
+  - [x] Choose a minimal entry world/stage flow that fits the current shell
         without prematurely building the full world-map UI from Story 3.2.
-  - [ ] Keep content ownership outside Phaser runtime so future progression and
+  - [x] Keep content ownership outside Phaser runtime so future progression and
         selection flows can swap stage payloads cleanly.
-  - [ ] Add structured logs with `worldId` and `stageId` where load/boot
+  - [x] Add structured logs with `worldId` and `stageId` where load/boot
         boundaries are crossed.
-- [ ] Add focused verification for loader boundaries and normalization. (AC: 1, 2)
-  - [ ] Add unit tests for typed loader success/failure and normalization output.
-  - [ ] Add at least one test proving unsupported direct raw-file access is not
+- [x] Add focused verification for loader boundaries and normalization. (AC: 1, 2)
+  - [x] Add unit tests for typed loader success/failure and normalization output.
+  - [x] Add at least one test proving unsupported direct raw-file access is not
         required by runtime code paths.
-  - [ ] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
-  - [ ] Manually verify: the app boots a stage through the new loader path and
+  - [x] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
+  - [x] Manually verify: the app boots a stage through the new loader path and
         stage kind metadata is visible in logs/debug output.
 
 ## Dev Notes
@@ -260,8 +260,28 @@ GPT-5 Codex
 - Scoped this story to content models, loaders, manifests, and normalization,
   while intentionally deferring world-map UI and progression persistence to
   Stories 3.2 and 4.x.
+- Added typed world/stage models, a manifest-backed loader, and normalized stage
+  runtime config handoff through the game runtime registry.
+- Updated `StageScene` to boot from normalized stage config and emit structured
+  logs with `worldId`, `stageId`, and `stageKind` at load and stage boundaries.
+- Added loader-focused unit tests covering default load success, missing-stage
+  typed failure, supported stage kinds, and board creation from normalized config.
 
 ### File List
 
+- app/assets/loaders/stage-config.loader.ts
+- app/assets/manifests/world-content.manifest.ts
+- app/assets/manifests/world-content.manifest.js
+- app/domain/errors/game-error.ts
+- app/domain/errors/game-error.js
+- app/domain/models/stage-model.ts
+- app/domain/models/world-model.ts
+- app/game/core/create-game-runtime.ts
+- app/game/core/runtime-registry-keys.ts
+- app/game/entities/stage-board.ts
+- app/game/scenes/BootScene.ts
+- app/game/scenes/StageScene.ts
+- app/shared/result/result.js
+- app/tests/unit/stage-config.loader.test.mjs
 - _bmad-output/implementation-artifacts/3-1-world-stage-data-and-loading.md
 - _bmad-output/implementation-artifacts/sprint-status.yaml

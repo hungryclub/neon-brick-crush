@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 
 import type { IGameRuntimeBridge } from '../hud-bridges/game-runtime-bridge';
+import { GAME_RUNTIME_BRIDGE_REGISTRY_KEY } from '../core/runtime-registry-keys';
 
 export const BOOT_SCENE_KEY = 'boot-scene';
 
@@ -22,7 +23,7 @@ export default class BootScene extends Phaser.Scene {
     }
 
     const runtimeBridge = this.registry.get(
-      'game-runtime-bridge'
+      GAME_RUNTIME_BRIDGE_REGISTRY_KEY
     ) as IGameRuntimeBridge | undefined;
 
     if (!runtimeBridge) {

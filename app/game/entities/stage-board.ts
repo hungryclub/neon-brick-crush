@@ -1,3 +1,5 @@
+import type { IStageRuntimeConfig } from '../../domain/models/stage-model';
+
 export interface IStageBoardCell {
   id: string;
   col: number;
@@ -5,20 +7,8 @@ export interface IStageBoardCell {
   hp: number;
 }
 
-const INITIAL_PATTERNS = [
-  [1, 1, 0, 1, 0, 1, 1],
-  [0, 1, 1, 0, 1, 1, 0]
-] as const;
-
-const TURN_PATTERNS = [
-  [1, 0, 1, 0, 1, 0, 1],
-  [0, 1, 0, 1, 0, 1, 0],
-  [1, 1, 0, 1, 1, 0, 1],
-  [0, 1, 1, 0, 1, 1, 0]
-] as const;
-
-export function createInitialStageBoard() {
-  return INITIAL_PATTERNS.flatMap((pattern, row) =>
+export function createInitialStageBoard(stageRuntimeConfig: IStageRuntimeConfig) {
+  return stageRuntimeConfig.initialBoardPatterns.flatMap((pattern, row) =>
     createCellsFromPattern({
       pattern,
       row,
@@ -27,8 +17,14 @@ export function createInitialStageBoard() {
   );
 }
 
-export function createSpawnRow(turnNumber: number) {
-  const pattern = TURN_PATTERNS[(turnNumber - 1) % TURN_PATTERNS.length];
+export function createSpawnRow(
+  turnNumber: number,
+  stageRuntimeConfig: Pick<IStageRuntimeConfig, 'spawnPatterns'>
+) {
+  const pattern =
+    stageRuntimeConfig.spawnPatterns[
+      (turnNumber - 1) % stageRuntimeConfig.spawnPatterns.length
+    ];
 
   return createCellsFromPattern({
     pattern,
