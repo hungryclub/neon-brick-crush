@@ -1,6 +1,6 @@
 # Story 1.2: 조준/발사/턴 해석 루프 구현
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -57,6 +57,11 @@ so that I can control each turn directly.
   - [x] Run `npm run build` in `app/`.
   - [x] Manually verify drag aim, release shot, block hit/destruction, turn end,
         board descent, and visible loss pressure in the running build.
+
+### Review Findings
+
+- [x] [Review][Patch] Portrait/mobile viewport calculates a negative loss row, so loss pressure is already tripped before any turn resolves. [`app/game/scenes/StageScene.ts:77`]
+- [x] [Review][Patch] Releasing the drag outside the canvas leaves the scene stuck in `aiming`, because only `pointerup` is handled and the input state never resets. [`app/game/scenes/StageScene.ts:155`]
 
 ## Dev Notes
 

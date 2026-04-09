@@ -71,10 +71,15 @@ export default class StageScene extends Phaser.Scene {
     const height = this.scale.height;
     const boardTop = 112;
     const launcherY = height - 86;
+    const initialBoardState = createInitialStageBoard();
 
     this.launcherPosition.x = width / 2;
     this.launcherPosition.y = launcherY;
-    this.lossRow = Math.floor((launcherY - boardTop) / (BLOCK_HEIGHT + BLOCK_GAP)) - 1;
+    this.lossRow = resolveLossRow({
+      boardTop,
+      initialBoard: initialBoardState,
+      launcherY
+    });
 
     this.physics.world.setBounds(0, 0, width, height);
     this.physics.world.setBoundsCollision(true, true, true, false);
@@ -108,7 +113,7 @@ export default class StageScene extends Phaser.Scene {
     this.aimGuide = this.add.graphics();
 
     this.createBall();
-    this.boardState = createInitialStageBoard();
+    this.boardState = initialBoardState;
     this.renderBoard();
     this.bindInput();
     this.syncHud();
@@ -157,8 +162,15 @@ export default class StageScene extends Phaser.Scene {
         return;
       }
 
-      this.pointerIsDown = false;
-      this.launchShot(pointer);
+      this.finishAim(pointer);
+    });
+
+    this.input.on('pointerupoutside', (pointer: Phaser.Input.Pointer) => {
+      if (!this.pointerIsDown || this.shotState !== 'aiming') {
+        return;
+      }
+
+      this.cancelAim(pointer);
     });
   }
 
@@ -248,6 +260,26 @@ export default class StageScene extends Phaser.Scene {
       turnNumber: this.turnNumber,
       velocityX: Math.round(shotVelocity.x),
       velocityY: Math.round(shotVelocity.y)
+    });
+    this.syncHud();
+  }
+
+  private finishAim(pointer: Phaser.Input.Pointer) {
+    this.pointerIsDown = false;
+    this.launchShot(pointer);
+  }
+
+  private cancelAim(pointer: Phaser.Input.Pointer) {
+    this.pointerIsDown = false;
+    this.aimGuide.clear();
+    this.shotState = 'idle';
+    this.runtimeHud.aimAngle = null;
+    this.runtimeHud.canShoot = true;
+    this.runtimeHud.shotState = 'idle';
+    this.logger.info('stage.aim_cancelled', {
+      pointerX: Math.round(pointer.x),
+      pointerY: Math.round(pointer.y),
+      turnNumber: this.turnNumber
     });
     this.syncHud();
   }
@@ -443,4 +475,22 @@ function resolveBlockColor(hp: number) {
   }
 
   return 0x78e3ff;
+}
+
+function resolveLossRow({
+  boardTop,
+  initialBoard,
+  launcherY
+}: {
+  boardTop: number;
+  initialBoard: IStageBoardCell[];
+  launcherY: number;
+}) {
+  const maxPlayableRow =
+    Math.floor((launcherY - boardTop) / (BLOCK_HEIGHT + BLOCK_GAP)) - 1;
+  const highestInitialRow = initialBoard.reduce((highestRow, cell) => {
+    return Math.max(highestRow, cell.row);
+  }, 0);
+
+  return Math.max(maxPlayableRow, highestInitialRow + 2, 1);
 }

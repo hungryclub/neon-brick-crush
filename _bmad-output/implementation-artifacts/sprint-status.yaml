@@ -1,11 +1,11 @@
 generated_at: '2026-04-08'
 project: 'neo-brick-crush'
 status: 'active'
-last_updated: '2026-04-08'
+last_updated: '2026-04-09'
 development_status:
   epic-1: in-progress
   1-1-app-root-and-runtime-shell: review
-  1-2-aim-shoot-and-turn-loop: review
+  1-2-aim-shoot-and-turn-loop: done
   1-3-fail-and-instant-retry: backlog
   1-4-rewarded-ad-retry-flow: backlog
   epic-2: backlog

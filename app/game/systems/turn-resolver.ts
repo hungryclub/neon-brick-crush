@@ -20,6 +20,7 @@ export function resolveTurn({
   lossRow,
   spawnRow
 }: ITurnResolutionInput): ITurnResolutionResult {
+  const safeLossRow = Math.max(lossRow, 1);
   const descendedBoard = board.map((cell) => ({
     ...cell,
     row: cell.row + 1
@@ -32,8 +33,8 @@ export function resolveTurn({
 
   return {
     board: nextBoard,
-    hasReachedLossLine: maxRow >= lossRow,
-    dangerLevel: Math.min(maxRow / lossRow, 1),
+    hasReachedLossLine: maxRow >= safeLossRow,
+    dangerLevel: Math.max(0, Math.min(maxRow / safeLossRow, 1)),
     turnNumber: nextTurnNumber
   };
 }

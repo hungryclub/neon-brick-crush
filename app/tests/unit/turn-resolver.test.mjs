@@ -54,3 +54,17 @@ test('resolveTurn keeps deterministic output for identical inputs', () => {
 
   assert.deepEqual(first, second);
 });
+
+test('resolveTurn clamps invalid loss rows to a safe danger range', () => {
+  const result = resolveTurn({
+    board: [{ id: 'block-a', col: 4, row: 1, hp: 3 }],
+    turnNumber: 2,
+    lossRow: -3,
+    spawnRow() {
+      return [];
+    }
+  });
+
+  assert.equal(result.hasReachedLossLine, true);
+  assert.equal(result.dangerLevel, 1);
+});
