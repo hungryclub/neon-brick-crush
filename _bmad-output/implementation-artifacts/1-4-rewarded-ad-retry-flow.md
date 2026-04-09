@@ -1,6 +1,6 @@
 # Story 1.4: 광고 시청 후 재도전 흐름 구현
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -246,6 +246,9 @@ GPT-5 Codex
 - `npm run build` passed in `app/` with an existing Vite chunk size warning.
 - Preview smoke confirmed the app still serves successfully after rewarded retry
   UI changes; interactive ad flow remains based on local stub outcomes.
+- Added a rejected rewarded-ad request regression test so thrown transport/SDK
+  failures now fall back to handled failure state instead of leaving the retry
+  UI pending forever.
 
 ### Completion Notes List
 
@@ -257,6 +260,8 @@ GPT-5 Codex
 - Kept ad adapter invocation inside the state/service layer and out of Scene/UI.
 - Expanded the failure overlay to present both instant retry and rewarded retry
   options with pending/error feedback.
+- Hardened the rewarded retry invoke path with an `onError` fallback so rejected
+  ad requests return to the normal failure flow.
 
 ### File List
 

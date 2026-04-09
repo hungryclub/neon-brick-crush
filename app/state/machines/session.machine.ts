@@ -139,7 +139,10 @@ export function createSessionMachine({
                 {
                   target: 'denied'
                 }
-              ]
+              ],
+              onError: {
+                target: 'denied'
+              }
             }
           },
           denied: {

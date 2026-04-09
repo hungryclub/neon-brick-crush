@@ -82,6 +82,25 @@ test('session machine falls back to failed state when rewarded retry is cancelle
   assert.equal(actor.getSnapshot().context.hasConsumedRewardedRetry, false);
 });
 
+test('session machine falls back to failed state when rewarded retry request rejects', async () => {
+  const actor = createActor(
+    createSessionMachine({
+      requestRewardedRetry: async () => {
+        throw new Error('ad transport failed');
+      }
+    })
+  ).start();
+
+  actor.send({ type: 'BOOT_FINISHED' });
+  actor.send({ type: 'STAGE_FAILED' });
+  actor.send({ type: 'REQUEST_REWARDED_RETRY' });
+
+  await flushActor();
+
+  assert.equal(actor.getSnapshot().matches({ failed: 'denied' }), true);
+  assert.equal(actor.getSnapshot().context.hasConsumedRewardedRetry, false);
+});
+
 test('session machine can reset session progress back to baseline', () => {
   const actor = createActor(createSessionMachine()).start();
 
