@@ -46,6 +46,7 @@ const stages: IRawStageContentDefinition[] = [
     title: 'Arc Pulse',
     kind: 'normal',
     assetBundleIds: ['stage-02-board'],
+    stageIdsToUnlockOnClear: ['world-01-stage-03', 'world-01-stage-04'],
     initialBoardPatterns: [
       [1, 0, 1, 1, 1, 0, 1],
       [0, 1, 1, 0, 1, 1, 0]
@@ -64,6 +65,7 @@ const stages: IRawStageContentDefinition[] = [
     kind: 'challenge',
     assetBundleIds: ['stage-03-board'],
     teachingFocusText: '짧은 턴 안에 효율적인 파괴 루트를 찾는 숙련 테스트',
+    stageIdsToUnlockOnClear: [],
     initialBoardPatterns: [
       [1, 1, 1, 0, 1, 1, 1],
       [0, 1, 0, 1, 0, 1, 0]

@@ -15,6 +15,7 @@ export interface IStageRulesProfile {
 
 export interface IStageUnlockProfile {
   nextWorldIdToUnlock: string | null;
+  stageIdsToUnlockOnClear: string[];
 }
 
 export interface IRawStageContentDefinition {
@@ -25,6 +26,7 @@ export interface IRawStageContentDefinition {
   assetBundleIds: string[];
   teachingFocusText?: string;
   nextWorldIdToUnlock?: string | null;
+  stageIdsToUnlockOnClear?: string[];
   initialBoardPatterns: number[][];
   spawnPatterns: number[][];
 }

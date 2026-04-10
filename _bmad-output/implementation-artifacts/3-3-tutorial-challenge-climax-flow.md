@@ -295,6 +295,10 @@ GPT-5 Codex
 - Updated `StageScene` to apply stage-type rule differences through loss-line
   buffer and gate layout profiles, while tutorial stages surface teach-by-play
   prompts inside the live stage shell.
+- Review patch: changed unlock policy so challenge stages no longer act as the
+  mandatory gate to a world climax, and moved loss-row profile logic into a
+  testable rule helper so tutorial/challenge/climax difficulty differences are
+  now materially applied.
 - Verified the new behavior with loader and repository regression tests plus
   `npm run test`, `npm run typecheck`, and `npm run build`.
 
@@ -308,6 +312,7 @@ GPT-5 Codex
 - app/domain/models/stage-model.ts
 - app/game/entities/stage-gates.ts
 - app/game/scenes/StageScene.ts
+- app/game/systems/stage-rule-profile.ts
 - app/platform/persistence/progression.repository.ts
 - app/state/selectors/progression.selectors.ts
 - app/tests/unit/progression.repository.test.mjs

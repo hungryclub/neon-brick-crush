@@ -27,6 +27,10 @@ import {
   type TRuntimeShotState
 } from '../hud-bridges/game-runtime-bridge';
 import {
+  resolveLossRow,
+  resolveStagePromptText
+} from '../systems/stage-rule-profile';
+import {
   GAME_RUNTIME_BRIDGE_REGISTRY_KEY,
   STAGE_RUNTIME_CONFIG_REGISTRY_KEY
 } from '../core/runtime-registry-keys';
@@ -829,52 +833,8 @@ function resolveBlockColor(hp: number) {
   return 0x78e3ff;
 }
 
-function resolveLossRow({
-  boardTop,
-  initialBoard,
-  launcherY,
-  lossRowBufferRows
-}: {
-  boardTop: number;
-  initialBoard: IStageBoardCell[];
-  launcherY: number;
-  lossRowBufferRows: number;
-}) {
-  const maxPlayableRow =
-    Math.floor((launcherY - boardTop) / (BLOCK_HEIGHT + BLOCK_GAP)) - 1;
-  const highestInitialRow = initialBoard.reduce((highestRow, cell) => {
-    return Math.max(highestRow, cell.row);
-  }, 0);
-
-  return Math.max(maxPlayableRow, highestInitialRow + lossRowBufferRows, 1);
-}
-
 function cloneBoard(board: IStageBoardCell[]) {
   return board.map((cell) => ({
     ...cell
   }));
-}
-
-function resolveStagePromptText(
-  stageRuntimeConfig: IStageRuntimeConfig,
-  turnNumber: number,
-  shotState: TRuntimeShotState
-) {
-  if (stageRuntimeConfig.stageKind === 'tutorial') {
-    if (turnNumber <= 1 && shotState === 'idle') {
-      return 'drag to aim / release to learn the first bounce';
-    }
-
-    return 'keep playing: repeat the angle before the next row drops';
-  }
-
-  if (stageRuntimeConfig.stageKind === 'challenge') {
-    return 'precision route: protect your star run with efficient shots';
-  }
-
-  if (stageRuntimeConfig.stageKind === 'climax') {
-    return 'world finale: hold the lane and finish the last lattice';
-  }
-
-  return 'drag to aim / release to shoot';
 }

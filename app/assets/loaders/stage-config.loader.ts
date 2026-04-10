@@ -112,7 +112,8 @@ export function loadStageRuntimeConfig({
     presentationProfile: createStagePresentationProfile(stage),
     rulesProfile: createStageRulesProfile(stage),
     unlockProfile: {
-      nextWorldIdToUnlock: stage.nextWorldIdToUnlock ?? null
+      nextWorldIdToUnlock: stage.nextWorldIdToUnlock ?? null,
+      stageIdsToUnlockOnClear: [...(stage.stageIdsToUnlockOnClear ?? [])]
     },
     initialBoardPatterns: clonePatterns(stage.initialBoardPatterns),
     spawnPatterns: clonePatterns(stage.spawnPatterns)

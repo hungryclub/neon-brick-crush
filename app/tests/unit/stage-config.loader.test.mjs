@@ -58,11 +58,24 @@ test('stage config loader projects typed stage presentation profiles', () => {
     worldId: 'world-01',
     stageId: 'world-01-stage-01'
   })._unsafeUnwrap();
+  const normalStage = loadStageRuntimeConfig({
+    worldId: 'world-01',
+    stageId: 'world-01-stage-02'
+  })._unsafeUnwrap();
+  const challengeStage = loadStageRuntimeConfig({
+    worldId: 'world-01',
+    stageId: 'world-01-stage-03'
+  })._unsafeUnwrap();
   const worldList = loadAllWorldContent()._unsafeUnwrap();
 
   assert.equal(tutorialStage.presentationProfile.shellLabel, 'Tutorial Stage');
   assert.equal(tutorialStage.presentationProfile.teachByPlayCueList.length >= 2, true);
   assert.equal(tutorialStage.rulesProfile.gateLayout, 'training');
+  assert.deepEqual(normalStage.unlockProfile.stageIdsToUnlockOnClear, [
+    'world-01-stage-03',
+    'world-01-stage-04'
+  ]);
+  assert.deepEqual(challengeStage.unlockProfile.stageIdsToUnlockOnClear, []);
   assert.equal(worldList.some((world) => world.id === 'world-02'), true);
 });
 

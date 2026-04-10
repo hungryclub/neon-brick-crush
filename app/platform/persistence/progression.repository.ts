@@ -8,46 +8,54 @@ import {
   loadWorldContent
 } from '../../assets/loaders/stage-config.loader.ts';
 
-let progressionSnapshot: IProgressionSnapshot = {
-  version: 3,
-  unlockedWorldIdList: ['world-01'],
-  stageProgressById: {
-    'world-01-stage-01': {
-      bestStarCount: 0,
-      isCompleted: false,
-      isUnlocked: true
+let progressionSnapshot: IProgressionSnapshot = createInitialProgressionSnapshot();
+
+export function resetProgressionSnapshotForTests() {
+  progressionSnapshot = createInitialProgressionSnapshot();
+}
+
+function createInitialProgressionSnapshot(): IProgressionSnapshot {
+  return {
+    version: 3,
+    unlockedWorldIdList: ['world-01'],
+    stageProgressById: {
+      'world-01-stage-01': {
+        bestStarCount: 0,
+        isCompleted: false,
+        isUnlocked: true
+      },
+      'world-01-stage-02': {
+        bestStarCount: 0,
+        isCompleted: false,
+        isUnlocked: false
+      },
+      'world-01-stage-03': {
+        bestStarCount: 0,
+        isCompleted: false,
+        isUnlocked: false
+      },
+      'world-01-stage-04': {
+        bestStarCount: 0,
+        isCompleted: false,
+        isUnlocked: false
+      },
+      'world-02-stage-01': {
+        bestStarCount: 0,
+        isCompleted: false,
+        isUnlocked: false
+      },
+      'world-02-stage-02': {
+        bestStarCount: 0,
+        isCompleted: false,
+        isUnlocked: false
+      }
     },
-    'world-01-stage-02': {
-      bestStarCount: 0,
-      isCompleted: false,
-      isUnlocked: false
-    },
-    'world-01-stage-03': {
-      bestStarCount: 0,
-      isCompleted: false,
-      isUnlocked: false
-    },
-    'world-01-stage-04': {
-      bestStarCount: 0,
-      isCompleted: false,
-      isUnlocked: false
-    },
-    'world-02-stage-01': {
-      bestStarCount: 0,
-      isCompleted: false,
-      isUnlocked: false
-    },
-    'world-02-stage-02': {
-      bestStarCount: 0,
-      isCompleted: false,
-      isUnlocked: false
+    lastPlayedStageSelection: {
+      worldId: 'world-01',
+      stageId: 'world-01-stage-01'
     }
-  },
-  lastPlayedStageSelection: {
-    worldId: 'world-01',
-    stageId: 'world-01-stage-01'
-  }
-};
+  };
+}
 
 export interface IProgressionRepository {
   load: () => Promise<IProgressionSnapshot>;
@@ -98,15 +106,20 @@ export default function createProgressionRepository(): IProgressionRepository {
           }
         }
       };
-      const nextStageSelection = resolveNextStageSelection(record);
+      const unlockedStageSelections = resolveUnlockedStageSelections(record, stageRuntimeConfigResult);
 
-      if (nextStageSelection) {
+      if (unlockedStageSelections.length > 0) {
         nextSnapshot.stageProgressById = {
           ...nextSnapshot.stageProgressById,
-          [nextStageSelection.stageId]: {
-            ...(nextSnapshot.stageProgressById[nextStageSelection.stageId] ?? createEmptyStageProgress()),
-            isUnlocked: true
-          }
+          ...Object.fromEntries(
+            unlockedStageSelections.map((selection) => [
+              selection.stageId,
+              {
+                ...(nextSnapshot.stageProgressById[selection.stageId] ?? createEmptyStageProgress()),
+                isUnlocked: true
+              }
+            ])
+          )
         };
       }
 
@@ -125,23 +138,43 @@ export default function createProgressionRepository(): IProgressionRepository {
   };
 }
 
-function resolveNextStageSelection(selection: IStageSelection) {
+function resolveUnlockedStageSelections(
+  selection: IStageSelection,
+  stageRuntimeConfigResult: ReturnType<typeof loadStageRuntimeConfig>
+) {
+  if (stageRuntimeConfigResult.isOk()) {
+    const configuredStageIds = stageRuntimeConfigResult.value.unlockProfile.stageIdsToUnlockOnClear;
+
+    if (configuredStageIds.length > 0) {
+      return configuredStageIds.map((stageId) => ({
+        worldId: selection.worldId,
+        stageId
+      }));
+    }
+
+    if (stageRuntimeConfigResult.value.stageKind === 'challenge') {
+      return [];
+    }
+  }
+
   const worldResult = loadWorldContent(selection.worldId);
 
   if (worldResult.isErr()) {
-    return null;
+    return [];
   }
 
   const currentIndex = worldResult.value.stageIds.indexOf(selection.stageId);
 
   if (currentIndex === -1 || currentIndex >= worldResult.value.stageIds.length - 1) {
-    return null;
+    return [];
   }
 
-  return {
-    worldId: selection.worldId,
-    stageId: worldResult.value.stageIds[currentIndex + 1]
-  };
+  return [
+    {
+      worldId: selection.worldId,
+      stageId: worldResult.value.stageIds[currentIndex + 1]
+    }
+  ];
 }
 
 function unlockWorldEntry(snapshot: IProgressionSnapshot, worldId: string) {
