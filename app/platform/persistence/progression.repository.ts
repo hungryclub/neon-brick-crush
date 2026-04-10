@@ -63,9 +63,15 @@ export default function createProgressionRepository({
       }
 
       if (!rawResult.value) {
-        progressionSnapshot = createInitialProgressionSnapshot();
-        await persistSnapshot(storageDriver, progressionSnapshot);
-        return ok(structuredClone(progressionSnapshot));
+        const defaultSnapshot = createInitialProgressionSnapshot();
+        const persistResult = await persistSnapshot(storageDriver, defaultSnapshot);
+
+        if (persistResult.isErr()) {
+          progressionSnapshot = defaultSnapshot;
+          return err(persistResult.error);
+        }
+
+        return ok(persistResult.value);
       }
 
       const parsedEnvelopeResult = parseProgressionSaveEnvelope(rawResult.value);
@@ -81,12 +87,12 @@ export default function createProgressionRepository({
       return ok(structuredClone(progressionSnapshot));
     },
     async saveLastPlayedStageSelection(selection) {
-      progressionSnapshot = {
+      const nextSnapshot: IProgressionSnapshot = {
         ...progressionSnapshot,
         lastPlayedStageSelection: selection
       };
 
-      return persistSnapshot(storageDriver, progressionSnapshot);
+      return persistSnapshot(storageDriver, nextSnapshot);
     },
     async saveStageCompletion(record) {
       if (!record) {
@@ -143,12 +149,10 @@ export default function createProgressionRepository({
         }
       }
 
-      progressionSnapshot = nextSnapshot;
-
-      return persistSnapshot(storageDriver, progressionSnapshot);
+      return persistSnapshot(storageDriver, nextSnapshot);
     },
     async saveSettings(settingsPatch) {
-      progressionSnapshot = {
+      const nextSnapshot: IProgressionSnapshot = {
         ...progressionSnapshot,
         settings: {
           ...progressionSnapshot.settings,
@@ -156,7 +160,7 @@ export default function createProgressionRepository({
         }
       };
 
-      return persistSnapshot(storageDriver, progressionSnapshot);
+      return persistSnapshot(storageDriver, nextSnapshot);
     }
   };
 }

@@ -272,6 +272,9 @@ GPT-5 Codex
 - Updated `GameShell.tsx` to hydrate progression through typed repository load
   results and recover boot safely to default progression when persistence data
   is invalid.
+- Review patch: save writes now update the in-memory progression truth only after
+  durable persistence succeeds, and stage-clear save failures surface an
+  explicit retry path instead of silently resetting the session.
 - Added unit tests for settings persistence, save schema metadata, and invalid
   payload recovery, then verified with `npm run test`, `npm run typecheck`, and
   `npm run build`.

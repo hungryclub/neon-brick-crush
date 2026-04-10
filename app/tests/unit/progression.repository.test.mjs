@@ -4,7 +4,11 @@ import assert from 'node:assert/strict';
 import createProgressionRepository, {
   resetProgressionSnapshotForTests
 } from '../../platform/persistence/progression.repository.ts';
-import { PROGRESSION_SAVE_SCHEMA_VERSION } from '../../platform/persistence/save-recovery.ts';
+import {
+  PROGRESSION_SAVE_SCHEMA_VERSION,
+  parseProgressionSaveEnvelope
+} from '../../platform/persistence/save-recovery.ts';
+import { err, ok } from '../../shared/result/result.ts';
 
 test('progression repository persists stars and unlocks the next stage', async () => {
   resetProgressionSnapshotForTests();
@@ -144,4 +148,48 @@ test('progression repository returns a typed load error and recovers to defaults
 
   assert.equal(loadResult.isErr(), true);
   assert.equal(loadResult._unsafeUnwrapErr().code, 'SAVE_LOAD_FAILED');
+});
+
+test('progression repository does not advance in-memory progression when a write fails', async () => {
+  resetProgressionSnapshotForTests();
+  let rawSave = null;
+  let shouldFailNextWrite = true;
+  const repository = createProgressionRepository({
+    storageDriver: {
+      async read() {
+        return ok(rawSave);
+      },
+      async write(raw) {
+        if (shouldFailNextWrite) {
+          shouldFailNextWrite = false;
+          return err({
+            code: 'SAVE_LOAD_FAILED',
+            message: 'write failed'
+          });
+        }
+
+        rawSave = raw;
+        return ok(undefined);
+      }
+    }
+  });
+
+  const failedSelectionSave = await repository.saveLastPlayedStageSelection({
+    worldId: 'world-02',
+    stageId: 'world-02-stage-01'
+  });
+  const successfulSettingsSave = await repository.saveSettings({
+    isReducedMotionEnabled: true
+  });
+
+  assert.equal(failedSelectionSave.isErr(), true);
+  assert.equal(successfulSettingsSave.isOk(), true);
+
+  const parsedEnvelope = parseProgressionSaveEnvelope(rawSave)._unsafeUnwrap();
+
+  assert.deepEqual(parsedEnvelope.progression.lastPlayedStageSelection, {
+    worldId: 'world-01',
+    stageId: 'world-01-stage-01'
+  });
+  assert.equal(parsedEnvelope.progression.settings.isReducedMotionEnabled, true);
 });

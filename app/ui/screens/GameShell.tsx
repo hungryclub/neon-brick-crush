@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSelector } from '@xstate/react';
 
-import type { IStageSelection } from '../../domain/models/stage-model';
+import type { IStageSelection, TStageKind } from '../../domain/models/stage-model';
 import { loadStageRuntimeConfig } from '../../assets/loaders/stage-config.loader.ts';
 import createProgressionRepository from '../../platform/persistence/progression.repository';
 import { createInitialProgressionSnapshot } from '../../platform/persistence/save-recovery.ts';
@@ -64,6 +64,13 @@ export default function GameShell() {
   const isProgressionLoading = useSelector(progressionActor, selectIsProgressionLoading);
   const latestStageCompletion = useSelector(progressionActor, selectLatestStageCompletion);
   const worldMapWorldSections = useSelector(progressionActor, selectWorldMapWorlds);
+  const [pendingStageClearSave, setPendingStageClearSave] = useState<{
+    selection: IStageSelection;
+    stageKind?: TStageKind;
+    stageTitle?: string;
+    starCount: number;
+  } | null>(null);
+  const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
   const activeStageRuntimeConfig = activeStageSelection
     ? loadStageRuntimeConfig(activeStageSelection).match(
         (config) => config,
@@ -125,39 +132,15 @@ export default function GameShell() {
         return;
       }
 
-      progressionRepositoryRef.current
-        .saveStageCompletion({
-          ...activeStageSelection,
-          starCount: resolveStageStarCount(retryCountRef.current)
-        })
-        .then((result) => {
-          if (result.isErr()) {
-            loggerRef.current.warn('progression.save_stage_completion_failed', {
-              code: result.error.code,
-              message: result.error.message
-            });
-            return;
-          }
+      const starCount = resolveStageStarCount(retryCountRef.current);
 
-          const snapshot = result.value;
-          const unlockedWorldIds = snapshot.unlockedWorldIdList.filter(
-            (worldId) => !latestUnlockedWorldIdsRef.current.includes(worldId)
-          );
-
-          progressionActor.send({
-            type: 'STAGE_COMPLETED',
-            record: {
-              ...activeStageSelection,
-              starCount: resolveStageStarCount(retryCountRef.current),
-              stageKind: activeStageRuntimeConfig?.stageKind,
-              stageTitle: activeStageRuntimeConfig?.stageTitle,
-              unlockedWorldIds
-            },
-            snapshot
-          });
-          latestUnlockedWorldIdsRef.current = snapshot.unlockedWorldIdList;
-        });
-      sessionActor.send({ type: 'RESET_SESSION' });
+      setPendingStageClearSave({
+        selection: activeStageSelection,
+        stageKind: activeStageRuntimeConfig?.stageKind,
+        stageTitle: activeStageRuntimeConfig?.stageTitle,
+        starCount
+      });
+      setSaveErrorMessage(null);
     });
     const unsubscribeStageResetCompleted = runtimeBridge.onStageResetCompleted(() => {
       sessionActor.send({ type: 'RETRY_RESTORED' });
@@ -185,6 +168,59 @@ export default function GameShell() {
       runtime.destroy();
     };
   }, [activeStageSelection, storeSetHasRuntime, storeSetRuntimeHud]);
+
+  useEffect(() => {
+    if (!pendingStageClearSave) {
+      return;
+    }
+
+    let isDisposed = false;
+
+    progressionRepositoryRef.current
+      .saveStageCompletion({
+        ...pendingStageClearSave.selection,
+        starCount: pendingStageClearSave.starCount
+      })
+      .then((result) => {
+        if (isDisposed) {
+          return;
+        }
+
+        if (result.isErr()) {
+          loggerRef.current.warn('progression.save_stage_completion_failed', {
+            code: result.error.code,
+            message: result.error.message
+          });
+          setSaveErrorMessage('클리어 보상을 저장하지 못했습니다. 다시 저장을 시도해 주세요.');
+          return;
+        }
+
+        const snapshot = result.value;
+        const unlockedWorldIds = snapshot.unlockedWorldIdList.filter(
+          (worldId) => !latestUnlockedWorldIdsRef.current.includes(worldId)
+        );
+
+        progressionActor.send({
+          type: 'STAGE_COMPLETED',
+          record: {
+            ...pendingStageClearSave.selection,
+            starCount: pendingStageClearSave.starCount,
+            stageKind: pendingStageClearSave.stageKind,
+            stageTitle: pendingStageClearSave.stageTitle,
+            unlockedWorldIds
+          },
+          snapshot
+        });
+        latestUnlockedWorldIdsRef.current = snapshot.unlockedWorldIdList;
+        setPendingStageClearSave(null);
+        setSaveErrorMessage(null);
+        sessionActor.send({ type: 'RESET_SESSION' });
+      });
+
+    return () => {
+      isDisposed = true;
+    };
+  }, [pendingStageClearSave]);
 
   const latestUnlockedWorldIdsRef = useRef<string[]>([]);
 
@@ -301,6 +337,24 @@ export default function GameShell() {
                   <p style={failureNoticeStyle}>{rewardedRetryFeedback}</p>
                 ) : null}
                 <span style={failureMetaStyle}>retry count: {retryCount}</span>
+              </div>
+            </div>
+          ) : null}
+          {saveErrorMessage ? (
+            <div style={failureOverlayStyle}>
+              <div style={failureCardStyle}>
+                <span style={failureEyebrowStyle}>Save Failed</span>
+                <strong style={failureTitleStyle}>클리어 보상을 아직 저장하지 못했습니다.</strong>
+                <p style={failureTextStyle}>{saveErrorMessage}</p>
+                <button
+                  style={retryButtonStyle}
+                  type='button'
+                  onClick={() => {
+                    setPendingStageClearSave((value) => (value ? { ...value } : value));
+                  }}
+                >
+                  Retry Save
+                </button>
               </div>
             </div>
           ) : null}
