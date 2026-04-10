@@ -27,7 +27,8 @@ export const progressionMachine = setup({
     applyLoadedSnapshot: assign({
       snapshot: ({ event }) => (event.type === 'PROGRESSION_LOADED' ? event.snapshot : null),
       activeStageSelection: ({ event }) =>
-        event.type === 'PROGRESSION_LOADED' ? event.snapshot.lastPlayedStageSelection : null
+        event.type === 'PROGRESSION_LOADED' ? event.snapshot.lastPlayedStageSelection : null,
+      lastStageCompletion: null
     }),
     applySelectedStage: assign({
       activeStageSelection: ({ context, event }) =>
@@ -73,6 +74,9 @@ export const progressionMachine = setup({
     },
     ready: {
       on: {
+        PROGRESSION_LOADED: {
+          actions: 'applyLoadedSnapshot'
+        },
         SELECT_STAGE: {
           actions: 'applySelectedStage'
         },
