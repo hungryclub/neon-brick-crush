@@ -122,7 +122,7 @@ export default function WorldMapPanel({
         </p>
         <button
           type='button'
-          disabled={isPurchasePending}
+          disabled={isPurchasePending || hasPurchasedFeaturedPack}
           onClick={onPurchaseFeatured}
           style={{
             ...purchaseButtonStyle,

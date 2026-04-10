@@ -45,10 +45,14 @@ export function selectIsRewardedRetryPending(snapshot: SessionSnapshot) {
 }
 
 export function selectCanUseRewardedRetry(snapshot: SessionSnapshot) {
-  return !snapshot.context.hasConsumedRewardedRetry;
+  return !snapshot.context.hasConsumedRewardedRetry && !snapshot.matches({ failed: 'unavailable' });
 }
 
 export function selectRewardedRetryFeedback(snapshot: SessionSnapshot) {
+  if (snapshot.matches({ failed: 'unavailable' })) {
+    return '이 기기에서는 광고 재도전이 현재 제공되지 않습니다. 일반 재도전으로 계속할 수 있어요.';
+  }
+
   if (snapshot.matches({ failed: 'denied' })) {
     return '광고 재도전 준비에 실패했습니다. 일반 재도전으로 계속할 수 있어요.';
   }

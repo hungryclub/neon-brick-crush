@@ -27,6 +27,31 @@ test('monetization machine records purchased outcome explicitly', async () => {
   assert.deepEqual(actor.getSnapshot().context.purchasedProductIds, ['supporter-pack']);
 });
 
+test('monetization machine ignores duplicate featured purchase requests after ownership is recorded', async () => {
+  let requestCount = 0;
+  const actor = createActor(
+    createMonetizationMachine({
+      purchaseProduct: async () => {
+        requestCount += 1;
+
+        return {
+          status: 'purchased',
+          productId: 'supporter-pack'
+        };
+      }
+    })
+  ).start();
+
+  actor.send({ type: 'REQUEST_FEATURED_PURCHASE' });
+  await flushActor();
+  actor.send({ type: 'REQUEST_FEATURED_PURCHASE' });
+  await flushActor();
+
+  assert.equal(requestCount, 1);
+  assert.equal(actor.getSnapshot().matches('purchased'), true);
+  assert.deepEqual(actor.getSnapshot().context.purchasedProductIds, ['supporter-pack']);
+});
+
 test('monetization machine records cancelled purchases explicitly', async () => {
   const actor = createActor(
     createMonetizationMachine({

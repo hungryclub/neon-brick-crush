@@ -190,7 +190,7 @@ export function createSessionMachine({
                 },
                 {
                   guard: 'rewardedRetryUnavailable',
-                  target: 'denied'
+                  target: 'unavailable'
                 },
                 {
                   target: 'denied'
@@ -213,6 +213,14 @@ export function createSessionMachine({
                   target: 'requestingRewardedRetry'
                 }
               ]
+            }
+          },
+          unavailable: {
+            on: {
+              REQUEST_RETRY: {
+                target: '#session.retrying',
+                actions: 'incrementRetryCount'
+              }
             }
           },
           cancelled: {

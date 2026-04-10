@@ -101,6 +101,28 @@ test('session machine falls back to failed state when rewarded retry request rej
   assert.equal(actor.getSnapshot().context.hasConsumedRewardedRetry, false);
 });
 
+test('session machine exposes unavailable rewarded retry as its own handled branch', async () => {
+  const actor = createActor(
+    createSessionMachine({
+      requestRewardedRetry: async () => ({
+        status: 'unavailable',
+        placement: 'fail_retry',
+        rewardKey: 'retry',
+        reason: 'MONETIZATION_UNAVAILABLE'
+      })
+    })
+  ).start();
+
+  actor.send({ type: 'BOOT_FINISHED' });
+  actor.send({ type: 'STAGE_FAILED' });
+  actor.send({ type: 'REQUEST_REWARDED_RETRY' });
+
+  await flushActor();
+
+  assert.equal(actor.getSnapshot().matches({ failed: 'unavailable' }), true);
+  assert.equal(actor.getSnapshot().context.hasConsumedRewardedRetry, false);
+});
+
 test('session machine can reset session progress back to baseline', () => {
   const actor = createActor(createSessionMachine()).start();
 

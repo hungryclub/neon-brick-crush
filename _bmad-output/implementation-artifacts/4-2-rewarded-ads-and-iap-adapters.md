@@ -247,5 +247,8 @@ write consistency가 정리되었다. 따라서 Story 4.2는 저장 경계를 �
   adapters.
 - Updated rewarded-ad handling to return typed handled outcomes for denied,
   cancelled, unavailable, and provider-failure paths.
+- Review patch: owned `supporter-pack` purchases are now blocked from both the
+  machine and the UI, and rewarded-ad `unavailable` outcomes now surface a
+  distinct handled branch instead of collapsing into the generic denied path.
 - Added monetization adapter and machine regression tests, then verified with
   `npm run test`, `npm run typecheck`, and `npm run build`.

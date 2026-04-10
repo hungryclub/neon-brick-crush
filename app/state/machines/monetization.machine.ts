@@ -135,9 +135,6 @@ export function createMonetizationMachine({
       },
       purchased: {
         on: {
-          REQUEST_FEATURED_PURCHASE: {
-            target: 'purchasing'
-          },
           CLEAR_PURCHASE_FEEDBACK: {
             target: 'idle',
             actions: 'clearPurchaseFeedback'
