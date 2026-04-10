@@ -90,6 +90,8 @@ export default function GameShell() {
   const latestStageCompletion = useSelector(progressionActor, selectLatestStageCompletion);
   const worldMapWorldSections = useSelector(progressionActor, selectWorldMapWorlds);
   const loggedEventLoadRef = useRef(false);
+  const appliedEventClaimRef = useRef<string | null>(null);
+  const loggedEventErrorRef = useRef<string | null>(null);
   const [pendingStageClearSave, setPendingStageClearSave] = useState<{
     selection: IStageSelection;
     stageKind?: TStageKind;
@@ -150,10 +152,11 @@ export default function GameShell() {
   useEffect(() => {
     const snapshot = eventActor.getSnapshot().context.latestSnapshot;
 
-    if (!latestClaimedEventId || !snapshot) {
+    if (!latestClaimedEventId || !snapshot || appliedEventClaimRef.current === latestClaimedEventId) {
       return;
     }
 
+    appliedEventClaimRef.current = latestClaimedEventId;
     progressionActor.send({ type: 'PROGRESSION_LOADED', snapshot });
     loggerRef.current.info('event.claim_granted', {
       eventId: latestClaimedEventId,
@@ -166,6 +169,13 @@ export default function GameShell() {
       return;
     }
 
+    const errorKey = `${latestEventClaimError.code}:${latestEventClaimError.message}`;
+
+    if (loggedEventErrorRef.current === errorKey) {
+      return;
+    }
+
+    loggedEventErrorRef.current = errorKey;
     loggerRef.current.warn('event.claim_rejected', {
       code: latestEventClaimError.code,
       message: latestEventClaimError.message

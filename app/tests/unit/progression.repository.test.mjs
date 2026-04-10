@@ -240,3 +240,22 @@ test('progression repository rejects duplicate event reward claims with a handle
   assert.equal(duplicateClaimResult.isErr(), true);
   assert.equal(duplicateClaimResult._unsafeUnwrapErr().code, 'EVENT_REWARD_ALREADY_CLAIMED');
 });
+
+test('progression repository rejects event claims whose reward id does not match the active definition', async () => {
+  resetProgressionSnapshotForTests();
+  const repository = createProgressionRepository();
+
+  await repository.saveStageCompletion({
+    worldId: 'world-01',
+    stageId: 'world-01-stage-01',
+    starCount: 1
+  });
+
+  const mismatchedClaimResult = await repository.saveEventRewardClaim({
+    eventId: 'event-neon-kickoff',
+    rewardId: 'wrong-reward-id'
+  });
+
+  assert.equal(mismatchedClaimResult.isErr(), true);
+  assert.equal(mismatchedClaimResult._unsafeUnwrapErr().code, 'EVENT_REWARD_INELIGIBLE');
+});

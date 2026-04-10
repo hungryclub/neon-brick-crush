@@ -178,6 +178,13 @@ export default function createProgressionRepository({
         return err(eventConfigResult.error);
       }
 
+      if (claim.rewardId !== eventConfigResult.value.reward.id) {
+        return err({
+          code: 'EVENT_REWARD_INELIGIBLE',
+          message: 'Requested reward does not match the active event definition.'
+        });
+      }
+
       const eligibilityResult = assertEventRewardClaimable(
         eventConfigResult.value,
         progressionSnapshot
@@ -197,7 +204,10 @@ export default function createProgressionRepository({
         eventClaimStateById: {
           ...progressionSnapshot.eventClaimStateById,
           [claim.eventId]: {
-            claimedRewardIds: [...eventClaimState.claimedRewardIds, claim.rewardId],
+            claimedRewardIds: [
+              ...eventClaimState.claimedRewardIds,
+              eventConfigResult.value.reward.id
+            ],
             lastClaimedAt: new Date().toISOString()
           }
         }

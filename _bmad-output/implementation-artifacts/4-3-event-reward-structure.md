@@ -237,4 +237,8 @@ platform/service/state-machine 경계 안으로 정리되었다. 따라서 Story
   now exposes event claim intents without directly mutating progression state.
 - Added structured event logs for load, claim attempted, claim granted, and
   claim rejected paths.
+- Review patch: event claims now validate the canonical reward id from typed
+  config before persisting, and GameShell only reapplies/logs a granted or
+  rejected event outcome once instead of replaying the same result on later
+  unrelated renders.
 - Verified with `npm run test`, `npm run typecheck`, and `npm run build`.
