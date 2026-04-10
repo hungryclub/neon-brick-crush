@@ -23,4 +23,4 @@ development_status:
   epic-5: in-progress
   5-1-neon-feedback-and-audio-base: done
   5-2-mobile-performance-and-pooling: done
-  5-3-debug-qa-and-release-guardrails: backlog
+  5-3-debug-qa-and-release-guardrails: ready-for-dev
