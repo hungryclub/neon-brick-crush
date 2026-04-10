@@ -20,7 +20,7 @@ development_status:
   4-1-xp-level-unlock-persistence: done
   4-2-rewarded-ads-and-iap-adapters: done
   4-3-event-reward-structure: done
-  epic-5: backlog
-  5-1-neon-feedback-and-audio-base: backlog
+  epic-5: in-progress
+  5-1-neon-feedback-and-audio-base: ready-for-dev
   5-2-mobile-performance-and-pooling: backlog
   5-3-debug-qa-and-release-guardrails: backlog
