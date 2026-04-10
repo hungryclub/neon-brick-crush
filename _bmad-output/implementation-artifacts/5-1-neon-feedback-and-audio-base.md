@@ -1,6 +1,6 @@
 # Story 5.1: 네온 피드백 레이어와 오디오 베이스 구현
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -22,23 +22,23 @@ So that strong shots feel memorable.
 
 ## Tasks / Subtasks
 
-- [ ] Add a dedicated neon feedback layer on top of the existing feedback plan boundary. (AC: 1, 2)
-  - [ ] Keep gameplay systems producing plain feedback data or commands rather than Scene-local VFX logic.
-  - [ ] Translate key runtime moments such as hits, gate triggers, fever activation, and combo bursts into readable neon visual playback.
-  - [ ] Ensure baseline visual feedback still reads cleanly on smaller mobile screens before adding stronger accent effects.
-- [ ] Add a platform audio base adapter and cue mapping. (AC: 1, 2)
-  - [ ] Create an audio boundary under `app/platform/audio/` so Scene/UI code does not talk to Phaser/Web Audio directly.
-  - [ ] Map existing feedback commands to lightweight SFX cues and optional vibration hooks.
-  - [ ] Keep unsupported audio or haptic environments on handled no-op paths.
-- [ ] Preserve pooling-friendly and low-allocation playback patterns. (AC: 2)
-  - [ ] Reuse existing effect objects or lightweight playback plans where possible instead of allocating new transient structures in hot loops.
-  - [ ] Keep heavier burst effects behind explicit, reusable playback helpers that can evolve into pooled objects in Story 5.2.
-  - [ ] Avoid moving effect decision logic into resolver or XState layers.
-- [ ] Add focused verification for feedback boundary correctness. (AC: 1, 2)
-  - [ ] Add unit coverage for feedback plan to neon/audio command translation.
-  - [ ] Add unit coverage for audio adapter handled fallback behavior.
-  - [ ] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
-  - [ ] Manually verify key moments remain readable on mobile-sized viewport conditions.
+- [x] Add a dedicated neon feedback layer on top of the existing feedback plan boundary. (AC: 1, 2)
+  - [x] Keep gameplay systems producing plain feedback data or commands rather than Scene-local VFX logic.
+  - [x] Translate key runtime moments such as hits, gate triggers, fever activation, and combo bursts into readable neon visual playback.
+  - [x] Ensure baseline visual feedback still reads cleanly on smaller mobile screens before adding stronger accent effects.
+- [x] Add a platform audio base adapter and cue mapping. (AC: 1, 2)
+  - [x] Create an audio boundary under `app/platform/audio/` so Scene/UI code does not talk to Phaser/Web Audio directly.
+  - [x] Map existing feedback commands to lightweight SFX cues and optional vibration hooks.
+  - [x] Keep unsupported audio or haptic environments on handled no-op paths.
+- [x] Preserve pooling-friendly and low-allocation playback patterns. (AC: 2)
+  - [x] Reuse existing effect objects or lightweight playback plans where possible instead of allocating new transient structures in hot loops.
+  - [x] Keep heavier burst effects behind explicit, reusable playback helpers that can evolve into pooled objects in Story 5.2.
+  - [x] Avoid moving effect decision logic into resolver or XState layers.
+- [x] Add focused verification for feedback boundary correctness. (AC: 1, 2)
+  - [x] Add unit coverage for feedback plan to neon/audio command translation.
+  - [x] Add unit coverage for audio adapter handled fallback behavior.
+  - [x] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
+  - [x] Manually verify key moments remain readable on mobile-sized viewport conditions.
 
 ## Dev Notes
 
@@ -180,3 +180,12 @@ rule/presentation 분리를 깨지 않는 것이 가장 중요하다.
 - `React = presentation only`
 - `effects/audio adapters = playback only`
 - `rule systems = data/decision only`
+
+## Completion Notes
+
+### GPT-5 Codex
+
+- Added `neon-feedback-layer.ts` so turn feedback commands and hit moments now flow through a dedicated neon playback boundary instead of Scene-local camera/effect branching.
+- Added `game-audio.adapter.ts` under `app/platform/audio/` so SFX cues and haptic hooks now use a handled platform adapter with unsupported-environment no-op behavior.
+- Updated `StageScene.ts` to route hit, gate, fever, and combo moments through the neon layer and audio adapter while keeping gameplay resolution logic separate.
+- Added unit coverage for neon playback translation and audio adapter fallback behavior.

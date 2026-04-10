@@ -12,6 +12,10 @@ import {
   type TTurnFeedbackCommand
 } from '../effects/turn-feedback-emitter.js';
 import {
+  createNeonFeedbackLayer,
+  type INeonFeedbackLayer
+} from '../effects/neon-feedback-layer.js';
+import {
   createStageGates,
   type IShotPathSegment,
   type IStageGate
@@ -34,6 +38,10 @@ import {
   GAME_RUNTIME_BRIDGE_REGISTRY_KEY,
   STAGE_RUNTIME_CONFIG_REGISTRY_KEY
 } from '../core/runtime-registry-keys';
+import {
+  createGameAudioAdapter,
+  type IGameAudioAdapter
+} from '../../platform/audio/game-audio.adapter.js';
 import { resolveTurn } from '../systems/turn-resolver';
 
 const BALL_RADIUS = 10;
@@ -74,6 +82,10 @@ export default class StageScene extends Phaser.Scene {
   private gateViews = new Map<string, IGateView>();
 
   private gates: IStageGate[] = [];
+
+  private neonFeedbackLayer!: INeonFeedbackLayer;
+
+  private audioAdapter!: IGameAudioAdapter;
 
   private isFeverActive = false;
 
@@ -176,6 +188,14 @@ export default class StageScene extends Phaser.Scene {
       .setOrigin(0.5, 0);
 
     this.aimGuide = this.add.graphics();
+    this.neonFeedbackLayer = createNeonFeedbackLayer(this);
+    this.audioAdapter = createGameAudioAdapter({
+      logger: this.logger
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.neonFeedbackLayer.destroy();
+      this.audioAdapter.destroy();
+    });
 
     this.renderGates();
     this.createBall();
@@ -657,6 +677,11 @@ export default class StageScene extends Phaser.Scene {
     this.activeCollisionBlockIds.add(blockId);
 
     const nextHp = blockView.cell.hp - 1;
+    this.emitBlockImpactFeedback({
+      x: blockView.rectangle.x,
+      y: blockView.rectangle.y,
+      destroyed: nextHp <= 0
+    });
 
     if (nextHp <= 0) {
       blockView.rectangle.destroy();
@@ -748,37 +773,37 @@ export default class StageScene extends Phaser.Scene {
   }
 
   private playTurnFeedbackPlan(commands: TTurnFeedbackCommand[]) {
-    commands.forEach((command) => {
-      if (command.type === 'gate-pulse') {
-        const gateView = this.gateViews.get(command.gateId);
+    this.neonFeedbackLayer.playTurnCommands(commands, {
+      resolveGateTarget: (gateId) => {
+        const gateView = this.gateViews.get(gateId);
 
         if (!gateView) {
-          return;
+          return null;
         }
 
-        gateView.rectangle.setFillStyle(gateView.gate.color, 0.44);
-        gateView.label.setScale(1.08);
-        this.time.delayedCall(160, () => {
-          gateView.rectangle.setFillStyle(gateView.gate.color, 0.2);
-          gateView.label.setScale(1);
-        });
-        return;
+        return {
+          x: gateView.rectangle.x,
+          y: gateView.rectangle.y,
+          color: gateView.gate.color,
+          onPulseStart: () => {
+            gateView.rectangle.setFillStyle(gateView.gate.color, 0.44);
+            gateView.label.setScale(1.08);
+          },
+          onPulseEnd: () => {
+            gateView.rectangle.setFillStyle(gateView.gate.color, 0.2);
+            gateView.label.setScale(1);
+          }
+        };
+      }
+    });
+
+    commands.forEach((command) => {
+      if (command.type === 'sfx-cue') {
+        this.audioAdapter.playCue(command.cue);
       }
 
-      if (command.type === 'camera-flash') {
-        this.cameras.main.flash(
-          command.duration,
-          command.color[0],
-          command.color[1],
-          command.color[2],
-          false
-        );
-        return;
-      }
-
-      if (command.type === 'camera-shake') {
-        this.cameras.main.shake(command.duration, command.intensity, false);
-        return;
+      if (command.type === 'haptic-pulse') {
+        this.audioAdapter.playHaptic(command.intensity);
       }
 
       this.logger.info('stage.feedback_command_emitted', {
@@ -793,6 +818,29 @@ export default class StageScene extends Phaser.Scene {
               : null,
         turnNumber: this.turnNumber
       });
+    });
+  }
+
+  private emitBlockImpactFeedback({
+    x,
+    y,
+    destroyed
+  }: {
+    x: number;
+    y: number;
+    destroyed: boolean;
+  }) {
+    this.neonFeedbackLayer.playImpact({
+      x,
+      y,
+      destroyed
+    });
+    this.audioAdapter.playCue(destroyed ? 'block-break' : 'block-hit');
+    this.logger.info('stage.hit_feedback_emitted', {
+      worldId: this.stageRuntimeConfig.worldId,
+      stageId: this.stageRuntimeConfig.stageId,
+      turnNumber: this.turnNumber,
+      destroyed
     });
   }
 
