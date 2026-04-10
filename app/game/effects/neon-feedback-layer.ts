@@ -19,6 +19,7 @@ const PULSE_POOL_SIZE = 8;
 interface IPulseGraphicsSlot {
   activeTween: Phaser.Tweens.Tween | null;
   graphics: Phaser.GameObjects.Graphics;
+  onRelease: (() => void) | null;
 }
 
 export interface INeonGateTarget {
@@ -46,7 +47,8 @@ export function createNeonFeedbackLayer(scene: Phaser.Scene): INeonFeedbackLayer
   const pulsePool = createEffectPool<IPulseGraphicsSlot>({
     create: () => ({
       activeTween: null,
-      graphics: scene.add.graphics().setDepth(EFFECT_DEPTH).setVisible(false)
+      graphics: scene.add.graphics().setDepth(EFFECT_DEPTH).setVisible(false),
+      onRelease: null
     }),
     size: PULSE_POOL_SIZE
   });
@@ -83,7 +85,7 @@ export function createNeonFeedbackLayer(scene: Phaser.Scene): INeonFeedbackLayer
             startRadius: 24,
             endRadius: 76,
             duration: command.duration,
-            onComplete: () => {
+            onRelease: () => {
               gateTarget.onPulseEnd?.();
             }
           });
@@ -141,6 +143,8 @@ export function createNeonFeedbackLayer(scene: Phaser.Scene): INeonFeedbackLayer
       pulsePool.entries().forEach((entry) => {
         entry.resource.activeTween?.remove();
         entry.resource.activeTween = null;
+        entry.resource.onRelease?.();
+        entry.resource.onRelease = null;
         entry.resource.graphics.destroy();
       });
     }
@@ -148,8 +152,10 @@ export function createNeonFeedbackLayer(scene: Phaser.Scene): INeonFeedbackLayer
 
   function takePulseLease() {
     const lease = pulsePool.acquire();
+    lease.resource.onRelease?.();
     lease.resource.activeTween?.remove();
     lease.resource.activeTween = null;
+    lease.resource.onRelease = null;
     lease.resource.graphics.clear();
     lease.resource.graphics.setAlpha(1);
     lease.resource.graphics.setVisible(true);
@@ -168,7 +174,7 @@ function playRingPulse({
   startRadius,
   endRadius,
   duration,
-  onComplete
+  onRelease
 }: {
   scene: Phaser.Scene;
   lease: IEffectPoolLease<IPulseGraphicsSlot>;
@@ -180,7 +186,7 @@ function playRingPulse({
   startRadius: number;
   endRadius: number;
   duration: number;
-  onComplete?: () => void;
+  onRelease?: () => void;
 }) {
   const { resource } = lease;
   const graphics = resource.graphics;
@@ -188,6 +194,7 @@ function playRingPulse({
     radius: startRadius,
     alpha
   };
+  resource.onRelease = onRelease ?? null;
 
   render();
   resource.activeTween = scene.tweens.add({
@@ -205,7 +212,9 @@ function playRingPulse({
       resource.activeTween = null;
       graphics.clear();
       graphics.setVisible(false);
-      onComplete?.();
+      const releaseHandler = resource.onRelease;
+      resource.onRelease = null;
+      releaseHandler?.();
     }
   });
 

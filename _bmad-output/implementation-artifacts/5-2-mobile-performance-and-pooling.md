@@ -191,3 +191,5 @@ instrumentation을 붙여 실제 모바일 환경에서도 감각 연출이 조�
 - Added `runtime-profiler.ts` and wired `StageScene.ts` to emit structured turn-performance logs for resolve, render, and feedback playback phases.
 - Added an impact-visual cap per turn so decorative burst effects degrade before input responsiveness and core readability do.
 - Added unit coverage for pool lease invalidation and runtime profiler aggregation.
+- Review patch: pooled gate halo slots now invoke cleanup on preemption so reused slots cannot leave older gates visually stuck in their highlighted state.
+- Review patch: board-clearing turns now flush `stage.turn_profiled` too, so high-impact success turns remain visible in the new mobile-performance instrumentation.

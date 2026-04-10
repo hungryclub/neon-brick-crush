@@ -547,12 +547,8 @@ export default class StageScene extends Phaser.Scene {
       modifierTrace: resolution.modifierTrace.map((entry) => `${entry.phase}:${entry.applied}`),
       feedbackEvents: resolution.feedbackEvents.map((event) => event.type)
     });
-    this.runtimeProfiler.flush('stage.turn_profiled', {
-      worldId: this.stageRuntimeConfig.worldId,
-      stageId: this.stageRuntimeConfig.stageId,
-      turnNumber: this.turnNumber,
-      impactEffectsThisTurn: this.impactEffectsThisTurn,
-      pulsePool: this.neonFeedbackLayer.getPoolStats()
+    this.flushTurnProfile({
+      turnOutcome: resolution.hasReachedLossLine ? 'failed' : 'resolved'
     });
 
     this.destroyedBlocksThisTurn = 0;
@@ -593,6 +589,9 @@ export default class StageScene extends Phaser.Scene {
       worldId: this.stageRuntimeConfig.worldId,
       stageId: this.stageRuntimeConfig.stageId,
       turnNumber: this.turnNumber
+    });
+    this.flushTurnProfile({
+      turnOutcome: 'cleared'
     });
     this.updateStagePrompt();
     this.syncHud();
@@ -913,6 +912,21 @@ export default class StageScene extends Phaser.Scene {
     this.stagePromptLabel.setText(
       resolveStagePromptText(this.stageRuntimeConfig, this.turnNumber, this.shotState)
     );
+  }
+
+  private flushTurnProfile({
+    turnOutcome
+  }: {
+    turnOutcome: 'cleared' | 'failed' | 'resolved';
+  }) {
+    this.runtimeProfiler.flush('stage.turn_profiled', {
+      worldId: this.stageRuntimeConfig.worldId,
+      stageId: this.stageRuntimeConfig.stageId,
+      turnNumber: this.turnNumber,
+      impactEffectsThisTurn: this.impactEffectsThisTurn,
+      pulsePool: this.neonFeedbackLayer.getPoolStats(),
+      turnOutcome
+    });
   }
 }
 
