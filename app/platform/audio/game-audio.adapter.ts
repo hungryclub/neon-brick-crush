@@ -28,6 +28,7 @@ interface IGainNodeLike {
 }
 
 export interface IAudioContextLike {
+  close?: () => Promise<void>;
   currentTime: number;
   destination: unknown;
   state?: string;
@@ -77,14 +78,19 @@ export function resolveHapticPattern(intensity: THapticIntensity) {
 }
 
 export function createGameAudioAdapter({
-  audioContext = resolveDefaultAudioContext(),
+  audioContext: providedAudioContext = undefined,
+  audioContextFactory = resolveDefaultAudioContext,
   vibrate = resolveDefaultVibrate(),
   logger = createLogger()
 }: {
   audioContext?: IAudioContextLike | null;
+  audioContextFactory?: () => IAudioContextLike | null;
   vibrate?: TVibrateHandler | null;
   logger?: ReturnType<typeof createLogger>;
 } = {}): IGameAudioAdapter {
+  const audioContext = providedAudioContext ?? audioContextFactory();
+  const ownsAudioContext = providedAudioContext === undefined && audioContext !== null;
+
   return {
     playCue(cue) {
       if (!audioContext) {
@@ -120,6 +126,12 @@ export function createGameAudioAdapter({
       vibrate(resolveHapticPattern(intensity));
     },
     destroy() {
+      if (ownsAudioContext && audioContext?.close) {
+        void audioContext.close().catch(() => {
+          logger.warn('audio.context_close_failed');
+        });
+      }
+
       logger.info('audio.adapter_destroyed');
     }
   };

@@ -28,3 +28,39 @@ test('audio cue spec and haptic pattern stay typed and deterministic', () => {
   assert.deepEqual(resolveHapticPattern('strong'), [18, 20, 28]);
   assert.deepEqual(resolveHapticPattern('light'), [8]);
 });
+
+test('audio adapter closes an owned audio context during destroy', async () => {
+  let closeCallCount = 0;
+  const adapter = createGameAudioAdapter({
+    audioContextFactory: () => ({
+      close: async () => {
+        closeCallCount += 1;
+      },
+      createGain: () => ({
+        connect() {},
+        disconnect() {},
+        gain: {
+          exponentialRampToValueAtTime() {},
+          setValueAtTime() {}
+        }
+      }),
+      createOscillator: () => ({
+        connect() {},
+        disconnect() {},
+        frequency: { value: 0 },
+        start() {},
+        stop() {},
+        type: 'square'
+      }),
+      currentTime: 0,
+      destination: {},
+      state: 'running'
+    }),
+    vibrate: null
+  });
+
+  adapter.destroy();
+  await Promise.resolve();
+
+  assert.equal(closeCallCount, 1);
+});

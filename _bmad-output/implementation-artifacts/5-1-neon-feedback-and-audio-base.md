@@ -189,3 +189,5 @@ rule/presentation 분리를 깨지 않는 것이 가장 중요하다.
 - Added `game-audio.adapter.ts` under `app/platform/audio/` so SFX cues and haptic hooks now use a handled platform adapter with unsupported-environment no-op behavior.
 - Updated `StageScene.ts` to route hit, gate, fever, and combo moments through the neon layer and audio adapter while keeping gameplay resolution logic separate.
 - Added unit coverage for neon playback translation and audio adapter fallback behavior.
+- Review patch: pooled neon pulse playback now tracks active tween leases so reused graphics cannot be cleared by older tweens during rapid hit/combo bursts.
+- Review patch: owned Web Audio contexts are now closed during adapter teardown to avoid leaking runtime audio resources across remounts.

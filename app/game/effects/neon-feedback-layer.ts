@@ -12,6 +12,12 @@ const FLASH_DEPTH = 140;
 const EFFECT_DEPTH = 150;
 const PULSE_POOL_SIZE = 8;
 
+interface IPulsePoolSlot {
+  activeTween: Phaser.Tweens.Tween | null;
+  graphics: Phaser.GameObjects.Graphics;
+  revision: number;
+}
+
 export interface INeonGateTarget {
   x: number;
   y: number;
@@ -33,9 +39,11 @@ export function createNeonFeedbackLayer(scene: Phaser.Scene): INeonFeedbackLayer
     .setDepth(FLASH_DEPTH)
     .setVisible(false);
 
-  const pulsePool = Array.from({ length: PULSE_POOL_SIZE }, () =>
-    scene.add.graphics().setDepth(EFFECT_DEPTH).setVisible(false)
-  );
+  const pulsePool = Array.from({ length: PULSE_POOL_SIZE }, (): IPulsePoolSlot => ({
+    activeTween: null,
+    graphics: scene.add.graphics().setDepth(EFFECT_DEPTH).setVisible(false),
+    revision: 0
+  }));
   let pulsePoolIndex = 0;
 
   return {
@@ -53,7 +61,7 @@ export function createNeonFeedbackLayer(scene: Phaser.Scene): INeonFeedbackLayer
           gateTarget.onPulseStart?.();
           playRingPulse({
             scene,
-            graphics: takePulseGraphics(),
+            slot: takePulseSlot(),
             x: gateTarget.x,
             y: gateTarget.y,
             color: gateTarget.color,
@@ -103,7 +111,7 @@ export function createNeonFeedbackLayer(scene: Phaser.Scene): INeonFeedbackLayer
 
       playRingPulse({
         scene,
-        graphics: takePulseGraphics(),
+        slot: takePulseSlot(),
         x: moment.x,
         y: moment.y,
         color: command.color,
@@ -115,27 +123,32 @@ export function createNeonFeedbackLayer(scene: Phaser.Scene): INeonFeedbackLayer
       });
     },
     destroy() {
+      scene.tweens.killTweensOf(flashOverlay);
       flashOverlay.destroy();
-      pulsePool.forEach((graphics) => {
-        graphics.destroy();
+      pulsePool.forEach((slot) => {
+        slot.activeTween?.remove();
+        slot.activeTween = null;
+        slot.graphics.destroy();
       });
     }
   };
 
-  function takePulseGraphics() {
-    const graphics = pulsePool[pulsePoolIndex];
+  function takePulseSlot() {
+    const slot = pulsePool[pulsePoolIndex];
     pulsePoolIndex = (pulsePoolIndex + 1) % pulsePool.length;
-    scene.tweens.killTweensOf(graphics);
-    graphics.clear();
-    graphics.setAlpha(1);
-    graphics.setVisible(true);
-    return graphics;
+    slot.activeTween?.remove();
+    slot.activeTween = null;
+    slot.revision += 1;
+    slot.graphics.clear();
+    slot.graphics.setAlpha(1);
+    slot.graphics.setVisible(true);
+    return slot;
   }
 }
 
 function playRingPulse({
   scene,
-  graphics,
+  slot,
   x,
   y,
   color,
@@ -147,7 +160,7 @@ function playRingPulse({
   onComplete
 }: {
   scene: Phaser.Scene;
-  graphics: Phaser.GameObjects.Graphics;
+  slot: IPulsePoolSlot;
   x: number;
   y: number;
   color: number;
@@ -158,13 +171,15 @@ function playRingPulse({
   duration: number;
   onComplete?: () => void;
 }) {
+  const leaseRevision = slot.revision;
+  const graphics = slot.graphics;
   const state = {
     radius: startRadius,
     alpha
   };
 
   render();
-  scene.tweens.add({
+  slot.activeTween = scene.tweens.add({
     targets: state,
     radius: endRadius,
     alpha: 0,
@@ -172,6 +187,11 @@ function playRingPulse({
     ease: 'Cubic.easeOut',
     onUpdate: render,
     onComplete: () => {
+      if (slot.revision !== leaseRevision) {
+        return;
+      }
+
+      slot.activeTween = null;
       graphics.clear();
       graphics.setVisible(false);
       onComplete?.();
@@ -179,6 +199,10 @@ function playRingPulse({
   });
 
   function render() {
+    if (slot.revision !== leaseRevision) {
+      return;
+    }
+
     graphics.clear();
     graphics.lineStyle(lineWidth, color, state.alpha);
     graphics.strokeCircle(x, y, state.radius);
