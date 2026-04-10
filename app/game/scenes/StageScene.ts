@@ -25,6 +25,7 @@ import {
   type IStageGate
 } from '../entities/stage-gates';
 import {
+  canStartAim,
   resolveAimPreview,
   resolveShotVelocity
 } from '../mechanics/aim-shot-controller';
@@ -311,18 +312,11 @@ export default class StageScene extends Phaser.Scene {
   }
 
   private canAim(pointer: Phaser.Input.Pointer) {
-    if (this.shotState !== 'idle' || this.isStageFailed) {
+    if (this.shotState !== 'idle' || this.isStageFailed || this.isStageCleared) {
       return false;
     }
 
-    const launcherDistance = Phaser.Math.Distance.Between(
-      pointer.x,
-      pointer.y,
-      this.launcherPosition.x,
-      this.launcherPosition.y
-    );
-
-    return launcherDistance <= 84;
+    return canStartAim(this.launcherPosition, pointer);
   }
 
   private createBall() {

@@ -22,6 +22,13 @@ export interface IShotVelocity {
   speed: number;
 }
 
+export function canStartAim(
+  origin: IPointLike,
+  pointer: IPointLike
+) {
+  return pointer.y <= origin.y + MIN_UPWARD_OFFSET;
+}
+
 export function resolveAimPreview(
   origin: IPointLike,
   pointer: IPointLike

@@ -2,9 +2,27 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  canStartAim,
   resolveAimPreview,
   resolveShotVelocity
 } from '../../game/mechanics/aim-shot-controller.ts';
+
+test('canStartAim allows drag starts from the playable lane above the launcher', () => {
+  assert.equal(
+    canStartAim(
+      { x: 200, y: 500 },
+      { x: 40, y: 320 }
+    ),
+    true
+  );
+  assert.equal(
+    canStartAim(
+      { x: 200, y: 500 },
+      { x: 200, y: 530 }
+    ),
+    false
+  );
+});
 
 test('resolveAimPreview clamps aim to an upward shot lane', () => {
   const preview = resolveAimPreview(
