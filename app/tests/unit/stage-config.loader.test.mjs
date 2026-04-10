@@ -8,6 +8,7 @@ import {
   loadStageRuntimeConfig,
   loadWorldContent
 } from '../../assets/loaders/stage-config.loader.ts';
+import { resolveRuntimeStageConfig } from '../../game/core/runtime-stage-config.ts';
 import { STAGE_CONFIG_NOT_FOUND } from '../../domain/errors/game-error.ts';
 import {
   createInitialStageBoard,
@@ -87,6 +88,29 @@ test('stage config loader returns a typed error when stage content is missing', 
 
   assert.equal(result.isErr(), true);
   assert.equal(result._unsafeUnwrapErr().code, STAGE_CONFIG_NOT_FOUND);
+});
+
+test('runtime stage config falls back to the default stage for stale saved selections', () => {
+  const warned = [];
+  const stageRuntimeConfig = resolveRuntimeStageConfig(
+    {
+      worldId: 'world-01',
+      stageId: 'missing-stage'
+    },
+    {
+      warn(event, context) {
+        warned.push({ event, context });
+      },
+      error() {},
+      info() {},
+      debug() {}
+    }
+  );
+
+  assert.equal(stageRuntimeConfig.worldId, DEFAULT_STAGE_SELECTION.worldId);
+  assert.equal(stageRuntimeConfig.stageId, DEFAULT_STAGE_SELECTION.stageId);
+  assert.equal(warned.length, 1);
+  assert.equal(warned[0].event, 'runtime.stage_config_fallback_to_default');
 });
 
 test('runtime board creation only needs normalized stage config from the loader', () => {

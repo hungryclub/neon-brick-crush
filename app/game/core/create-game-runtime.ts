@@ -1,18 +1,15 @@
 import Phaser from 'phaser';
 
-import {
-  loadInitialStageRuntimeConfig,
-  loadStageRuntimeConfig
-} from '../../assets/loaders/stage-config.loader';
-import createLogger from '../../shared/logging/create-logger';
+import createLogger from '../../shared/logging/create-logger.ts';
 import type { IStageSelection } from '../../domain/models/stage-model';
 import type { IGameRuntimeBridge } from '../hud-bridges/game-runtime-bridge';
 import {
   GAME_RUNTIME_BRIDGE_REGISTRY_KEY,
   STAGE_RUNTIME_CONFIG_REGISTRY_KEY
-} from './runtime-registry-keys';
-import BootScene, { BOOT_SCENE_KEY } from '../scenes/BootScene';
-import StageScene from '../scenes/StageScene';
+} from './runtime-registry-keys.ts';
+import { resolveRuntimeStageConfig } from './runtime-stage-config.ts';
+import BootScene, { BOOT_SCENE_KEY } from '../scenes/BootScene.ts';
+import StageScene from '../scenes/StageScene.ts';
 
 interface ICreateGameRuntimeProps {
   parent: HTMLDivElement;
@@ -26,20 +23,7 @@ export default function createGameRuntime({
   stageSelection = null
 }: ICreateGameRuntimeProps) {
   const logger = createLogger();
-  const stageRuntimeConfigResult = stageSelection
-    ? loadStageRuntimeConfig(stageSelection)
-    : loadInitialStageRuntimeConfig();
-
-  if (stageRuntimeConfigResult.isErr()) {
-    logger.error('runtime.stage_config_load_failed', {
-      code: stageRuntimeConfigResult.error.code,
-      message: stageRuntimeConfigResult.error.message
-    });
-
-    throw new Error(stageRuntimeConfigResult.error.message);
-  }
-
-  const stageRuntimeConfig = stageRuntimeConfigResult.value;
+  const stageRuntimeConfig = resolveRuntimeStageConfig(stageSelection, logger);
 
   logger.info('runtime.stage_config_loaded', {
     worldId: stageRuntimeConfig.worldId,

@@ -271,7 +271,7 @@ export default function GameShell() {
   }, [latestEventClaimError]);
 
   useEffect(() => {
-    if (!runtimeHostRef.current) return;
+    if (!runtimeHostRef.current || isProgressionLoading) return;
 
     const runtimeBridge = createGameRuntimeBridge();
     runtimeBridgeRef.current = runtimeBridge;
@@ -336,6 +336,7 @@ export default function GameShell() {
     };
   }, [
     activeStageSelection,
+    isProgressionLoading,
     storeSetHasRuntime,
     storeSetRuntimeDebug,
     storeSetRuntimeHud

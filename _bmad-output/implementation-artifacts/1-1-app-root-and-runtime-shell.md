@@ -1,6 +1,6 @@
 # Story 1.1: 앱 루트와 런타임 셸 초기화
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
