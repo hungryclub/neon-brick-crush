@@ -1,6 +1,6 @@
 # Story 5.2: 모바일 성능 예산과 pooling 최적화 구현
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -22,22 +22,22 @@ So that impact never causes frustrating slowdown.
 
 ## Tasks / Subtasks
 
-- [ ] Apply pooling to repeated runtime objects and transient feedback playback. (AC: 1)
-  - [ ] Audit ball, impact ring, gate halo, and other transient feedback objects that can be reused instead of recreated.
-  - [ ] Convert repeated gameplay/runtime allocations into reusable pool or ring-buffer style playback paths where the architecture expects pooling.
-  - [ ] Keep pooling ownership inside runtime/effects layers rather than leaking lifecycle concerns into resolver or React code.
-- [ ] Remove avoidable hot-loop allocations and repeated per-turn churn. (AC: 1)
-  - [ ] Review `StageScene` update/turn resolution paths for repeated object creation, array churn, or avoidable temporary structures.
-  - [ ] Preserve current gameplay behavior while tightening allocation-heavy paths.
-  - [ ] Prefer readability-preserving caps or degraded decorative behavior over expensive burst effects on constrained devices.
-- [ ] Add lightweight performance instrumentation for mobile-like inspection. (AC: 2)
-  - [ ] Expose structured timing or counters around heavy turn-resolution and feedback playback phases.
-  - [ ] Capture enough debug information to inspect chain-reaction and fever spikes without shipping intrusive overlays yet.
-  - [ ] Keep instrumentation dev-friendly and compatible with Story 5.3 debug tooling work.
-- [ ] Verify responsiveness under stress. (AC: 1, 2)
-  - [ ] Add focused unit coverage for pooling or perf helper behavior where practical.
-  - [ ] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
-  - [ ] Manually smoke-check preview behavior under repeated shots and high-impact feedback moments.
+- [x] Apply pooling to repeated runtime objects and transient feedback playback. (AC: 1)
+  - [x] Audit ball, impact ring, gate halo, and other transient feedback objects that can be reused instead of recreated.
+  - [x] Convert repeated gameplay/runtime allocations into reusable pool or ring-buffer style playback paths where the architecture expects pooling.
+  - [x] Keep pooling ownership inside runtime/effects layers rather than leaking lifecycle concerns into resolver or React code.
+- [x] Remove avoidable hot-loop allocations and repeated per-turn churn. (AC: 1)
+  - [x] Review `StageScene` update/turn resolution paths for repeated object creation, array churn, or avoidable temporary structures.
+  - [x] Preserve current gameplay behavior while tightening allocation-heavy paths.
+  - [x] Prefer readability-preserving caps or degraded decorative behavior over expensive burst effects on constrained devices.
+- [x] Add lightweight performance instrumentation for mobile-like inspection. (AC: 2)
+  - [x] Expose structured timing or counters around heavy turn-resolution and feedback playback phases.
+  - [x] Capture enough debug information to inspect chain-reaction and fever spikes without shipping intrusive overlays yet.
+  - [x] Keep instrumentation dev-friendly and compatible with Story 5.3 debug tooling work.
+- [x] Verify responsiveness under stress. (AC: 1, 2)
+  - [x] Add focused unit coverage for pooling or perf helper behavior where practical.
+  - [x] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
+  - [x] Manually smoke-check preview behavior under repeated shots and high-impact feedback moments.
 
 ## Dev Notes
 
@@ -182,3 +182,12 @@ instrumentation을 붙여 실제 모바일 환경에서도 감각 연출이 조�
 - `React = presentation only`
 - `effects/perf helpers = runtime optimization only`
 - `rule systems = data/decision only`
+
+## Completion Notes
+
+### GPT-5 Codex
+
+- Added `effect-pool.ts` so transient runtime effects now use a reusable lease-based pool helper instead of ad hoc per-layer slot rotation.
+- Added `runtime-profiler.ts` and wired `StageScene.ts` to emit structured turn-performance logs for resolve, render, and feedback playback phases.
+- Added an impact-visual cap per turn so decorative burst effects degrade before input responsiveness and core readability do.
+- Added unit coverage for pool lease invalidation and runtime profiler aggregation.

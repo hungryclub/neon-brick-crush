@@ -16,6 +16,10 @@ import {
   type INeonFeedbackLayer
 } from '../effects/neon-feedback-layer.js';
 import {
+  createRuntimeProfiler,
+  type IRuntimeProfiler
+} from '../perf/runtime-profiler.js';
+import {
   createStageGates,
   type IShotPathSegment,
   type IStageGate
@@ -48,6 +52,7 @@ const BALL_RADIUS = 10;
 const BLOCK_WIDTH = 142;
 const BLOCK_HEIGHT = 54;
 const BLOCK_GAP = 12;
+const IMPACT_EFFECTS_PER_TURN_CAP = 8;
 interface IBlockView {
   cell: IStageBoardCell;
   label: Phaser.GameObjects.Text;
@@ -66,6 +71,10 @@ export default class StageScene extends Phaser.Scene {
   private readonly logger = createLogger();
 
   private readonly runtimeHud = createInitialRuntimeHudSnapshot();
+
+  private readonly runtimeProfiler: IRuntimeProfiler = createRuntimeProfiler({
+    logger: this.logger
+  });
 
   private activeCollisionBlockIds = new Set<string>();
 
@@ -106,6 +115,8 @@ export default class StageScene extends Phaser.Scene {
   private turnNumber = 1;
 
   private destroyedBlocksThisTurn = 0;
+
+  private impactEffectsThisTurn = 0;
 
   private stageRuntimeConfig!: IStageRuntimeConfig;
 
@@ -367,6 +378,9 @@ export default class StageScene extends Phaser.Scene {
     const ballBody = this.ball.body as Phaser.Physics.Arcade.Body;
 
     this.shotPathSegments = [];
+    this.runtimeProfiler.reset();
+    this.runtimeProfiler.incrementCounter('turn_started');
+    this.impactEffectsThisTurn = 0;
     this.lastTrackedBallPosition = {
       x: this.launcherPosition.x,
       y: this.launcherPosition.y
@@ -445,6 +459,7 @@ export default class StageScene extends Phaser.Scene {
     this.shotState = 'idle';
     this.turnNumber = 1;
     this.destroyedBlocksThisTurn = 0;
+    this.impactEffectsThisTurn = 0;
     this.isFeverActive = false;
     this.lastTrackedBallPosition = null;
     this.shotPathSegments = [];
@@ -478,29 +493,40 @@ export default class StageScene extends Phaser.Scene {
     this.runtimeHud.shotState = 'resolving';
     this.syncHud();
 
-    const resolution = resolveTurn({
-      board: this.boardState,
-      feverActive: this.isFeverActive,
-      gates: this.gates,
-      shotPath: this.shotPathSegments,
-      turnNumber: this.turnNumber,
-      lossRow: this.lossRow,
-      spawnRow: (turnNumber) => createSpawnRow(turnNumber, this.stageRuntimeConfig)
+    const resolution = this.runtimeProfiler.measure('turn.resolve_ms', () =>
+      resolveTurn({
+        board: this.boardState,
+        feverActive: this.isFeverActive,
+        gates: this.gates,
+        shotPath: this.shotPathSegments,
+        turnNumber: this.turnNumber,
+        lossRow: this.lossRow,
+        spawnRow: (turnNumber) => createSpawnRow(turnNumber, this.stageRuntimeConfig)
+      })
+    );
+
+    this.runtimeProfiler.incrementCounter('shot_path_segments', this.shotPathSegments.length);
+    this.runtimeProfiler.incrementCounter('feedback_events', resolution.feedbackEvents.length);
+    this.runtimeProfiler.incrementCounter('remaining_blocks_after_turn', resolution.board.length);
+
+    this.runtimeProfiler.measure('turn.render_ms', () => {
+      this.boardState = resolution.board;
+      this.turnNumber = resolution.turnNumber;
+      this.runtimeHud.turnNumber = resolution.turnNumber;
+      this.runtimeHud.dangerLevel = resolution.dangerLevel;
+      this.runtimeHud.hasReachedLossLine = resolution.hasReachedLossLine;
+
+      this.renderBoard();
+      this.resetBall();
     });
-
-    this.boardState = resolution.board;
-    this.turnNumber = resolution.turnNumber;
-    this.runtimeHud.turnNumber = resolution.turnNumber;
-    this.runtimeHud.dangerLevel = resolution.dangerLevel;
-    this.runtimeHud.hasReachedLossLine = resolution.hasReachedLossLine;
-
-    this.renderBoard();
-    this.resetBall();
     const feedbackPlan = createTurnFeedbackPlan({
       branch: resolution.comboBranch,
       feedbackEvents: resolution.feedbackEvents
     });
-    this.playTurnFeedbackPlan(feedbackPlan.commands);
+    this.runtimeProfiler.incrementCounter('feedback_commands', feedbackPlan.commands.length);
+    this.runtimeProfiler.measure('feedback.playback_ms', () => {
+      this.playTurnFeedbackPlan(feedbackPlan.commands);
+    });
     runtimeBridge?.signalTurnResolved({
       destroyedBlocksThisTurn: this.destroyedBlocksThisTurn,
       feverApplied: resolution.feedbackEvents.some((event) => event.type === 'fever.activated'),
@@ -521,8 +547,16 @@ export default class StageScene extends Phaser.Scene {
       modifierTrace: resolution.modifierTrace.map((entry) => `${entry.phase}:${entry.applied}`),
       feedbackEvents: resolution.feedbackEvents.map((event) => event.type)
     });
+    this.runtimeProfiler.flush('stage.turn_profiled', {
+      worldId: this.stageRuntimeConfig.worldId,
+      stageId: this.stageRuntimeConfig.stageId,
+      turnNumber: this.turnNumber,
+      impactEffectsThisTurn: this.impactEffectsThisTurn,
+      pulsePool: this.neonFeedbackLayer.getPoolStats()
+    });
 
     this.destroyedBlocksThisTurn = 0;
+    this.impactEffectsThisTurn = 0;
     this.isFeverActive = false;
     this.lastTrackedBallPosition = null;
     this.shotPathSegments = [];
@@ -677,6 +711,7 @@ export default class StageScene extends Phaser.Scene {
     this.activeCollisionBlockIds.add(blockId);
 
     const nextHp = blockView.cell.hp - 1;
+    this.runtimeProfiler.incrementCounter('block_hit_events');
     this.emitBlockImpactFeedback({
       x: blockView.rectangle.x,
       y: blockView.rectangle.y,
@@ -799,10 +834,12 @@ export default class StageScene extends Phaser.Scene {
 
     commands.forEach((command) => {
       if (command.type === 'sfx-cue') {
+        this.runtimeProfiler.incrementCounter(`sfx_${command.cue}`);
         this.audioAdapter.playCue(command.cue);
       }
 
       if (command.type === 'haptic-pulse') {
+        this.runtimeProfiler.incrementCounter(`haptic_${command.intensity}`);
         this.audioAdapter.playHaptic(command.intensity);
       }
 
@@ -830,17 +867,27 @@ export default class StageScene extends Phaser.Scene {
     y: number;
     destroyed: boolean;
   }) {
-    this.neonFeedbackLayer.playImpact({
-      x,
-      y,
-      destroyed
-    });
+    const allowImpactVisual = this.impactEffectsThisTurn < IMPACT_EFFECTS_PER_TURN_CAP;
+
+    if (allowImpactVisual) {
+      this.impactEffectsThisTurn += 1;
+      this.runtimeProfiler.incrementCounter('impact_visual_played');
+      this.neonFeedbackLayer.playImpact({
+        x,
+        y,
+        destroyed
+      });
+    } else {
+      this.runtimeProfiler.incrementCounter('impact_visual_skipped');
+    }
+
     this.audioAdapter.playCue(destroyed ? 'block-break' : 'block-hit');
     this.logger.info('stage.hit_feedback_emitted', {
       worldId: this.stageRuntimeConfig.worldId,
       stageId: this.stageRuntimeConfig.stageId,
       turnNumber: this.turnNumber,
-      destroyed
+      destroyed,
+      visualPlayed: allowImpactVisual
     });
   }
 

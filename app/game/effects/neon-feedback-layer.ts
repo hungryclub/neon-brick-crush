@@ -2,20 +2,23 @@ import Phaser from 'phaser';
 
 import type { TTurnFeedbackCommand } from './turn-feedback-emitter.js';
 import {
+  createEffectPool,
+  type IEffectPool,
+  type IEffectPoolLease
+} from './effect-pool.js';
+import {
   createImpactVisualCommand,
   createNeonVisualPlan,
   type IImpactFeedbackMoment,
-  type TNeonVisualCommand
 } from './neon-feedback-plan.js';
 
 const FLASH_DEPTH = 140;
 const EFFECT_DEPTH = 150;
 const PULSE_POOL_SIZE = 8;
 
-interface IPulsePoolSlot {
+interface IPulseGraphicsSlot {
   activeTween: Phaser.Tweens.Tween | null;
   graphics: Phaser.GameObjects.Graphics;
-  revision: number;
 }
 
 export interface INeonGateTarget {
@@ -27,6 +30,7 @@ export interface INeonGateTarget {
 }
 
 export interface INeonFeedbackLayer {
+  getPoolStats(): { active: number; size: number };
   playTurnCommands(commands: TTurnFeedbackCommand[], options: { resolveGateTarget: (gateId: string) => INeonGateTarget | null }): void;
   playImpact(moment: IImpactFeedbackMoment): void;
   destroy(): void;
@@ -39,14 +43,23 @@ export function createNeonFeedbackLayer(scene: Phaser.Scene): INeonFeedbackLayer
     .setDepth(FLASH_DEPTH)
     .setVisible(false);
 
-  const pulsePool = Array.from({ length: PULSE_POOL_SIZE }, (): IPulsePoolSlot => ({
-    activeTween: null,
-    graphics: scene.add.graphics().setDepth(EFFECT_DEPTH).setVisible(false),
-    revision: 0
-  }));
-  let pulsePoolIndex = 0;
+  const pulsePool = createEffectPool<IPulseGraphicsSlot>({
+    create: () => ({
+      activeTween: null,
+      graphics: scene.add.graphics().setDepth(EFFECT_DEPTH).setVisible(false)
+    }),
+    size: PULSE_POOL_SIZE
+  });
 
   return {
+    getPoolStats() {
+      const entries = pulsePool.entries();
+
+      return {
+        active: entries.filter((entry) => entry.active).length,
+        size: entries.length
+      };
+    },
     playTurnCommands(commands, { resolveGateTarget }) {
       const visualPlan = createNeonVisualPlan(commands);
 
@@ -61,7 +74,7 @@ export function createNeonFeedbackLayer(scene: Phaser.Scene): INeonFeedbackLayer
           gateTarget.onPulseStart?.();
           playRingPulse({
             scene,
-            slot: takePulseSlot(),
+            lease: takePulseLease(),
             x: gateTarget.x,
             y: gateTarget.y,
             color: gateTarget.color,
@@ -111,7 +124,7 @@ export function createNeonFeedbackLayer(scene: Phaser.Scene): INeonFeedbackLayer
 
       playRingPulse({
         scene,
-        slot: takePulseSlot(),
+        lease: takePulseLease(),
         x: moment.x,
         y: moment.y,
         color: command.color,
@@ -125,30 +138,28 @@ export function createNeonFeedbackLayer(scene: Phaser.Scene): INeonFeedbackLayer
     destroy() {
       scene.tweens.killTweensOf(flashOverlay);
       flashOverlay.destroy();
-      pulsePool.forEach((slot) => {
-        slot.activeTween?.remove();
-        slot.activeTween = null;
-        slot.graphics.destroy();
+      pulsePool.entries().forEach((entry) => {
+        entry.resource.activeTween?.remove();
+        entry.resource.activeTween = null;
+        entry.resource.graphics.destroy();
       });
     }
   };
 
-  function takePulseSlot() {
-    const slot = pulsePool[pulsePoolIndex];
-    pulsePoolIndex = (pulsePoolIndex + 1) % pulsePool.length;
-    slot.activeTween?.remove();
-    slot.activeTween = null;
-    slot.revision += 1;
-    slot.graphics.clear();
-    slot.graphics.setAlpha(1);
-    slot.graphics.setVisible(true);
-    return slot;
+  function takePulseLease() {
+    const lease = pulsePool.acquire();
+    lease.resource.activeTween?.remove();
+    lease.resource.activeTween = null;
+    lease.resource.graphics.clear();
+    lease.resource.graphics.setAlpha(1);
+    lease.resource.graphics.setVisible(true);
+    return lease;
   }
 }
 
 function playRingPulse({
   scene,
-  slot,
+  lease,
   x,
   y,
   color,
@@ -160,7 +171,7 @@ function playRingPulse({
   onComplete
 }: {
   scene: Phaser.Scene;
-  slot: IPulsePoolSlot;
+  lease: IEffectPoolLease<IPulseGraphicsSlot>;
   x: number;
   y: number;
   color: number;
@@ -171,15 +182,15 @@ function playRingPulse({
   duration: number;
   onComplete?: () => void;
 }) {
-  const leaseRevision = slot.revision;
-  const graphics = slot.graphics;
+  const { resource } = lease;
+  const graphics = resource.graphics;
   const state = {
     radius: startRadius,
     alpha
   };
 
   render();
-  slot.activeTween = scene.tweens.add({
+  resource.activeTween = scene.tweens.add({
     targets: state,
     radius: endRadius,
     alpha: 0,
@@ -187,11 +198,11 @@ function playRingPulse({
     ease: 'Cubic.easeOut',
     onUpdate: render,
     onComplete: () => {
-      if (slot.revision !== leaseRevision) {
+      if (!lease.release()) {
         return;
       }
 
-      slot.activeTween = null;
+      resource.activeTween = null;
       graphics.clear();
       graphics.setVisible(false);
       onComplete?.();
@@ -199,7 +210,7 @@ function playRingPulse({
   });
 
   function render() {
-    if (slot.revision !== leaseRevision) {
+    if (!lease.isCurrent()) {
       return;
     }
 
