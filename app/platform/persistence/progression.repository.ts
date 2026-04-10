@@ -11,6 +11,11 @@ import {
   loadStageRuntimeConfig,
   loadWorldContent
 } from '../../assets/loaders/stage-config.loader.ts';
+import { loadEventConfigById } from '../../assets/loaders/event-config.loader.ts';
+import {
+  assertEventRewardClaimable,
+  createEmptyEventClaimState
+} from '../../domain/models/event-model.ts';
 import createProgressionStorageDriver, {
   resetInMemoryProgressionStorageForTests,
   type IProgressionStorageDriver
@@ -45,6 +50,10 @@ export interface IProgressionRepository {
   saveSettings: (
     settingsPatch: Partial<IPlayerSettings>
   ) => Promise<Result<IProgressionSnapshot, IGameError>>;
+  saveEventRewardClaim: (claim: {
+    eventId: string;
+    rewardId: string;
+  }) => Promise<Result<IProgressionSnapshot, IGameError>>;
 }
 
 export default function createProgressionRepository({
@@ -161,6 +170,40 @@ export default function createProgressionRepository({
       };
 
       return persistSnapshot(storageDriver, nextSnapshot);
+    },
+    async saveEventRewardClaim(claim) {
+      const eventConfigResult = loadEventConfigById(claim.eventId);
+
+      if (eventConfigResult.isErr()) {
+        return err(eventConfigResult.error);
+      }
+
+      const eligibilityResult = assertEventRewardClaimable(
+        eventConfigResult.value,
+        progressionSnapshot
+      );
+
+      if (eligibilityResult.isErr()) {
+        return err(eligibilityResult.error);
+      }
+
+      const eventClaimState = progressionSnapshot.eventClaimStateById[claim.eventId] ??
+        createEmptyEventClaimState();
+      const nextTotalXp = progressionSnapshot.totalXp + eventConfigResult.value.reward.xpAmount;
+      const nextSnapshot: IProgressionSnapshot = {
+        ...progressionSnapshot,
+        totalXp: nextTotalXp,
+        playerLevel: resolvePlayerLevel(nextTotalXp),
+        eventClaimStateById: {
+          ...progressionSnapshot.eventClaimStateById,
+          [claim.eventId]: {
+            claimedRewardIds: [...eventClaimState.claimedRewardIds, claim.rewardId],
+            lastClaimedAt: new Date().toISOString()
+          }
+        }
+      };
+
+      return persistSnapshot(storageDriver, nextSnapshot);
     }
   };
 }
@@ -243,6 +286,7 @@ function createEmptyStageProgress() {
     isUnlocked: false
   };
 }
+
 
 async function persistSnapshot(
   storageDriver: IProgressionStorageDriver,

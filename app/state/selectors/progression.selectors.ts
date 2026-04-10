@@ -1,6 +1,8 @@
 import type { SnapshotFrom } from 'xstate';
 
 import type { IStageProgressState } from '../../domain/models/progression-model';
+import { evaluateEventRewardEligibility } from '../../domain/models/event-model.ts';
+import { loadActiveEventConfigs } from '../../assets/loaders/event-config.loader.ts';
 import {
   loadAllWorldContent,
   loadWorldStageRuntimeConfigs
@@ -66,6 +68,38 @@ export function selectWorldMapWorlds(snapshot: TProgressionSnapshot) {
           worldId: world.id
         };
       })
+    };
+  });
+}
+
+export function selectActiveEventCards(snapshot: TProgressionSnapshot) {
+  const progressionSnapshot = snapshot.context.snapshot;
+  const eventResult = loadActiveEventConfigs();
+
+  if (!progressionSnapshot || eventResult.isErr()) {
+    return [];
+  }
+
+  return eventResult.value.map((eventDefinition) => {
+    const eligibility = evaluateEventRewardEligibility(eventDefinition, progressionSnapshot);
+
+    return {
+      id: eventDefinition.id,
+      title: eventDefinition.title,
+      description: eventDefinition.description,
+      rewardId: eventDefinition.reward.id,
+      rewardTitle: eventDefinition.reward.title,
+      rewardDescription: eventDefinition.reward.description,
+      xpAmount: eventDefinition.reward.xpAmount,
+      canClaim: eligibility.canClaim,
+      statusText:
+        eligibility.reason === 'claimable'
+          ? 'Claimable'
+          : eligibility.reason === 'already_claimed'
+            ? 'Claimed'
+            : eligibility.reason === 'expired'
+              ? 'Expired'
+              : 'Locked by Progression'
     };
   });
 }

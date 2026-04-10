@@ -16,9 +16,16 @@ import createGameRuntimeBridge from '../../game/hud-bridges/game-runtime-bridge'
 import HudPanel from '../components/HudPanel';
 import StageProfileBanner from '../components/StageProfileBanner';
 import WorldMapPanel from '../components/WorldMapPanel';
+import { eventActor } from '../../state/machines/event.machine.ts';
 import { monetizationActor } from '../../state/machines/monetization.machine.ts';
 import { progressionActor } from '../../state/machines/progression.machine';
 import { sessionActor } from '../../state/machines/session.machine';
+import {
+  selectEventClaimFeedback,
+  selectIsEventClaimPending,
+  selectLatestEventClaimError,
+  selectLatestClaimedEventId
+} from '../../state/selectors/event.selectors.ts';
 import {
   selectHasPurchasedFeaturedPack,
   selectIsPurchasePending,
@@ -26,6 +33,7 @@ import {
 } from '../../state/selectors/monetization.selectors.ts';
 import {
   selectActiveStageSelection,
+  selectActiveEventCards,
   selectIsProgressionLoading,
   selectLatestStageCompletion,
   selectWorldMapWorlds
@@ -57,6 +65,9 @@ export default function GameShell() {
   const runtimeHud = useUiStore((state) => state.storeRuntimeHud);
   const canActivateFever = useSelector(sessionActor, selectCanActivateFever);
   const canUseRewardedRetry = useSelector(sessionActor, selectCanUseRewardedRetry);
+  const eventClaimFeedback = useSelector(eventActor, selectEventClaimFeedback);
+  const isEventClaimPending = useSelector(eventActor, selectIsEventClaimPending);
+  const latestEventClaimError = useSelector(eventActor, selectLatestEventClaimError);
   const feverMeter = useSelector(sessionActor, selectFeverMeter);
   const hasPurchasedFeaturedPack = useSelector(
     monetizationActor,
@@ -69,13 +80,16 @@ export default function GameShell() {
   const sessionPhase = useSelector(sessionActor, selectSessionPhase);
   const isSessionBooting = useSelector(sessionActor, selectIsSessionBooting);
   const isSessionRetrying = useSelector(sessionActor, selectIsSessionRetrying);
+  const latestClaimedEventId = useSelector(eventActor, selectLatestClaimedEventId);
   const purchaseFeedback = useSelector(monetizationActor, selectPurchaseFeedback);
   const rewardedRetryFeedback = useSelector(sessionActor, selectRewardedRetryFeedback);
   const retryCount = useSelector(sessionActor, selectRetryCount);
   const activeStageSelection = useSelector(progressionActor, selectActiveStageSelection);
+  const activeEventCards = useSelector(progressionActor, selectActiveEventCards);
   const isProgressionLoading = useSelector(progressionActor, selectIsProgressionLoading);
   const latestStageCompletion = useSelector(progressionActor, selectLatestStageCompletion);
   const worldMapWorldSections = useSelector(progressionActor, selectWorldMapWorlds);
+  const loggedEventLoadRef = useRef(false);
   const [pendingStageClearSave, setPendingStageClearSave] = useState<{
     selection: IStageSelection;
     stageKind?: TStageKind;
@@ -121,6 +135,42 @@ export default function GameShell() {
       isDisposed = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (isProgressionLoading || loggedEventLoadRef.current) {
+      return;
+    }
+
+    loggedEventLoadRef.current = true;
+    loggerRef.current.info('event.loaded', {
+      activeEventCount: activeEventCards.length
+    });
+  }, [activeEventCards.length, isProgressionLoading]);
+
+  useEffect(() => {
+    const snapshot = eventActor.getSnapshot().context.latestSnapshot;
+
+    if (!latestClaimedEventId || !snapshot) {
+      return;
+    }
+
+    progressionActor.send({ type: 'PROGRESSION_LOADED', snapshot });
+    loggerRef.current.info('event.claim_granted', {
+      eventId: latestClaimedEventId,
+      activeStageId: activeStageSelection?.stageId ?? null
+    });
+  }, [activeStageSelection?.stageId, latestClaimedEventId]);
+
+  useEffect(() => {
+    if (!latestEventClaimError) {
+      return;
+    }
+
+    loggerRef.current.warn('event.claim_rejected', {
+      code: latestEventClaimError.code,
+      message: latestEventClaimError.message
+    });
+  }, [latestEventClaimError]);
 
   useEffect(() => {
     if (!runtimeHostRef.current) return;
@@ -264,9 +314,24 @@ export default function GameShell() {
       <section style={shellLayoutStyle}>
         <WorldMapPanel
           activeStageSelection={activeStageSelection}
+          activeEventCards={activeEventCards}
+          eventClaimFeedback={eventClaimFeedback}
           featuredPurchaseLabel='Supporter Pack'
           hasPurchasedFeaturedPack={hasPurchasedFeaturedPack}
+          isEventClaimPending={isEventClaimPending}
           isPurchasePending={isPurchasePending}
+          onClaimEventReward={(claim) => {
+            loggerRef.current.info('event.claim_attempted', {
+              eventId: claim.eventId,
+              rewardId: claim.rewardId,
+              activeStageId: activeStageSelection?.stageId ?? null
+            });
+            eventActor.send({
+              type: 'REQUEST_EVENT_CLAIM',
+              eventId: claim.eventId,
+              rewardId: claim.rewardId
+            });
+          }}
           onSelectStage={(selection: IStageSelection) => {
             progressionRepositoryRef.current
               .saveLastPlayedStageSelection(selection)

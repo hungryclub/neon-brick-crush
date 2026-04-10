@@ -1,4 +1,5 @@
 import type { IStageSelection, TStageKind } from './stage-model';
+import type { IEventClaimState } from './event-model';
 
 export interface IPlayerSettings {
   isReducedMotionEnabled: boolean;
@@ -17,6 +18,7 @@ export interface IProgressionSnapshot {
   playerLevel: number;
   totalXp: number;
   settings: IPlayerSettings;
+  eventClaimStateById: Record<string, IEventClaimState>;
   unlockedWorldIdList: string[];
   stageProgressById: Record<string, IStageProgressState>;
   lastPlayedStageSelection: IStageSelection | null;

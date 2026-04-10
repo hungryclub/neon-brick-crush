@@ -35,3 +35,36 @@ test('save recovery returns a typed error for invalid schema payloads', () => {
   assert.equal(result.isErr(), true);
   assert.equal(result._unsafeUnwrapErr().code, 'SAVE_LOAD_FAILED');
 });
+
+test('save recovery backfills missing event claim state for older payloads', () => {
+  const result = parseProgressionSaveEnvelope(
+    JSON.stringify({
+      schemaVersion: PROGRESSION_SAVE_SCHEMA_VERSION,
+      progression: {
+        version: PROGRESSION_SAVE_SCHEMA_VERSION,
+        playerLevel: 2,
+        totalXp: 175,
+        settings: {
+          isReducedMotionEnabled: false,
+          isSfxEnabled: true,
+          isTutorialHintsEnabled: true
+        },
+        unlockedWorldIdList: ['world-01'],
+        stageProgressById: {
+          'world-01-stage-01': {
+            bestStarCount: 1,
+            isCompleted: true,
+            isUnlocked: true
+          }
+        },
+        lastPlayedStageSelection: {
+          worldId: 'world-01',
+          stageId: 'world-01-stage-01'
+        }
+      }
+    })
+  );
+
+  assert.equal(result.isOk(), true);
+  assert.deepEqual(result._unsafeUnwrap().progression.eventClaimStateById, {});
+});

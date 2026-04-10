@@ -193,3 +193,50 @@ test('progression repository does not advance in-memory progression when a write
   });
   assert.equal(parsedEnvelope.progression.settings.isReducedMotionEnabled, true);
 });
+
+test('progression repository persists a successful event reward claim through the save envelope', async () => {
+  resetProgressionSnapshotForTests();
+  const repository = createProgressionRepository();
+
+  await repository.saveStageCompletion({
+    worldId: 'world-01',
+    stageId: 'world-01-stage-01',
+    starCount: 1
+  });
+
+  const updatedSnapshot = (
+    await repository.saveEventRewardClaim({
+      eventId: 'event-neon-kickoff',
+      rewardId: 'reward-neon-kickoff-xp'
+    })
+  )._unsafeUnwrap();
+
+  assert.equal(updatedSnapshot.totalXp, 375);
+  assert.equal(updatedSnapshot.playerLevel, 4);
+  assert.deepEqual(updatedSnapshot.eventClaimStateById['event-neon-kickoff'].claimedRewardIds, [
+    'reward-neon-kickoff-xp'
+  ]);
+});
+
+test('progression repository rejects duplicate event reward claims with a handled error', async () => {
+  resetProgressionSnapshotForTests();
+  const repository = createProgressionRepository();
+
+  await repository.saveStageCompletion({
+    worldId: 'world-01',
+    stageId: 'world-01-stage-01',
+    starCount: 1
+  });
+  await repository.saveEventRewardClaim({
+    eventId: 'event-neon-kickoff',
+    rewardId: 'reward-neon-kickoff-xp'
+  });
+
+  const duplicateClaimResult = await repository.saveEventRewardClaim({
+    eventId: 'event-neon-kickoff',
+    rewardId: 'reward-neon-kickoff-xp'
+  });
+
+  assert.equal(duplicateClaimResult.isErr(), true);
+  assert.equal(duplicateClaimResult._unsafeUnwrapErr().code, 'EVENT_REWARD_ALREADY_CLAIMED');
+});

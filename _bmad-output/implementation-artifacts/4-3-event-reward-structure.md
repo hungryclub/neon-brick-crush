@@ -1,6 +1,6 @@
 # Story 4.3: 이벤트/운영 보상 구조 구현
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -22,40 +22,40 @@ so that live content feels additive instead of disruptive.
 
 ## Tasks / Subtasks
 
-- [ ] Add typed event content and state boundaries. (AC: 1, 2)
-  - [ ] Define typed event models for event identity, active window, reward
+- [x] Add typed event content and state boundaries. (AC: 1, 2)
+  - [x] Define typed event models for event identity, active window, reward
         definition, claim status, and eligibility prerequisites.
-  - [ ] Load event definitions through typed config/loader paths rather than
+  - [x] Load event definitions through typed config/loader paths rather than
         hardcoded UI constants.
-  - [ ] Keep event status persistence repository-backed so reloads preserve
+  - [x] Keep event status persistence repository-backed so reloads preserve
         claim and availability state.
-- [ ] Revalidate event reward eligibility in the domain layer. (AC: 1)
-  - [ ] Check unlock, replay, or progression prerequisites before any claim is
+- [x] Revalidate event reward eligibility in the domain layer. (AC: 1)
+  - [x] Check unlock, replay, or progression prerequisites before any claim is
         accepted.
-  - [ ] Keep eligibility logic outside React and Phaser Scene code.
-  - [ ] Return handled typed failures for already-claimed, expired, or invalid
+  - [x] Keep eligibility logic outside React and Phaser Scene code.
+  - [x] Return handled typed failures for already-claimed, expired, or invalid
         event reward states.
-- [ ] Route event reward claims through service and repository boundaries. (AC: 2)
-  - [ ] Reuse Story 4.1 save envelope and Story 4.2 monetization/progression
+- [x] Route event reward claims through service and repository boundaries. (AC: 2)
+  - [x] Reuse Story 4.1 save envelope and Story 4.2 monetization/progression
         service patterns instead of inventing a new reward pipeline.
-  - [ ] Ensure reward application updates progression through repositories or
+  - [x] Ensure reward application updates progression through repositories or
         adjacent domain services, not UI-local mutation.
-  - [ ] Keep claim intent-only in UI: buttons send events, but do not apply
+  - [x] Keep claim intent-only in UI: buttons send events, but do not apply
         rewards directly.
-- [ ] Add analytics/logging hooks for event operations. (AC: 2)
-  - [ ] Emit structured logs for event loaded, claim attempted, claim granted,
+- [x] Add analytics/logging hooks for event operations. (AC: 2)
+  - [x] Emit structured logs for event loaded, claim attempted, claim granted,
         claim rejected, and claim restored states.
-  - [ ] Keep analytics/error sink wiring inside `app/platform` or shared logging
+  - [x] Keep analytics/error sink wiring inside `app/platform` or shared logging
         boundaries.
-  - [ ] Preserve enough structured fields for later review: event id, reward
+  - [x] Preserve enough structured fields for later review: event id, reward
         id, stage/world context, and outcome code.
-- [ ] Add focused verification for event claim correctness. (AC: 1, 2)
-  - [ ] Add tests for typed event loading, repository persistence, and domain
+- [x] Add focused verification for event claim correctness. (AC: 1, 2)
+  - [x] Add tests for typed event loading, repository persistence, and domain
         eligibility revalidation.
-  - [ ] Add tests for successful claim, duplicate claim rejection, and expired
+  - [x] Add tests for successful claim, duplicate claim rejection, and expired
         event rejection.
-  - [ ] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
-  - [ ] Manually verify: event rewards reload correctly and handled claim
+  - [x] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
+  - [x] Manually verify: event rewards reload correctly and handled claim
         failures never corrupt progression state.
 
 ## Dev Notes
@@ -221,3 +221,20 @@ platform/service/state-machine 경계 안으로 정리되었다. 따라서 Story
 - `React = presentation only`
 - `repositories/services = progression and reward application`
 - `platform/logging adapters = all external sink contact`
+
+## Completion Notes
+
+### GPT-5 Codex
+
+- Added typed live-event definitions and a dedicated loader so event content now
+  comes from manifest/loader boundaries instead of UI-local constants.
+- Extended the progression save snapshot with repository-backed event claim
+  state and implemented handled claim persistence through
+  `progression.repository.ts`.
+- Added domain-level event eligibility checks for already-claimed, expired, and
+  progression-locked reward states before any reward application occurs.
+- Introduced `event.machine.ts` and selector/UI wiring so the world-map shell
+  now exposes event claim intents without directly mutating progression state.
+- Added structured event logs for load, claim attempted, claim granted, and
+  claim rejected paths.
+- Verified with `npm run test`, `npm run typecheck`, and `npm run build`.

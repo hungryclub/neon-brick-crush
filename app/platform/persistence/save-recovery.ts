@@ -25,6 +25,7 @@ export function createInitialProgressionSnapshot(): IProgressionSnapshot {
     playerLevel: 1,
     totalXp: 0,
     settings: createDefaultPlayerSettings(),
+    eventClaimStateById: {},
     unlockedWorldIdList: ['world-01'],
     stageProgressById: {
       'world-01-stage-01': {
@@ -123,6 +124,8 @@ function validateProgressionSnapshot(
     typeof snapshot.playerLevel !== 'number' ||
     typeof snapshot.totalXp !== 'number' ||
     !Array.isArray(snapshot.unlockedWorldIdList) ||
+    (snapshot.eventClaimStateById !== undefined &&
+      (typeof snapshot.eventClaimStateById !== 'object' || snapshot.eventClaimStateById === null)) ||
     typeof snapshot.stageProgressById !== 'object' ||
     snapshot.stageProgressById === null ||
     !snapshot.settings ||
@@ -154,6 +157,7 @@ function validateProgressionSnapshot(
       isSfxEnabled: snapshot.settings.isSfxEnabled,
       isTutorialHintsEnabled: snapshot.settings.isTutorialHintsEnabled
     },
+    eventClaimStateById: structuredClone(snapshot.eventClaimStateById ?? {}),
     unlockedWorldIdList: [...snapshot.unlockedWorldIdList],
     stageProgressById: structuredClone(snapshot.stageProgressById),
     lastPlayedStageSelection: snapshot.lastPlayedStageSelection ?? null

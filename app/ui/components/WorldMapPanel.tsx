@@ -22,9 +22,23 @@ interface IWorldMapWorldSection {
 
 interface IWorldMapPanelProps {
   activeStageSelection: IStageSelection | null;
+  activeEventCards: Array<{
+    canClaim: boolean;
+    description: string;
+    id: string;
+    rewardDescription: string;
+    rewardId: string;
+    rewardTitle: string;
+    statusText: string;
+    title: string;
+    xpAmount: number;
+  }>;
+  eventClaimFeedback: string | null;
   featuredPurchaseLabel: string;
   hasPurchasedFeaturedPack: boolean;
+  isEventClaimPending: boolean;
   isPurchasePending: boolean;
+  onClaimEventReward: (claim: { eventId: string; rewardId: string }) => void;
   purchaseFeedback: string | null;
   onPurchaseFeatured: () => void;
   onSelectStage: (selection: IStageSelection) => void;
@@ -33,9 +47,13 @@ interface IWorldMapPanelProps {
 
 export default function WorldMapPanel({
   activeStageSelection,
+  activeEventCards,
+  eventClaimFeedback,
   featuredPurchaseLabel,
   hasPurchasedFeaturedPack,
+  isEventClaimPending,
   isPurchasePending,
+  onClaimEventReward,
   purchaseFeedback,
   onPurchaseFeatured,
   onSelectStage,
@@ -114,6 +132,42 @@ export default function WorldMapPanel({
           );
         })}
       </div>
+      {activeEventCards.length ? (
+        <section style={eventPanelStyle}>
+          <span style={eyebrowStyle}>Live Event</span>
+          <strong style={monetizationTitleStyle}>Season Reward</strong>
+          {activeEventCards.map((eventCard) => {
+            return (
+              <div key={eventCard.id} style={eventCardStyle}>
+                <strong style={eventTitleStyle}>{eventCard.title}</strong>
+                <p style={monetizationTextStyle}>{eventCard.description}</p>
+                <p style={eventRewardStyle}>
+                  {eventCard.rewardTitle} · +{eventCard.xpAmount} XP
+                </p>
+                <p style={eventStatusStyle}>{eventCard.statusText}</p>
+                <button
+                  type='button'
+                  disabled={isEventClaimPending || !eventCard.canClaim}
+                  onClick={() => {
+                    onClaimEventReward({
+                      eventId: eventCard.id,
+                      rewardId: eventCard.rewardId
+                    });
+                  }}
+                  style={{
+                    ...purchaseButtonStyle,
+                    ...(isEventClaimPending ? purchaseButtonPendingStyle : null),
+                    ...(!eventCard.canClaim ? purchaseButtonLockedStyle : null)
+                  }}
+                >
+                  {isEventClaimPending ? 'Claiming Event Reward...' : eventCard.canClaim ? 'Claim Reward' : 'Unavailable'}
+                </button>
+              </div>
+            );
+          })}
+          {eventClaimFeedback ? <p style={monetizationFeedbackStyle}>{eventClaimFeedback}</p> : null}
+        </section>
+      ) : null}
       <section style={monetizationPanelStyle}>
         <span style={eyebrowStyle}>Support</span>
         <strong style={monetizationTitleStyle}>Optional Meta Boost</strong>
@@ -222,6 +276,41 @@ const monetizationPanelStyle = {
   border: '1px solid rgba(255, 214, 102, 0.2)'
 } as const;
 
+const eventPanelStyle = {
+  display: 'grid',
+  gap: 10,
+  marginTop: 8,
+  padding: '16px 14px',
+  borderRadius: 18,
+  background: 'rgba(22, 19, 48, 0.9)',
+  border: '1px solid rgba(120, 227, 255, 0.18)'
+} as const;
+
+const eventCardStyle = {
+  display: 'grid',
+  gap: 8,
+  padding: '12px 0',
+  borderTop: '1px solid rgba(255, 255, 255, 0.08)'
+} as const;
+
+const eventTitleStyle = {
+  fontSize: 15
+} as const;
+
+const eventRewardStyle = {
+  margin: 0,
+  fontSize: 12,
+  color: '#8dffb3'
+} as const;
+
+const eventStatusStyle = {
+  margin: 0,
+  fontSize: 11,
+  textTransform: 'uppercase',
+  letterSpacing: '0.08em',
+  color: 'rgba(245, 247, 255, 0.62)'
+} as const;
+
 const monetizationTitleStyle = {
   fontSize: 16
 } as const;
@@ -257,6 +346,12 @@ const purchaseButtonPendingStyle = {
 
 const purchaseButtonOwnedStyle = {
   background: 'linear-gradient(135deg, rgba(140, 255, 179, 0.92), rgba(120, 227, 255, 0.92))'
+} as const;
+
+const purchaseButtonLockedStyle = {
+  background: 'rgba(14, 18, 30, 0.78)',
+  color: 'rgba(245, 247, 255, 0.55)',
+  cursor: 'not-allowed'
 } as const;
 
 const stageButtonStyle = {
