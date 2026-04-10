@@ -27,6 +27,8 @@ import DebugOverlay from '../components/DebugOverlay';
 import HudPanel from '../components/HudPanel';
 import StageProfileBanner from '../components/StageProfileBanner';
 import WorldMapPanel from '../components/WorldMapPanel';
+import MobileMapLayout from '../layouts/MobileMapLayout';
+import MobilePlayLayout from '../layouts/MobilePlayLayout';
 import { eventActor } from '../../state/machines/event.machine.ts';
 import { monetizationActor } from '../../state/machines/monetization.machine.ts';
 import { progressionActor } from '../../state/machines/progression.machine';
@@ -117,6 +119,7 @@ export default function GameShell() {
   const [debugSimulationState, setDebugSimulationState] = useState<IDebugSimulationState>(
     getDebugSimulationState()
   );
+  const [mobileView, setMobileView] = useState<'play' | 'map'>('play');
   const [viewportWidth, setViewportWidth] = useState(() =>
     typeof window === 'undefined' ? 1280 : window.innerWidth
   );
@@ -138,6 +141,21 @@ export default function GameShell() {
       window.removeEventListener('resize', handleResize);
     };
   }, []);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const previousTouchAction = document.body.style.touchAction;
+
+    if (viewportWidth < 760) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'manipulation';
+    }
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.touchAction = previousTouchAction;
+    };
+  }, [viewportWidth]);
 
   useEffect(() => {
     retryCountRef.current = retryCount;
@@ -474,6 +492,46 @@ export default function GameShell() {
 
   const isCompactLayout = viewportWidth < 1080;
   const isMobileLayout = viewportWidth < 760;
+  const handleOpenMobileMap = () => {
+    setMobileView('map');
+  };
+  const handleReturnToPlay = () => {
+    setMobileView('play');
+  };
+  const handleSelectStage = (selection: IStageSelection) => {
+    progressionRepositoryRef.current
+      .saveLastPlayedStageSelection(selection)
+      .then((result) => {
+        if (result.isErr()) {
+          loggerRef.current.warn('progression.save_selection_failed', {
+            code: result.error.code,
+            message: result.error.message
+          });
+          return;
+        }
+
+        const snapshot = result.value;
+        progressionActor.send({ type: 'PROGRESSION_LOADED', snapshot });
+        progressionActor.send({ type: 'SELECT_STAGE', selection });
+      });
+    sessionActor.send({ type: 'RESET_SESSION' });
+    setMobileView('play');
+  };
+  const handleClaimEventReward = (claim: { eventId: string; rewardId: string }) => {
+    loggerRef.current.info('event.claim_attempted', {
+      eventId: claim.eventId,
+      rewardId: claim.rewardId,
+      activeStageId: activeStageSelection?.stageId ?? null
+    });
+    eventActor.send({
+      type: 'REQUEST_EVENT_CLAIM',
+      eventId: claim.eventId,
+      rewardId: claim.rewardId
+    });
+  };
+  const handlePurchaseFeatured = () => {
+    monetizationActor.send({ type: 'REQUEST_FEATURED_PURCHASE' });
+  };
   const mapPanel = (
     <WorldMapPanel
       activeStageSelection={activeStageSelection}
@@ -484,39 +542,9 @@ export default function GameShell() {
       hasPurchasedFeaturedPack={hasPurchasedFeaturedPack}
       isEventClaimPending={isEventClaimPending}
       isPurchasePending={isPurchasePending}
-      onClaimEventReward={(claim) => {
-        loggerRef.current.info('event.claim_attempted', {
-          eventId: claim.eventId,
-          rewardId: claim.rewardId,
-          activeStageId: activeStageSelection?.stageId ?? null
-        });
-        eventActor.send({
-          type: 'REQUEST_EVENT_CLAIM',
-          eventId: claim.eventId,
-          rewardId: claim.rewardId
-        });
-      }}
-      onSelectStage={(selection: IStageSelection) => {
-        progressionRepositoryRef.current
-          .saveLastPlayedStageSelection(selection)
-          .then((result) => {
-            if (result.isErr()) {
-              loggerRef.current.warn('progression.save_selection_failed', {
-                code: result.error.code,
-                message: result.error.message
-              });
-              return;
-            }
-
-            const snapshot = result.value;
-            progressionActor.send({ type: 'PROGRESSION_LOADED', snapshot });
-            progressionActor.send({ type: 'SELECT_STAGE', selection });
-          });
-        sessionActor.send({ type: 'RESET_SESSION' });
-      }}
-      onPurchaseFeatured={() => {
-        monetizationActor.send({ type: 'REQUEST_FEATURED_PURCHASE' });
-      }}
+      onClaimEventReward={handleClaimEventReward}
+      onSelectStage={handleSelectStage}
+      onPurchaseFeatured={handlePurchaseFeatured}
       purchaseFeedback={purchaseFeedback}
       worldSections={worldMapWorldSections}
     />
@@ -539,11 +567,104 @@ export default function GameShell() {
     />
   );
 
+  if (isMobileLayout) {
+    return (
+      <main style={resolveLayoutStyle(true)}>
+        {mobileView === 'play' ? (
+          <MobilePlayLayout
+            canActivateFever={canActivateFever}
+            canUseRewardedRetry={canUseRewardedRetry}
+            feverButtonLabel={
+              isFeverActive ? 'Fever Active' : canActivateFever ? 'Activate Fever' : 'Build Fever'
+            }
+            isFeverActive={isFeverActive}
+            isProgressionLoading={isProgressionLoading}
+            isRewardedRetryPending={isRewardedRetryPending}
+            isSessionBooting={isSessionBooting}
+            isSessionFailed={isSessionFailed}
+            latestStageCompletion={latestStageCompletion}
+            onActivateFever={handleFeverActivation}
+            onBackToMap={() => {
+              progressionActor.send({ type: 'RETURN_TO_MAP' });
+              setMobileView('map');
+            }}
+            onOpenMap={handleOpenMobileMap}
+            onRetry={() => {
+              sessionActor.send({ type: 'REQUEST_RETRY' });
+            }}
+            onRetrySave={() => {
+              setPendingStageClearSave((value) => (value ? { ...value } : value));
+            }}
+            onRewardedRetry={() => {
+              sessionActor.send({ type: 'REQUEST_REWARDED_RETRY' });
+            }}
+            retryCount={retryCount}
+            rewardedRetryFeedback={rewardedRetryFeedback}
+            runtimeHostRef={runtimeHostRef}
+            runtimeHud={runtimeHud}
+            saveErrorMessage={saveErrorMessage}
+            stageRuntimeConfig={activeStageRuntimeConfig}
+          />
+        ) : (
+          <MobileMapLayout
+            activeStageSelection={activeStageSelection}
+            featuredPurchaseLabel='Supporter Pack'
+            hasPurchasedFeaturedPack={hasPurchasedFeaturedPack}
+            isPurchasePending={isPurchasePending}
+            onBackToPlay={handleReturnToPlay}
+            onPurchaseFeatured={handlePurchaseFeatured}
+            onSelectStage={handleSelectStage}
+            purchaseFeedback={purchaseFeedback}
+            worldSections={worldMapWorldSections}
+          />
+        )}
+        {debugToolsEnabled ? (
+          <>
+            <button
+              style={debugToggleButtonStyle}
+              type='button'
+              onClick={() => {
+                storeToggleDebugVisible();
+              }}
+            >
+              {storeIsDebugVisible ? 'Hide Debug' : 'Show Debug'}
+            </button>
+            <DebugOverlay
+              activeStageId={activeStageSelection?.stageId ?? null}
+              canUseRewardedRetry={canUseRewardedRetry}
+              isVisible={storeIsDebugVisible}
+              onClose={() => {
+                storeToggleDebugVisible();
+              }}
+              onForceFailure={() => {
+                dispatchDebugCommand({ type: 'FORCE_STAGE_FAILURE' });
+              }}
+              onResetProgressionSave={() => {
+                dispatchDebugCommand({ type: 'RESET_PROGRESSION_SAVE' });
+              }}
+              onSetPurchaseMode={(mode) => {
+                dispatchDebugCommand({ type: 'SET_PURCHASE_MODE', mode });
+              }}
+              onSetRewardedAdMode={(mode) => {
+                dispatchDebugCommand({ type: 'SET_REWARDED_AD_MODE', mode });
+              }}
+              runtimeDebug={storeRuntimeDebug}
+              runtimeHud={runtimeHud}
+              saveErrorMessage={saveErrorMessage}
+              sessionPhase={sessionPhase}
+              simulationState={debugSimulationState}
+            />
+          </>
+        ) : null}
+      </main>
+    );
+  }
+
   return (
-    <main style={resolveLayoutStyle(isMobileLayout)}>
+    <main style={resolveLayoutStyle(false)}>
       <section style={resolveShellLayoutStyle(isCompactLayout)}>
         <section style={resolveStageColumnStyle(isCompactLayout)}>
-          {isMobileLayout ? stageBanner : <div style={resolveInfoRailStyle(isCompactLayout)}>{stageBanner}{hudPanel}</div>}
+          <div style={resolveInfoRailStyle(isCompactLayout)}>{stageBanner}{hudPanel}</div>
           <section style={resolveStageShellStyle(isCompactLayout)}>
             <div ref={runtimeHostRef} id='game-runtime-host' style={runtimeHostStyle} />
             {isSessionBooting || isProgressionLoading ? (
@@ -633,12 +754,10 @@ export default function GameShell() {
               </div>
             ) : null}
           </section>
-          {isMobileLayout ? hudPanel : null}
           <div style={resolveActionBarStyle(isCompactLayout)}>
           <button
             style={{
               ...feverButtonStyle,
-              ...(isMobileLayout ? mobileFeverButtonStyle : null),
               ...(canActivateFever ? feverButtonReadyStyle : feverButtonDisabledStyle),
               ...(isFeverActive ? feverButtonActiveStyle : null)
             }}
@@ -650,8 +769,7 @@ export default function GameShell() {
           </button>
           </div>
         </section>
-        {isCompactLayout ? mapPanel : null}
-        {!isCompactLayout ? mapPanel : null}
+        {mapPanel}
       </section>
       {debugToolsEnabled ? (
         <>
