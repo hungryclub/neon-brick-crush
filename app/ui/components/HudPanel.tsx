@@ -2,6 +2,7 @@ import type { IRuntimeHudSnapshot } from '../../game/hud-bridges/game-runtime-br
 
 interface IHudPanelProps {
   canActivateFever: boolean;
+  compact?: boolean;
   feverMeter: number;
   isFeverActive: boolean;
   runtimeHud: IRuntimeHudSnapshot;
@@ -10,6 +11,7 @@ interface IHudPanelProps {
 
 export default function HudPanel({
   canActivateFever,
+  compact = false,
   feverMeter,
   isFeverActive,
   runtimeHud,
@@ -21,9 +23,9 @@ export default function HudPanel({
   const feverPercent = `${Math.round((feverMeter / 100) * 100)}%`;
 
   return (
-    <div style={panelStyle}>
-      <div style={pillStyle}>neo-brick-crush</div>
-      <div style={statsWrapStyle}>
+    <div style={{ ...panelStyle, ...(compact ? compactPanelStyle : null) }}>
+      <div style={{ ...pillStyle, ...(compact ? compactPillStyle : null) }}>neo-brick-crush</div>
+      <div style={{ ...statsWrapStyle, ...(compact ? compactStatsWrapStyle : null) }}>
         <div style={meterStyle}>
           <span>Session</span>
           <strong>{sessionPhase}</strong>
@@ -68,22 +70,28 @@ export default function HudPanel({
 }
 
 const panelStyle = {
-  position: 'absolute',
-  top: 16,
-  left: 16,
-  right: 16,
   display: 'flex',
   justifyContent: 'space-between',
-  alignItems: 'center',
+  alignItems: 'flex-start',
   gap: 12,
-  pointerEvents: 'none'
+  minWidth: 0
 } as const;
 
 const statsWrapStyle = {
-  display: 'flex',
-  justifyContent: 'flex-end',
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(92px, 1fr))',
+  justifyContent: 'stretch',
   gap: 10,
-  flexWrap: 'wrap'
+  flex: 1,
+  minWidth: 0
+} as const;
+
+const compactPanelStyle = {
+  display: 'grid'
+} as const;
+
+const compactStatsWrapStyle = {
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))'
 } as const;
 
 const pillStyle = {
@@ -97,15 +105,19 @@ const pillStyle = {
   fontSize: 12
 } as const;
 
+const compactPillStyle = {
+  justifySelf: 'start'
+} as const;
+
 const meterStyle = {
   display: 'grid',
   gap: 4,
-  minWidth: 140,
-  padding: '10px 14px',
+  minWidth: 0,
+  padding: '10px 12px',
   borderRadius: 16,
   background: 'rgba(255, 0, 145, 0.18)',
   border: '1px solid rgba(255, 120, 199, 0.28)',
-  textAlign: 'right'
+  textAlign: 'left'
 } as const;
 
 const lossStateStyle = {

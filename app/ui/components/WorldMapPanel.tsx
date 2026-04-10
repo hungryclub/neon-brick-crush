@@ -38,6 +38,7 @@ interface IWorldMapPanelProps {
   hasPurchasedFeaturedPack: boolean;
   isEventClaimPending: boolean;
   isPurchasePending: boolean;
+  compact?: boolean;
   onClaimEventReward: (claim: { eventId: string; rewardId: string }) => void;
   purchaseFeedback: string | null;
   onPurchaseFeatured: () => void;
@@ -48,6 +49,7 @@ interface IWorldMapPanelProps {
 export default function WorldMapPanel({
   activeStageSelection,
   activeEventCards,
+  compact = false,
   eventClaimFeedback,
   featuredPurchaseLabel,
   hasPurchasedFeaturedPack,
@@ -60,12 +62,12 @@ export default function WorldMapPanel({
   worldSections
 }: IWorldMapPanelProps) {
   return (
-    <aside style={panelStyle}>
+    <aside style={{ ...panelStyle, ...(compact ? compactPanelStyle : null) }}>
       <div style={headerStyle}>
         <span style={eyebrowStyle}>World Map</span>
         <strong style={titleStyle}>Stage Route</strong>
       </div>
-      <div style={stageListStyle}>
+      <div style={{ ...stageListStyle, ...(compact ? compactStageListStyle : null) }}>
         {worldSections.map((worldSection) => {
           return (
             <section key={worldSection.worldId} style={worldSectionStyle}>
@@ -80,7 +82,7 @@ export default function WorldMapPanel({
                 </span>
                 <strong style={worldTitleStyle}>{worldSection.title}</strong>
               </div>
-              <div style={worldStageListStyle}>
+              <div style={{ ...worldStageListStyle, ...(compact ? compactWorldStageListStyle : null) }}>
                 {worldSection.stageCards.map((stageCard, index) => {
                   const isActive =
                     activeStageSelection?.worldId === stageCard.worldId &&
@@ -202,13 +204,19 @@ function renderStars(starCount: number) {
 
 const panelStyle = {
   width: '100%',
-  minHeight: '100%',
+  minHeight: 0,
   padding: '22px 18px',
   display: 'grid',
   alignContent: 'start',
   gap: 16,
   background: 'linear-gradient(180deg, rgba(7, 11, 22, 0.96), rgba(10, 14, 28, 0.88))',
-  borderRight: '1px solid rgba(120, 227, 255, 0.12)'
+  borderLeft: '1px solid rgba(120, 227, 255, 0.12)'
+} as const;
+
+const compactPanelStyle = {
+  padding: '16px 14px',
+  borderLeft: 'none',
+  borderTop: '1px solid rgba(120, 227, 255, 0.12)'
 } as const;
 
 const headerStyle = {
@@ -231,6 +239,10 @@ const stageListStyle = {
   display: 'grid',
   gap: 16,
   alignContent: 'start'
+} as const;
+
+const compactStageListStyle = {
+  gap: 14
 } as const;
 
 const worldSectionStyle = {
@@ -264,6 +276,10 @@ const worldTitleStyle = {
 const worldStageListStyle = {
   display: 'grid',
   gap: 10
+} as const;
+
+const compactWorldStageListStyle = {
+  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))'
 } as const;
 
 const monetizationPanelStyle = {

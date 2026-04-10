@@ -117,12 +117,27 @@ export default function GameShell() {
   const [debugSimulationState, setDebugSimulationState] = useState<IDebugSimulationState>(
     getDebugSimulationState()
   );
+  const [viewportWidth, setViewportWidth] = useState(() =>
+    typeof window === 'undefined' ? 1280 : window.innerWidth
+  );
   const activeStageRuntimeConfig = activeStageSelection
     ? loadStageRuntimeConfig(activeStageSelection).match(
         (config) => config,
         () => null
       )
     : null;
+
+  useEffect(() => {
+    const handleResize = () => {
+      setViewportWidth(window.innerWidth);
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   useEffect(() => {
     retryCountRef.current = retryCount;
@@ -457,69 +472,173 @@ export default function GameShell() {
     }
   }
 
-  return (
-    <main style={layoutStyle}>
-      <section style={shellLayoutStyle}>
-        <WorldMapPanel
-          activeStageSelection={activeStageSelection}
-          activeEventCards={activeEventCards}
-          eventClaimFeedback={eventClaimFeedback}
-          featuredPurchaseLabel='Supporter Pack'
-          hasPurchasedFeaturedPack={hasPurchasedFeaturedPack}
-          isEventClaimPending={isEventClaimPending}
-          isPurchasePending={isPurchasePending}
-          onClaimEventReward={(claim) => {
-            loggerRef.current.info('event.claim_attempted', {
-              eventId: claim.eventId,
-              rewardId: claim.rewardId,
-              activeStageId: activeStageSelection?.stageId ?? null
-            });
-            eventActor.send({
-              type: 'REQUEST_EVENT_CLAIM',
-              eventId: claim.eventId,
-              rewardId: claim.rewardId
-            });
-          }}
-          onSelectStage={(selection: IStageSelection) => {
-            progressionRepositoryRef.current
-              .saveLastPlayedStageSelection(selection)
-              .then((result) => {
-                if (result.isErr()) {
-                  loggerRef.current.warn('progression.save_selection_failed', {
-                    code: result.error.code,
-                    message: result.error.message
-                  });
-                  return;
-                }
-
-                const snapshot = result.value;
-                progressionActor.send({ type: 'PROGRESSION_LOADED', snapshot });
-                progressionActor.send({ type: 'SELECT_STAGE', selection });
+  const isCompactLayout = viewportWidth < 1080;
+  const isMobileLayout = viewportWidth < 760;
+  const mapPanel = (
+    <WorldMapPanel
+      activeStageSelection={activeStageSelection}
+      activeEventCards={activeEventCards}
+      compact={isCompactLayout}
+      eventClaimFeedback={eventClaimFeedback}
+      featuredPurchaseLabel='Supporter Pack'
+      hasPurchasedFeaturedPack={hasPurchasedFeaturedPack}
+      isEventClaimPending={isEventClaimPending}
+      isPurchasePending={isPurchasePending}
+      onClaimEventReward={(claim) => {
+        loggerRef.current.info('event.claim_attempted', {
+          eventId: claim.eventId,
+          rewardId: claim.rewardId,
+          activeStageId: activeStageSelection?.stageId ?? null
+        });
+        eventActor.send({
+          type: 'REQUEST_EVENT_CLAIM',
+          eventId: claim.eventId,
+          rewardId: claim.rewardId
+        });
+      }}
+      onSelectStage={(selection: IStageSelection) => {
+        progressionRepositoryRef.current
+          .saveLastPlayedStageSelection(selection)
+          .then((result) => {
+            if (result.isErr()) {
+              loggerRef.current.warn('progression.save_selection_failed', {
+                code: result.error.code,
+                message: result.error.message
               });
-            sessionActor.send({ type: 'RESET_SESSION' });
-          }}
-          onPurchaseFeatured={() => {
-            monetizationActor.send({ type: 'REQUEST_FEATURED_PURCHASE' });
-          }}
-          purchaseFeedback={purchaseFeedback}
-          worldSections={worldMapWorldSections}
-        />
-        <section style={stageShellStyle}>
-          <div ref={runtimeHostRef} id='game-runtime-host' style={runtimeHostStyle} />
-          <StageProfileBanner
-            runtimeHud={runtimeHud}
-            stageRuntimeConfig={activeStageRuntimeConfig}
-          />
-          <HudPanel
-            canActivateFever={canActivateFever}
-            feverMeter={feverMeter}
-            isFeverActive={isFeverActive}
-            runtimeHud={runtimeHud}
-            sessionPhase={sessionPhase}
-          />
+              return;
+            }
+
+            const snapshot = result.value;
+            progressionActor.send({ type: 'PROGRESSION_LOADED', snapshot });
+            progressionActor.send({ type: 'SELECT_STAGE', selection });
+          });
+        sessionActor.send({ type: 'RESET_SESSION' });
+      }}
+      onPurchaseFeatured={() => {
+        monetizationActor.send({ type: 'REQUEST_FEATURED_PURCHASE' });
+      }}
+      purchaseFeedback={purchaseFeedback}
+      worldSections={worldMapWorldSections}
+    />
+  );
+  const stageBanner = (
+    <StageProfileBanner
+      compact={isCompactLayout}
+      runtimeHud={runtimeHud}
+      stageRuntimeConfig={activeStageRuntimeConfig}
+    />
+  );
+  const hudPanel = (
+    <HudPanel
+      canActivateFever={canActivateFever}
+      compact={isCompactLayout}
+      feverMeter={feverMeter}
+      isFeverActive={isFeverActive}
+      runtimeHud={runtimeHud}
+      sessionPhase={sessionPhase}
+    />
+  );
+
+  return (
+    <main style={resolveLayoutStyle(isMobileLayout)}>
+      <section style={resolveShellLayoutStyle(isCompactLayout)}>
+        <section style={resolveStageColumnStyle(isCompactLayout)}>
+          {isMobileLayout ? stageBanner : <div style={resolveInfoRailStyle(isCompactLayout)}>{stageBanner}{hudPanel}</div>}
+          <section style={resolveStageShellStyle(isCompactLayout)}>
+            <div ref={runtimeHostRef} id='game-runtime-host' style={runtimeHostStyle} />
+            {isSessionBooting || isProgressionLoading ? (
+              <div style={bootOverlayStyle}>Booting runtime shell...</div>
+            ) : null}
+            {isSessionFailed ? (
+              <div style={failureOverlayStyle}>
+                <div style={failureCardStyle}>
+                  <span style={failureEyebrowStyle}>Stage Failed</span>
+                  <strong style={failureTitleStyle}>즉시 다시 도전할 수 있어요.</strong>
+                  <p style={failureTextStyle}>
+                    압박선에 닿았습니다. 전체 앱을 다시 여는 대신 지금 상태에서 바로
+                    스테이지를 복구합니다.
+                  </p>
+                  <button
+                    style={retryButtonStyle}
+                    type='button'
+                    onClick={() => {
+                      sessionActor.send({ type: 'REQUEST_RETRY' });
+                    }}
+                  >
+                    Instant Retry
+                  </button>
+                  {canUseRewardedRetry ? (
+                    <button
+                      style={{
+                        ...secondaryRetryButtonStyle,
+                        ...(isRewardedRetryPending ? disabledButtonStyle : null)
+                      }}
+                      type='button'
+                      disabled={isRewardedRetryPending}
+                      onClick={() => {
+                        sessionActor.send({ type: 'REQUEST_REWARDED_RETRY' });
+                      }}
+                    >
+                      {isRewardedRetryPending ? 'Watching Ad...' : 'Rewarded Retry'}
+                    </button>
+                  ) : null}
+                  {rewardedRetryFeedback ? (
+                    <p style={failureNoticeStyle}>{rewardedRetryFeedback}</p>
+                  ) : null}
+                  <span style={failureMetaStyle}>retry count: {retryCount}</span>
+                </div>
+              </div>
+            ) : null}
+            {saveErrorMessage ? (
+              <div style={failureOverlayStyle}>
+                <div style={failureCardStyle}>
+                  <span style={failureEyebrowStyle}>Save Failed</span>
+                  <strong style={failureTitleStyle}>클리어 보상을 아직 저장하지 못했습니다.</strong>
+                  <p style={failureTextStyle}>{saveErrorMessage}</p>
+                  <button
+                    style={retryButtonStyle}
+                    type='button'
+                    onClick={() => {
+                      setPendingStageClearSave((value) => (value ? { ...value } : value));
+                    }}
+                  >
+                    Retry Save
+                  </button>
+                </div>
+              </div>
+            ) : null}
+            {latestStageCompletion ? (
+              <div style={successOverlayStyle}>
+                <div style={successCardStyle}>
+                  <span style={failureEyebrowStyle}>Stage Cleared</span>
+                  <strong style={failureTitleStyle}>
+                    별 {latestStageCompletion.starCount}개를 획득했습니다.
+                  </strong>
+                  <p style={failureTextStyle}>
+                    {latestStageCompletion.stageKind === 'climax' &&
+                    latestStageCompletion.unlockedWorldIds?.length
+                      ? `월드 마지막을 돌파해 ${latestStageCompletion.unlockedWorldIds.length}개의 새 월드가 해금되었습니다.`
+                      : '월드맵에 결과가 저장되었습니다. 다른 스테이지를 고르거나 같은 스테이지를 다시 도전할 수 있어요.'}
+                  </p>
+                  <button
+                    style={retryButtonStyle}
+                    type='button'
+                    onClick={() => {
+                      progressionActor.send({ type: 'RETURN_TO_MAP' });
+                    }}
+                  >
+                    Back To Map
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </section>
+          {isMobileLayout ? hudPanel : null}
+          <div style={resolveActionBarStyle(isCompactLayout)}>
           <button
             style={{
               ...feverButtonStyle,
+              ...(isMobileLayout ? mobileFeverButtonStyle : null),
               ...(canActivateFever ? feverButtonReadyStyle : feverButtonDisabledStyle),
               ...(isFeverActive ? feverButtonActiveStyle : null)
             }}
@@ -529,93 +648,10 @@ export default function GameShell() {
           >
             {isFeverActive ? 'Fever Active' : canActivateFever ? 'Activate Fever' : 'Build Fever'}
           </button>
-          {isSessionBooting || isProgressionLoading ? (
-            <div style={bootOverlayStyle}>Booting runtime shell...</div>
-          ) : null}
-          {isSessionFailed ? (
-            <div style={failureOverlayStyle}>
-              <div style={failureCardStyle}>
-                <span style={failureEyebrowStyle}>Stage Failed</span>
-                <strong style={failureTitleStyle}>즉시 다시 도전할 수 있어요.</strong>
-                <p style={failureTextStyle}>
-                  압박선에 닿았습니다. 전체 앱을 다시 여는 대신 지금 상태에서 바로
-                  스테이지를 복구합니다.
-                </p>
-                <button
-                  style={retryButtonStyle}
-                  type='button'
-                  onClick={() => {
-                    sessionActor.send({ type: 'REQUEST_RETRY' });
-                  }}
-                >
-                  Instant Retry
-                </button>
-                {canUseRewardedRetry ? (
-                  <button
-                    style={{
-                      ...secondaryRetryButtonStyle,
-                      ...(isRewardedRetryPending ? disabledButtonStyle : null)
-                    }}
-                    type='button'
-                    disabled={isRewardedRetryPending}
-                    onClick={() => {
-                      sessionActor.send({ type: 'REQUEST_REWARDED_RETRY' });
-                    }}
-                  >
-                    {isRewardedRetryPending ? 'Watching Ad...' : 'Rewarded Retry'}
-                  </button>
-                ) : null}
-                {rewardedRetryFeedback ? (
-                  <p style={failureNoticeStyle}>{rewardedRetryFeedback}</p>
-                ) : null}
-                <span style={failureMetaStyle}>retry count: {retryCount}</span>
-              </div>
-            </div>
-          ) : null}
-          {saveErrorMessage ? (
-            <div style={failureOverlayStyle}>
-              <div style={failureCardStyle}>
-                <span style={failureEyebrowStyle}>Save Failed</span>
-                <strong style={failureTitleStyle}>클리어 보상을 아직 저장하지 못했습니다.</strong>
-                <p style={failureTextStyle}>{saveErrorMessage}</p>
-                <button
-                  style={retryButtonStyle}
-                  type='button'
-                  onClick={() => {
-                    setPendingStageClearSave((value) => (value ? { ...value } : value));
-                  }}
-                >
-                  Retry Save
-                </button>
-              </div>
-            </div>
-          ) : null}
-          {latestStageCompletion ? (
-            <div style={successOverlayStyle}>
-              <div style={successCardStyle}>
-                <span style={failureEyebrowStyle}>Stage Cleared</span>
-                <strong style={failureTitleStyle}>
-                  별 {latestStageCompletion.starCount}개를 획득했습니다.
-                </strong>
-                <p style={failureTextStyle}>
-                  {latestStageCompletion.stageKind === 'climax' &&
-                  latestStageCompletion.unlockedWorldIds?.length
-                    ? `월드 마지막을 돌파해 ${latestStageCompletion.unlockedWorldIds.length}개의 새 월드가 해금되었습니다.`
-                    : '월드맵에 결과가 저장되었습니다. 다른 스테이지를 고르거나 같은 스테이지를 다시 도전할 수 있어요.'}
-                </p>
-                <button
-                  style={retryButtonStyle}
-                  type='button'
-                  onClick={() => {
-                    progressionActor.send({ type: 'RETURN_TO_MAP' });
-                  }}
-                >
-                  Back To Map
-                </button>
-              </div>
-            </div>
-          ) : null}
+          </div>
         </section>
+        {isCompactLayout ? mapPanel : null}
+        {!isCompactLayout ? mapPanel : null}
       </section>
       {debugToolsEnabled ? (
         <>
@@ -671,34 +707,65 @@ function resolveStageStarCount(retryCount: number) {
   return 1;
 }
 
-const layoutStyle = {
-  minHeight: '100vh',
-  margin: 0,
-  display: 'grid',
-  placeItems: 'center',
-  background:
-    'radial-gradient(circle at top, #1e2b5f 0%, #090b17 48%, #030409 100%)',
-  color: '#f5f7ff',
-  fontFamily: "'Trebuchet MS', 'Segoe UI', sans-serif"
-} as const;
+function resolveLayoutStyle(isMobileLayout: boolean) {
+  return {
+    minHeight: '100vh',
+    margin: 0,
+    padding: isMobileLayout ? '0' : '24px',
+    display: 'grid',
+    placeItems: 'stretch',
+    background:
+      'radial-gradient(circle at top, #1e2b5f 0%, #090b17 48%, #030409 100%)',
+    color: '#f5f7ff',
+    fontFamily: "'Trebuchet MS', 'Segoe UI', sans-serif"
+  } as const;
+}
 
-const shellLayoutStyle = {
-  width: 'min(100vw, 1240px)',
-  display: 'grid',
-  gridTemplateColumns: '280px minmax(0, 1fr)',
-  borderRadius: '24px',
-  overflow: 'hidden',
-  border: '1px solid rgba(120, 227, 255, 0.18)',
-  boxShadow: '0 20px 80px rgba(0, 0, 0, 0.45)'
-} as const;
+function resolveShellLayoutStyle(isCompactLayout: boolean) {
+  return {
+    width: 'min(100%, 1320px)',
+    margin: '0 auto',
+    display: 'grid',
+    gridTemplateColumns: isCompactLayout ? 'minmax(0, 1fr)' : 'minmax(0, 1.25fr) 320px',
+    alignItems: 'start',
+    borderRadius: isCompactLayout ? '0' : '28px',
+    overflow: 'hidden',
+    border: isCompactLayout ? 'none' : '1px solid rgba(120, 227, 255, 0.18)',
+    boxShadow: isCompactLayout ? 'none' : '0 20px 80px rgba(0, 0, 0, 0.45)',
+    background: 'rgba(5, 8, 18, 0.72)'
+  } as const;
+}
 
-const stageShellStyle = {
-  width: '100%',
-  aspectRatio: '16 / 9',
-  position: 'relative',
-  overflow: 'hidden',
-  minHeight: 0
-} as const;
+function resolveStageColumnStyle(isCompactLayout: boolean) {
+  return {
+    display: 'grid',
+    gap: isCompactLayout ? 12 : 16,
+    padding: isCompactLayout ? '14px' : '18px',
+    minWidth: 0
+  } as const;
+}
+
+function resolveInfoRailStyle(isCompactLayout: boolean) {
+  return {
+    display: 'grid',
+    gridTemplateColumns: isCompactLayout ? 'minmax(0, 1fr)' : 'minmax(280px, 0.9fr) minmax(0, 1.1fr)',
+    gap: 12,
+    alignItems: 'start'
+  } as const;
+}
+
+function resolveStageShellStyle(isCompactLayout: boolean) {
+  return {
+    width: '100%',
+    aspectRatio: '16 / 9',
+    position: 'relative',
+    overflow: 'hidden',
+    minHeight: isCompactLayout ? '320px' : '0',
+    borderRadius: isCompactLayout ? '22px' : '24px',
+    border: '1px solid rgba(120, 227, 255, 0.14)',
+    background: 'linear-gradient(180deg, rgba(8, 12, 24, 0.98), rgba(8, 10, 21, 0.98))'
+  } as const;
+}
 
 const runtimeHostStyle = {
   width: '100%',
@@ -706,16 +773,25 @@ const runtimeHostStyle = {
 } as const;
 
 const feverButtonStyle = {
-  position: 'absolute',
-  right: 18,
-  bottom: 18,
-  zIndex: 2,
   borderRadius: 999,
   padding: '14px 18px',
   fontWeight: 700,
   border: '1px solid rgba(255, 255, 255, 0.15)',
-  transition: 'transform 120ms ease, opacity 120ms ease'
+  transition: 'transform 120ms ease, opacity 120ms ease',
+  justifySelf: 'end'
 } as const;
+
+const mobileFeverButtonStyle = {
+  width: '100%',
+  justifySelf: 'stretch'
+} as const;
+
+function resolveActionBarStyle(isCompactLayout: boolean) {
+  return {
+    display: 'flex',
+    justifyContent: isCompactLayout ? 'stretch' : 'flex-end'
+  } as const;
+}
 
 const feverButtonDisabledStyle = {
   background: 'rgba(14, 18, 30, 0.78)',

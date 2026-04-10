@@ -2,11 +2,13 @@ import type { IStageRuntimeConfig } from '../../domain/models/stage-model';
 import type { IRuntimeHudSnapshot } from '../../game/hud-bridges/game-runtime-bridge';
 
 interface IStageProfileBannerProps {
+  compact?: boolean;
   runtimeHud: IRuntimeHudSnapshot;
   stageRuntimeConfig: IStageRuntimeConfig | null;
 }
 
 export default function StageProfileBanner({
+  compact = false,
   runtimeHud,
   stageRuntimeConfig
 }: IStageProfileBannerProps) {
@@ -21,6 +23,7 @@ export default function StageProfileBanner({
     <div
       style={{
         ...panelStyle,
+        ...(compact ? compactPanelStyle : null),
         borderColor: accentColor,
         boxShadow: `0 10px 40px ${accentColor}22`
       }}
@@ -59,11 +62,8 @@ function resolveTeachByPlayCue(
 }
 
 const panelStyle = {
-  position: 'absolute',
-  top: 18,
-  left: 18,
-  zIndex: 2,
-  width: 'min(360px, calc(100% - 36px))',
+  width: '100%',
+  minWidth: 0,
   padding: '14px 16px',
   display: 'grid',
   gap: 6,
@@ -73,6 +73,11 @@ const panelStyle = {
   backdropFilter: 'blur(10px)'
 } as const;
 
+const compactPanelStyle = {
+  padding: '12px 14px',
+  borderRadius: 16
+} as const;
+
 const eyebrowStyle = {
   fontSize: 11,
   letterSpacing: '0.12em',
@@ -80,7 +85,8 @@ const eyebrowStyle = {
 } as const;
 
 const titleStyle = {
-  fontSize: 20
+  fontSize: 20,
+  lineHeight: 1.15
 } as const;
 
 const objectiveStyle = {
