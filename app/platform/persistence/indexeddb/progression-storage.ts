@@ -11,6 +11,7 @@ const RECORD_KEY = 'main';
 let inMemoryRawSave: string | null = null;
 
 export interface IProgressionStorageDriver {
+  clear: () => Promise<Result<void, IGameError>>;
   read: () => Promise<Result<string | null, IGameError>>;
   write: (raw: string) => Promise<Result<void, IGameError>>;
 }
@@ -24,6 +25,10 @@ export default function createProgressionStorageDriver(): IProgressionStorageDri
     return {
       async read() {
         return ok(inMemoryRawSave);
+      },
+      async clear() {
+        inMemoryRawSave = null;
+        return ok(undefined);
       },
       async write(raw) {
         inMemoryRawSave = raw;
@@ -57,6 +62,33 @@ export default function createProgressionStorageDriver(): IProgressionStorageDri
         return err({
           code: SAVE_LOAD_FAILED,
           message: 'IndexedDB progression save could not be opened.'
+        });
+      }
+    },
+    async clear() {
+      try {
+        const database = await openDatabase();
+
+        return await new Promise((resolve) => {
+          const transaction = database.transaction(OBJECT_STORE_NAME, 'readwrite');
+          const request = transaction.objectStore(OBJECT_STORE_NAME).delete(RECORD_KEY);
+
+          request.onsuccess = () => {
+            resolve(ok(undefined));
+          };
+          request.onerror = () => {
+            resolve(
+              err({
+                code: SAVE_LOAD_FAILED,
+                message: 'IndexedDB progression save could not be cleared.'
+              })
+            );
+          };
+        });
+      } catch {
+        return err({
+          code: SAVE_LOAD_FAILED,
+          message: 'IndexedDB progression save could not be opened for clearing.'
         });
       }
     },

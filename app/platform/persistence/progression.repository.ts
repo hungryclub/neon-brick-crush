@@ -40,6 +40,7 @@ export function resetProgressionSnapshotForTests() {
 }
 
 export interface IProgressionRepository {
+  debugResetProgression: () => Promise<Result<IProgressionSnapshot, IGameError>>;
   load: () => Promise<Result<IProgressionSnapshot, IGameError>>;
   saveLastPlayedStageSelection: (
     selection: IStageSelection | null
@@ -62,6 +63,16 @@ export default function createProgressionRepository({
   storageDriver?: IProgressionStorageDriver;
 } = {}): IProgressionRepository {
   return {
+    async debugResetProgression() {
+      const defaultSnapshot = createInitialProgressionSnapshot();
+      const clearResult = await storageDriver.clear();
+
+      if (clearResult.isErr()) {
+        return err(clearResult.error);
+      }
+
+      return persistSnapshot(storageDriver, defaultSnapshot);
+    },
     async load() {
       const rawResult = await storageDriver.read();
 

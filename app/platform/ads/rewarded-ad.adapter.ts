@@ -1,5 +1,7 @@
 import { errAsync, okAsync } from 'neverthrow';
 
+import { getDebugSimulationState } from '../../debug/debug-command-bus.ts';
+import { isDebugToolsEnabled } from '../../debug/debug-flags.ts';
 import {
   AD_LOAD_FAILED,
   MONETIZATION_UNAVAILABLE,
@@ -16,13 +18,19 @@ interface ICreateRewardedAdAdapterOptions {
 }
 
 export default function createRewardedAdAdapter({
-  mode = 'granted'
+  mode
 }: ICreateRewardedAdAdapterOptions = {}) {
+  const resolvedMode =
+    mode ??
+    (isDebugToolsEnabled() && getDebugSimulationState().rewardedAdMode !== 'live'
+      ? getDebugSimulationState().rewardedAdMode
+      : 'granted');
+
   function requestPlacement(
     placement: TRewardedPlacement,
     rewardKey: TRewardKey
   ) {
-    if (mode === 'cancelled') {
+    if (resolvedMode === 'cancelled') {
       return okAsync<TRewardedAdOutcome, IGameError>({
         status: 'cancelled',
         placement,
@@ -30,7 +38,7 @@ export default function createRewardedAdAdapter({
       });
     }
 
-    if (mode === 'denied') {
+    if (resolvedMode === 'denied') {
       return okAsync<TRewardedAdOutcome, IGameError>({
         status: 'denied',
         placement,
@@ -39,7 +47,7 @@ export default function createRewardedAdAdapter({
       });
     }
 
-    if (mode === 'unavailable') {
+    if (resolvedMode === 'unavailable') {
       return okAsync<TRewardedAdOutcome, IGameError>({
         status: 'unavailable',
         placement,
@@ -48,7 +56,7 @@ export default function createRewardedAdAdapter({
       });
     }
 
-    if (mode === 'failed') {
+    if (resolvedMode === 'failed') {
       return errAsync({
         code: AD_LOAD_FAILED,
         message: 'Rewarded ad provider request failed.'

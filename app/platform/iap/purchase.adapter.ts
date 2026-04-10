@@ -1,5 +1,7 @@
 import { errAsync, okAsync } from 'neverthrow';
 
+import { getDebugSimulationState } from '../../debug/debug-command-bus.ts';
+import { isDebugToolsEnabled } from '../../debug/debug-flags.ts';
 import {
   IAP_PURCHASE_FAILED,
   MONETIZATION_UNAVAILABLE,
@@ -15,18 +17,24 @@ interface ICreatePurchaseAdapterOptions {
 }
 
 export default function createPurchaseAdapter({
-  mode = 'purchased'
+  mode
 }: ICreatePurchaseAdapterOptions = {}) {
+  const resolvedMode =
+    mode ??
+    (isDebugToolsEnabled() && getDebugSimulationState().purchaseMode !== 'live'
+      ? getDebugSimulationState().purchaseMode
+      : 'purchased');
+
   return {
     purchaseProduct(productId: TIapProductId) {
-      if (mode === 'cancelled') {
+      if (resolvedMode === 'cancelled') {
         return okAsync<TIapPurchaseOutcome, IGameError>({
           status: 'cancelled',
           productId
         });
       }
 
-      if (mode === 'unavailable') {
+      if (resolvedMode === 'unavailable') {
         return okAsync<TIapPurchaseOutcome, IGameError>({
           status: 'unavailable',
           productId,
@@ -34,7 +42,7 @@ export default function createPurchaseAdapter({
         });
       }
 
-      if (mode === 'failed') {
+      if (resolvedMode === 'failed') {
         return errAsync({
           code: IAP_PURCHASE_FAILED,
           message: 'Purchase provider request failed.'

@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSelector } from '@xstate/react';
 
+import {
+  dispatchDebugCommand,
+  getDebugSimulationState,
+  subscribeDebugCommands,
+  subscribeDebugSimulationState,
+  type IDebugSimulationState
+} from '../../debug/debug-command-bus.ts';
+import { isDebugToolsEnabled } from '../../debug/debug-flags.ts';
 import type { IStageSelection, TStageKind } from '../../domain/models/stage-model';
 import { loadStageRuntimeConfig } from '../../assets/loaders/stage-config.loader.ts';
 import createProgressionRepository from '../../platform/persistence/progression.repository';
@@ -8,11 +16,14 @@ import { createInitialProgressionSnapshot } from '../../platform/persistence/sav
 import createGameRuntime from '../../game/core/create-game-runtime';
 import createLogger from '../../shared/logging/create-logger';
 import {
+  createInitialRuntimeDebugSnapshot,
   createInitialRuntimeHudSnapshot,
   type IGameRuntimeBridge,
+  type IRuntimeDebugSnapshot,
   type IRuntimeHudSnapshot
 } from '../../game/hud-bridges/game-runtime-bridge';
 import createGameRuntimeBridge from '../../game/hud-bridges/game-runtime-bridge';
+import DebugOverlay from '../components/DebugOverlay';
 import HudPanel from '../components/HudPanel';
 import StageProfileBanner from '../components/StageProfileBanner';
 import WorldMapPanel from '../components/WorldMapPanel';
@@ -54,6 +65,7 @@ import {
 import useUiStore from '../../state/stores/use-ui-store';
 
 export default function GameShell() {
+  const debugToolsEnabled = isDebugToolsEnabled();
   const loggerRef = useRef(createLogger());
   const progressionRepositoryRef = useRef(createProgressionRepository());
   const retryCountRef = useRef(0);
@@ -61,7 +73,10 @@ export default function GameShell() {
   const runtimeHostRef = useRef<HTMLDivElement | null>(null);
   const storeIsDebugVisible = useUiStore((state) => state.storeIsDebugVisible);
   const storeSetHasRuntime = useUiStore((state) => state.storeSetHasRuntime);
+  const storeRuntimeDebug = useUiStore((state) => state.storeRuntimeDebug);
+  const storeSetRuntimeDebug = useUiStore((state) => state.storeSetRuntimeDebug);
   const storeSetRuntimeHud = useUiStore((state) => state.storeSetRuntimeHud);
+  const storeToggleDebugVisible = useUiStore((state) => state.storeToggleDebugVisible);
   const runtimeHud = useUiStore((state) => state.storeRuntimeHud);
   const canActivateFever = useSelector(sessionActor, selectCanActivateFever);
   const canUseRewardedRetry = useSelector(sessionActor, selectCanUseRewardedRetry);
@@ -99,6 +114,9 @@ export default function GameShell() {
     starCount: number;
   } | null>(null);
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
+  const [debugSimulationState, setDebugSimulationState] = useState<IDebugSimulationState>(
+    getDebugSimulationState()
+  );
   const activeStageRuntimeConfig = activeStageSelection
     ? loadStageRuntimeConfig(activeStageSelection).match(
         (config) => config,
@@ -109,6 +127,76 @@ export default function GameShell() {
   useEffect(() => {
     retryCountRef.current = retryCount;
   }, [retryCount]);
+
+  useEffect(() => {
+    if (!debugToolsEnabled) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!event.shiftKey || event.key.toLowerCase() !== 'd') {
+        return;
+      }
+
+      event.preventDefault();
+      storeToggleDebugVisible();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [debugToolsEnabled, storeToggleDebugVisible]);
+
+  useEffect(() => {
+    if (!debugToolsEnabled) {
+      return;
+    }
+
+    return subscribeDebugSimulationState((state) => {
+      setDebugSimulationState(state);
+    });
+  }, [debugToolsEnabled]);
+
+  useEffect(() => {
+    if (!debugToolsEnabled) {
+      return;
+    }
+
+    return subscribeDebugCommands((command) => {
+      if (command.type === 'FORCE_STAGE_FAILURE') {
+        runtimeBridgeRef.current?.requestForcedFailure();
+        return;
+      }
+
+      if (command.type !== 'RESET_PROGRESSION_SAVE') {
+        return;
+      }
+
+      progressionRepositoryRef.current.debugResetProgression().then((result) => {
+        if (result.isErr()) {
+          loggerRef.current.warn('debug.reset_progression_failed', {
+            code: result.error.code,
+            message: result.error.message
+          });
+          return;
+        }
+
+        progressionActor.send({
+          type: 'PROGRESSION_LOADED',
+          snapshot: result.value
+        });
+        progressionActor.send({ type: 'RETURN_TO_MAP' });
+        sessionActor.send({ type: 'RESET_SESSION' });
+        setPendingStageClearSave(null);
+        setSaveErrorMessage(null);
+        loggerRef.current.info('debug.reset_progression_applied', {
+          activeStageId: activeStageSelection?.stageId ?? null
+        });
+      });
+    });
+  }, [activeStageSelection?.stageId, debugToolsEnabled]);
 
   useEffect(() => {
     let isDisposed = false;
@@ -196,6 +284,11 @@ export default function GameShell() {
         storeSetRuntimeHud(snapshot);
       }
     );
+    const unsubscribeRuntimeDebug = runtimeBridge.onRuntimeDebugChanged(
+      (snapshot: IRuntimeDebugSnapshot) => {
+        storeSetRuntimeDebug(snapshot);
+      }
+    );
     const unsubscribeStageFailed = runtimeBridge.onStageFailed(() => {
       sessionActor.send({ type: 'STAGE_FAILED' });
     });
@@ -230,16 +323,23 @@ export default function GameShell() {
     return () => {
       unsubscribeRuntimeReady();
       unsubscribeRuntimeHud();
+      unsubscribeRuntimeDebug();
       unsubscribeStageFailed();
       unsubscribeStageCleared();
       unsubscribeStageResetCompleted();
       unsubscribeTurnResolved();
       runtimeBridgeRef.current = null;
       storeSetHasRuntime(false);
+      storeSetRuntimeDebug(createInitialRuntimeDebugSnapshot());
       storeSetRuntimeHud(createInitialRuntimeHudSnapshot());
       runtime.destroy();
     };
-  }, [activeStageSelection, storeSetHasRuntime, storeSetRuntimeHud]);
+  }, [
+    activeStageSelection,
+    storeSetHasRuntime,
+    storeSetRuntimeDebug,
+    storeSetRuntimeHud
+  ]);
 
   useEffect(() => {
     if (!pendingStageClearSave) {
@@ -479,15 +579,43 @@ export default function GameShell() {
           ) : null}
         </section>
       </section>
-      {storeIsDebugVisible ? (
-        <aside style={debugPanelStyle}>
-          <strong>Debug</strong>
-          <span>session: {sessionPhase}</span>
-          <span>turn: {runtimeHud.turnNumber}</span>
-          <span>shot: {runtimeHud.shotState}</span>
-          <span>retryCount: {retryCount}</span>
-          <span>stage: {activeStageSelection?.stageId ?? 'none'}</span>
-        </aside>
+      {debugToolsEnabled ? (
+        <>
+          <button
+            style={debugToggleButtonStyle}
+            type='button'
+            onClick={() => {
+              storeToggleDebugVisible();
+            }}
+          >
+            {storeIsDebugVisible ? 'Hide Debug' : 'Show Debug'}
+          </button>
+          <DebugOverlay
+            activeStageId={activeStageSelection?.stageId ?? null}
+            canUseRewardedRetry={canUseRewardedRetry}
+            isVisible={storeIsDebugVisible}
+            onClose={() => {
+              storeToggleDebugVisible();
+            }}
+            onForceFailure={() => {
+              dispatchDebugCommand({ type: 'FORCE_STAGE_FAILURE' });
+            }}
+            onResetProgressionSave={() => {
+              dispatchDebugCommand({ type: 'RESET_PROGRESSION_SAVE' });
+            }}
+            onSetPurchaseMode={(mode) => {
+              dispatchDebugCommand({ type: 'SET_PURCHASE_MODE', mode });
+            }}
+            onSetRewardedAdMode={(mode) => {
+              dispatchDebugCommand({ type: 'SET_REWARDED_AD_MODE', mode });
+            }}
+            runtimeDebug={storeRuntimeDebug}
+            runtimeHud={runtimeHud}
+            saveErrorMessage={saveErrorMessage}
+            sessionPhase={sessionPhase}
+            simulationState={debugSimulationState}
+          />
+        </>
       ) : null}
     </main>
   );
@@ -670,15 +798,15 @@ const failureMetaStyle = {
   fontSize: 12
 } as const;
 
-const debugPanelStyle = {
+const debugToggleButtonStyle = {
   position: 'fixed',
-  top: 16,
-  right: 16,
-  display: 'grid',
-  gap: 6,
-  padding: '12px 14px',
-  borderRadius: 12,
-  background: 'rgba(6, 10, 20, 0.82)',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
-  fontSize: 12
+  bottom: 16,
+  left: 16,
+  zIndex: 31,
+  padding: '10px 14px',
+  borderRadius: 999,
+  background: 'rgba(8, 12, 22, 0.92)',
+  color: '#f5f7ff',
+  border: '1px solid rgba(120, 227, 255, 0.18)',
+  cursor: 'pointer'
 } as const;

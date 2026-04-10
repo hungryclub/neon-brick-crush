@@ -29,8 +29,10 @@ import {
   resolveShotVelocity
 } from '../mechanics/aim-shot-controller';
 import {
+  createInitialRuntimeDebugSnapshot,
   createInitialRuntimeHudSnapshot,
   type IGameRuntimeBridge,
+  type IRuntimeDebugSnapshot,
   type IRuntimeHudSnapshot,
   type TRuntimeShotState
 } from '../hud-bridges/game-runtime-bridge';
@@ -298,6 +300,13 @@ export default class StageScene extends Phaser.Scene {
       this.logger.info('stage.fever_activation_requested', {
         turnNumber: this.turnNumber
       });
+    });
+    runtimeBridge?.onForcedFailureRequested(() => {
+      this.logger.warn('stage.debug_forced_failure_requested', {
+        turnNumber: this.turnNumber,
+        remainingBlocks: this.boardState.length
+      });
+      this.handleStageFailure();
     });
   }
 
@@ -919,6 +928,21 @@ export default class StageScene extends Phaser.Scene {
   }: {
     turnOutcome: 'cleared' | 'failed' | 'resolved';
   }) {
+    const runtimeBridge = this.registry.get(
+      GAME_RUNTIME_BRIDGE_REGISTRY_KEY
+    ) as IGameRuntimeBridge | undefined;
+    const runtimeDebugSnapshot: IRuntimeDebugSnapshot = createInitialRuntimeDebugSnapshot();
+
+    runtimeDebugSnapshot.lastTurnProfile = {
+      counters: { ...this.runtimeProfiler.snapshot().counters },
+      impactEffectsThisTurn: this.impactEffectsThisTurn,
+      pulsePool: this.neonFeedbackLayer.getPoolStats(),
+      samples: { ...this.runtimeProfiler.snapshot().samples },
+      turnNumber: this.turnNumber,
+      turnOutcome
+    };
+    runtimeBridge?.signalRuntimeDebugChanged(runtimeDebugSnapshot);
+
     this.runtimeProfiler.flush('stage.turn_profiled', {
       worldId: this.stageRuntimeConfig.worldId,
       stageId: this.stageRuntimeConfig.stageId,

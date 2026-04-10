@@ -1,6 +1,6 @@
 # Story 5.3: 디버그/QA 도구와 release guardrails 구현
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -23,22 +23,22 @@ So that branching gameplay flows can be validated quickly.
 
 ## Tasks / Subtasks
 
-- [ ] Add dev-only debug surfaces and state inspection hooks. (AC: 1)
-  - [ ] Expose a debug overlay or panel for session/progression/runtime inspection without making it part of release UI.
-  - [ ] Surface existing runtime profiler and critical selector data in a QA-friendly way.
-  - [ ] Keep all debug UI and commands behind explicit development guards.
-- [ ] Add simulation controls for critical branching flows. (AC: 1, 2)
-  - [ ] Provide ad simulation, save reset, forced failure, and reward flow toggles through typed debug commands rather than ad hoc globals.
-  - [ ] Reuse existing repository/machine/service boundaries so simulations exercise real orchestration paths.
-  - [ ] Keep failure simulations handled and reversible for repeated QA use.
-- [ ] Reinforce release guardrails around debug-only code. (AC: 2)
-  - [ ] Ensure production builds do not render or enable debug-only paths.
-  - [ ] Keep structured logs for retry, reward, save failure, unlock, and profiling flows observable even without debug UI.
-  - [ ] Avoid coupling release behavior to debug-only providers or overlays.
-- [ ] Verify QA and release-readiness behavior. (AC: 1, 2)
-  - [ ] Add focused tests for dev guard conditions and simulation command routing where practical.
-  - [ ] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
-  - [ ] Manually verify debug tools appear only in development context and remain absent from release behavior.
+- [x] Add dev-only debug surfaces and state inspection hooks. (AC: 1)
+  - [x] Expose a debug overlay or panel for session/progression/runtime inspection without making it part of release UI.
+  - [x] Surface existing runtime profiler and critical selector data in a QA-friendly way.
+  - [x] Keep all debug UI and commands behind explicit development guards.
+- [x] Add simulation controls for critical branching flows. (AC: 1, 2)
+  - [x] Provide ad simulation, save reset, forced failure, and reward flow toggles through typed debug commands rather than ad hoc globals.
+  - [x] Reuse existing repository/machine/service boundaries so simulations exercise real orchestration paths.
+  - [x] Keep failure simulations handled and reversible for repeated QA use.
+- [x] Reinforce release guardrails around debug-only code. (AC: 2)
+  - [x] Ensure production builds do not render or enable debug-only paths.
+  - [x] Keep structured logs for retry, reward, save failure, unlock, and profiling flows observable even without debug UI.
+  - [x] Avoid coupling release behavior to debug-only providers or overlays.
+- [x] Verify QA and release-readiness behavior. (AC: 1, 2)
+  - [x] Add focused tests for dev guard conditions and simulation command routing where practical.
+  - [x] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
+  - [x] Manually verify debug tools appear only in development context and remain absent from release behavior.
 
 ## Dev Notes
 
@@ -188,3 +188,11 @@ Story 5.3은 이 기반 위에 dev-only debug tooling과 release guardrails를 �
 - `React = presentation only`
 - `debug commands = dev-only orchestration inputs`
 - `logs = release-safe observability`
+
+## Completion Notes
+
+- Added dev-only debug flag and typed debug command bus for rewarded ad, purchase, forced failure, and save reset simulation.
+- Added a React debug overlay that surfaces session/runtime state plus the latest runtime profiler snapshot without exposing the panel in release builds.
+- Extended the runtime bridge and `StageScene` so QA commands can force failure and inspect last-turn profile data through structured snapshots.
+- Routed rewarded ad and purchase adapters through debug simulation state so QA can exercise real machine/service flows without ad hoc global mutations.
+- Added focused unit coverage for debug flag resolution and default debug simulation state, then re-ran app verification commands.

@@ -6,6 +6,8 @@ type RuntimeStageResetCompletedListener = () => void;
 type RuntimeStageResetRequestedListener = () => void;
 type RuntimeTurnResolvedListener = (payload: ITurnResolvedPayload) => void;
 type RuntimeFeverActivationRequestedListener = () => void;
+type RuntimeForceFailureRequestedListener = () => void;
+type RuntimeDebugListener = (snapshot: IRuntimeDebugSnapshot) => void;
 
 export type TRuntimeShotState = 'idle' | 'aiming' | 'launched' | 'resolving';
 
@@ -26,6 +28,17 @@ export interface IRuntimeHudSnapshot {
   turnNumber: number;
 }
 
+export interface IRuntimeDebugSnapshot {
+  lastTurnProfile: {
+    counters: Record<string, number>;
+    impactEffectsThisTurn: number;
+    pulsePool: { active: number; size: number };
+    samples: Record<string, { count: number; totalMs: number }>;
+    turnNumber: number;
+    turnOutcome: 'cleared' | 'failed' | 'resolved';
+  } | null;
+}
+
 export function createInitialRuntimeHudSnapshot(): IRuntimeHudSnapshot {
   return {
     aimAngle: null,
@@ -36,6 +49,12 @@ export function createInitialRuntimeHudSnapshot(): IRuntimeHudSnapshot {
     remainingBlocks: 0,
     shotState: 'idle',
     turnNumber: 1
+  };
+}
+
+export function createInitialRuntimeDebugSnapshot(): IRuntimeDebugSnapshot {
+  return {
+    lastTurnProfile: null
   };
 }
 
@@ -56,6 +75,10 @@ export interface IGameRuntimeBridge {
   onTurnResolved: (listener: RuntimeTurnResolvedListener) => () => void;
   requestFeverActivation: () => void;
   onFeverActivationRequested: (listener: RuntimeFeverActivationRequestedListener) => () => void;
+  requestForcedFailure: () => void;
+  onForcedFailureRequested: (listener: RuntimeForceFailureRequestedListener) => () => void;
+  signalRuntimeDebugChanged: (snapshot: IRuntimeDebugSnapshot) => void;
+  onRuntimeDebugChanged: (listener: RuntimeDebugListener) => () => void;
 }
 
 export default function createGameRuntimeBridge(): IGameRuntimeBridge {
@@ -67,6 +90,8 @@ export default function createGameRuntimeBridge(): IGameRuntimeBridge {
   const runtimeStageResetCompletedListeners = new Set<RuntimeStageResetCompletedListener>();
   const runtimeTurnResolvedListeners = new Set<RuntimeTurnResolvedListener>();
   const runtimeFeverActivationRequestedListeners = new Set<RuntimeFeverActivationRequestedListener>();
+  const runtimeForceFailureRequestedListeners = new Set<RuntimeForceFailureRequestedListener>();
+  const runtimeDebugListeners = new Set<RuntimeDebugListener>();
 
   return {
     signalRuntimeReady() {
@@ -147,6 +172,26 @@ export default function createGameRuntimeBridge(): IGameRuntimeBridge {
 
       return () => {
         runtimeFeverActivationRequestedListeners.delete(listener);
+      };
+    },
+    requestForcedFailure() {
+      runtimeForceFailureRequestedListeners.forEach((listener) => listener());
+    },
+    onForcedFailureRequested(listener) {
+      runtimeForceFailureRequestedListeners.add(listener);
+
+      return () => {
+        runtimeForceFailureRequestedListeners.delete(listener);
+      };
+    },
+    signalRuntimeDebugChanged(snapshot) {
+      runtimeDebugListeners.forEach((listener) => listener(snapshot));
+    },
+    onRuntimeDebugChanged(listener) {
+      runtimeDebugListeners.add(listener);
+
+      return () => {
+        runtimeDebugListeners.delete(listener);
       };
     }
   };
