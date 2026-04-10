@@ -43,28 +43,30 @@ function HudPill({
 
 const stripStyle = {
   display: 'grid',
-  gap: 8
+  gap: 6
 } as const;
 
 const pillStyle = {
   minWidth: 0,
-  padding: '10px 10px 12px',
-  borderRadius: 16,
+  minHeight: 64,
+  padding: '8px 10px 10px',
+  borderRadius: 14,
   background: 'rgba(255, 0, 145, 0.18)',
   border: '1px solid rgba(255, 120, 199, 0.28)',
   display: 'grid',
-  gap: 4
+  alignContent: 'space-between',
+  gap: 2
 } as const;
 
 const labelStyle = {
-  fontSize: 10,
+  fontSize: 9,
   textTransform: 'uppercase',
   letterSpacing: '0.08em',
   color: 'rgba(245, 247, 255, 0.72)'
 } as const;
 
 const valueStyle = {
-  fontSize: 18,
-  lineHeight: 1.05,
+  fontSize: 14,
+  lineHeight: 1,
   wordBreak: 'break-word'
 } as const;

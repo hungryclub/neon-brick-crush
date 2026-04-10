@@ -149,15 +149,15 @@ const layoutStyle = {
   height: '100dvh',
   display: 'grid',
   gridTemplateRows: 'auto auto minmax(0, 1fr) auto',
-  gap: 12,
-  padding: 'calc(env(safe-area-inset-top, 0px) + 10px) 12px calc(env(safe-area-inset-bottom, 0px) + 12px)',
+  gap: 8,
+  padding: 'calc(env(safe-area-inset-top, 0px) + 8px) 10px calc(env(safe-area-inset-bottom, 0px) + 10px)',
   overflow: 'hidden'
 } as const;
 
 const canvasFrameStyle = {
   minHeight: 0,
   overflow: 'hidden',
-  borderRadius: 22,
+  borderRadius: 18,
   border: '1px solid rgba(120, 227, 255, 0.14)',
   background: 'linear-gradient(180deg, rgba(8, 12, 24, 0.98), rgba(8, 10, 21, 0.98))',
   position: 'relative'
@@ -170,15 +170,16 @@ const runtimeHostStyle = {
 
 const bottomStyle = {
   display: 'grid',
-  gap: 10
+  gap: 6
 } as const;
 
 const feverButtonStyle = {
   width: '100%',
   borderRadius: 999,
-  minHeight: 54,
-  padding: '12px 18px',
+  minHeight: 44,
+  padding: '10px 16px',
   fontWeight: 700,
+  fontSize: 14,
   border: '1px solid rgba(255, 255, 255, 0.15)'
 } as const;
 
