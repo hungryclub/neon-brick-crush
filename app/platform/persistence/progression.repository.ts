@@ -1,76 +1,84 @@
+import type { Result } from 'neverthrow';
+
 import type {
+  IPlayerSettings,
   IProgressionSnapshot,
   IStageCompletionRecord
 } from '../../domain/models/progression-model';
 import type { IStageSelection } from '../../domain/models/stage-model';
+import type { IGameError } from '../../domain/errors/game-error.ts';
 import {
   loadStageRuntimeConfig,
   loadWorldContent
 } from '../../assets/loaders/stage-config.loader.ts';
+import createProgressionStorageDriver, {
+  resetInMemoryProgressionStorageForTests,
+  type IProgressionStorageDriver
+} from './indexeddb/progression-storage.ts';
+import {
+  createDefaultPlayerSettings,
+  createInitialProgressionSnapshot,
+  createProgressionSaveEnvelope,
+  parseProgressionSaveEnvelope
+} from './save-recovery.ts';
+import { err, ok } from '../../shared/result/result.ts';
+
+const XP_PER_CLEAR = 100;
+const XP_PER_STAR = 25;
+const XP_PER_LEVEL = 100;
 
 let progressionSnapshot: IProgressionSnapshot = createInitialProgressionSnapshot();
 
 export function resetProgressionSnapshotForTests() {
   progressionSnapshot = createInitialProgressionSnapshot();
-}
-
-function createInitialProgressionSnapshot(): IProgressionSnapshot {
-  return {
-    version: 3,
-    unlockedWorldIdList: ['world-01'],
-    stageProgressById: {
-      'world-01-stage-01': {
-        bestStarCount: 0,
-        isCompleted: false,
-        isUnlocked: true
-      },
-      'world-01-stage-02': {
-        bestStarCount: 0,
-        isCompleted: false,
-        isUnlocked: false
-      },
-      'world-01-stage-03': {
-        bestStarCount: 0,
-        isCompleted: false,
-        isUnlocked: false
-      },
-      'world-01-stage-04': {
-        bestStarCount: 0,
-        isCompleted: false,
-        isUnlocked: false
-      },
-      'world-02-stage-01': {
-        bestStarCount: 0,
-        isCompleted: false,
-        isUnlocked: false
-      },
-      'world-02-stage-02': {
-        bestStarCount: 0,
-        isCompleted: false,
-        isUnlocked: false
-      }
-    },
-    lastPlayedStageSelection: {
-      worldId: 'world-01',
-      stageId: 'world-01-stage-01'
-    }
-  };
+  resetInMemoryProgressionStorageForTests();
 }
 
 export interface IProgressionRepository {
-  load: () => Promise<IProgressionSnapshot>;
+  load: () => Promise<Result<IProgressionSnapshot, IGameError>>;
   saveLastPlayedStageSelection: (
     selection: IStageSelection | null
-  ) => Promise<IProgressionSnapshot>;
+  ) => Promise<Result<IProgressionSnapshot, IGameError>>;
   saveStageCompletion: (
     record: IStageCompletionRecord | null
-  ) => Promise<IProgressionSnapshot>;
+  ) => Promise<Result<IProgressionSnapshot, IGameError>>;
+  saveSettings: (
+    settingsPatch: Partial<IPlayerSettings>
+  ) => Promise<Result<IProgressionSnapshot, IGameError>>;
 }
 
-export default function createProgressionRepository(): IProgressionRepository {
+export default function createProgressionRepository({
+  storageDriver = createProgressionStorageDriver()
+}: {
+  storageDriver?: IProgressionStorageDriver;
+} = {}): IProgressionRepository {
   return {
-    async load(): Promise<IProgressionSnapshot> {
-      return structuredClone(progressionSnapshot);
+    async load() {
+      const rawResult = await storageDriver.read();
+
+      if (rawResult.isErr()) {
+        progressionSnapshot = createInitialProgressionSnapshot();
+        await persistSnapshot(storageDriver, progressionSnapshot);
+        return err(rawResult.error);
+      }
+
+      if (!rawResult.value) {
+        progressionSnapshot = createInitialProgressionSnapshot();
+        await persistSnapshot(storageDriver, progressionSnapshot);
+        return ok(structuredClone(progressionSnapshot));
+      }
+
+      const parsedEnvelopeResult = parseProgressionSaveEnvelope(rawResult.value);
+
+      if (parsedEnvelopeResult.isErr()) {
+        progressionSnapshot = createInitialProgressionSnapshot();
+        await persistSnapshot(storageDriver, progressionSnapshot);
+        return err(parsedEnvelopeResult.error);
+      }
+
+      progressionSnapshot = parsedEnvelopeResult.value.progression;
+
+      return ok(structuredClone(progressionSnapshot));
     },
     async saveLastPlayedStageSelection(selection) {
       progressionSnapshot = {
@@ -78,11 +86,11 @@ export default function createProgressionRepository(): IProgressionRepository {
         lastPlayedStageSelection: selection
       };
 
-      return structuredClone(progressionSnapshot);
+      return persistSnapshot(storageDriver, progressionSnapshot);
     },
     async saveStageCompletion(record) {
       if (!record) {
-        return structuredClone(progressionSnapshot);
+        return ok(structuredClone(progressionSnapshot));
       }
 
       const stageRuntimeConfigResult = loadStageRuntimeConfig(record);
@@ -91,8 +99,12 @@ export default function createProgressionRepository(): IProgressionRepository {
         isCompleted: false,
         isUnlocked: false
       };
+      const nextTotalXp =
+        progressionSnapshot.totalXp + XP_PER_CLEAR + record.starCount * XP_PER_STAR;
       let nextSnapshot: IProgressionSnapshot = {
         ...progressionSnapshot,
+        totalXp: nextTotalXp,
+        playerLevel: resolvePlayerLevel(nextTotalXp),
         lastPlayedStageSelection: {
           worldId: record.worldId,
           stageId: record.stageId
@@ -133,7 +145,18 @@ export default function createProgressionRepository(): IProgressionRepository {
 
       progressionSnapshot = nextSnapshot;
 
-      return structuredClone(progressionSnapshot);
+      return persistSnapshot(storageDriver, progressionSnapshot);
+    },
+    async saveSettings(settingsPatch) {
+      progressionSnapshot = {
+        ...progressionSnapshot,
+        settings: {
+          ...progressionSnapshot.settings,
+          ...settingsPatch
+        }
+      };
+
+      return persistSnapshot(storageDriver, progressionSnapshot);
     }
   };
 }
@@ -215,4 +238,34 @@ function createEmptyStageProgress() {
     isCompleted: false,
     isUnlocked: false
   };
+}
+
+async function persistSnapshot(
+  storageDriver: IProgressionStorageDriver,
+  snapshot: IProgressionSnapshot
+): Promise<Result<IProgressionSnapshot, IGameError>> {
+  const writeResult = await storageDriver.write(
+    JSON.stringify(createProgressionSaveEnvelope(snapshot))
+  );
+
+  if (writeResult.isErr()) {
+    return err(writeResult.error);
+  }
+
+  progressionSnapshot = {
+    ...snapshot,
+    settings: {
+      ...snapshot.settings
+    }
+  };
+
+  return ok(structuredClone(progressionSnapshot));
+}
+
+function resolvePlayerLevel(totalXp: number) {
+  return Math.floor(totalXp / XP_PER_LEVEL) + 1;
+}
+
+export function createDefaultSettingsPatch() {
+  return createDefaultPlayerSettings();
 }

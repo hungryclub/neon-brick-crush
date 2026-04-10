@@ -4,7 +4,9 @@ import { useSelector } from '@xstate/react';
 import type { IStageSelection } from '../../domain/models/stage-model';
 import { loadStageRuntimeConfig } from '../../assets/loaders/stage-config.loader.ts';
 import createProgressionRepository from '../../platform/persistence/progression.repository';
+import { createInitialProgressionSnapshot } from '../../platform/persistence/save-recovery.ts';
 import createGameRuntime from '../../game/core/create-game-runtime';
+import createLogger from '../../shared/logging/create-logger';
 import {
   createInitialRuntimeHudSnapshot,
   type IGameRuntimeBridge,
@@ -38,6 +40,7 @@ import {
 import useUiStore from '../../state/stores/use-ui-store';
 
 export default function GameShell() {
+  const loggerRef = useRef(createLogger());
   const progressionRepositoryRef = useRef(createProgressionRepository());
   const retryCountRef = useRef(0);
   const runtimeBridgeRef = useRef<IGameRuntimeBridge | null>(null);
@@ -75,12 +78,24 @@ export default function GameShell() {
   useEffect(() => {
     let isDisposed = false;
 
-    progressionRepositoryRef.current.load().then((snapshot) => {
+    progressionRepositoryRef.current.load().then((result) => {
       if (isDisposed) {
         return;
       }
 
-      progressionActor.send({ type: 'PROGRESSION_LOADED', snapshot });
+      if (result.isErr()) {
+        loggerRef.current.warn('progression.load_recovered', {
+          code: result.error.code,
+          message: result.error.message
+        });
+        progressionActor.send({
+          type: 'PROGRESSION_LOADED',
+          snapshot: createInitialProgressionSnapshot()
+        });
+        return;
+      }
+
+      progressionActor.send({ type: 'PROGRESSION_LOADED', snapshot: result.value });
     });
 
     return () => {
@@ -115,7 +130,16 @@ export default function GameShell() {
           ...activeStageSelection,
           starCount: resolveStageStarCount(retryCountRef.current)
         })
-        .then((snapshot) => {
+        .then((result) => {
+          if (result.isErr()) {
+            loggerRef.current.warn('progression.save_stage_completion_failed', {
+              code: result.error.code,
+              message: result.error.message
+            });
+            return;
+          }
+
+          const snapshot = result.value;
           const unlockedWorldIds = snapshot.unlockedWorldIdList.filter(
             (worldId) => !latestUnlockedWorldIdsRef.current.includes(worldId)
           );
@@ -195,7 +219,16 @@ export default function GameShell() {
           onSelectStage={(selection: IStageSelection) => {
             progressionRepositoryRef.current
               .saveLastPlayedStageSelection(selection)
-              .then((snapshot) => {
+              .then((result) => {
+                if (result.isErr()) {
+                  loggerRef.current.warn('progression.save_selection_failed', {
+                    code: result.error.code,
+                    message: result.error.message
+                  });
+                  return;
+                }
+
+                const snapshot = result.value;
                 progressionActor.send({ type: 'PROGRESSION_LOADED', snapshot });
                 progressionActor.send({ type: 'SELECT_STAGE', selection });
               });

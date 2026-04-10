@@ -1,5 +1,11 @@
 import type { IStageSelection, TStageKind } from './stage-model';
 
+export interface IPlayerSettings {
+  isReducedMotionEnabled: boolean;
+  isSfxEnabled: boolean;
+  isTutorialHintsEnabled: boolean;
+}
+
 export interface IStageProgressState {
   bestStarCount: number;
   isCompleted: boolean;
@@ -8,6 +14,9 @@ export interface IStageProgressState {
 
 export interface IProgressionSnapshot {
   version: number;
+  playerLevel: number;
+  totalXp: number;
+  settings: IPlayerSettings;
   unlockedWorldIdList: string[];
   stageProgressById: Record<string, IStageProgressState>;
   lastPlayedStageSelection: IStageSelection | null;

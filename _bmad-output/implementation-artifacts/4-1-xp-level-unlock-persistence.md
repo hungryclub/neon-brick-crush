@@ -1,6 +1,6 @@
 # Story 4.1: XP/레벨업/해금 저장 흐름 구현
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -23,42 +23,42 @@ so that replay feels meaningful.
 
 ## Tasks / Subtasks
 
-- [ ] Extend progression/save domain models for long-term meta state. (AC: 1, 2)
-  - [ ] Add explicit save model types for XP, player level, unlock flags,
+- [x] Extend progression/save domain models for long-term meta state. (AC: 1, 2)
+  - [x] Add explicit save model types for XP, player level, unlock flags,
         stars, settings, and schema version metadata.
-  - [ ] Keep session/runtime turn data separate from long-term persisted meta
+  - [x] Keep session/runtime turn data separate from long-term persisted meta
         progression so Scene code does not become save-state aware.
-  - [ ] Preserve compatibility with the current stage/world progression snapshot
+  - [x] Preserve compatibility with the current stage/world progression snapshot
         so Story 3.x data can migrate cleanly into the new save envelope.
-- [ ] Introduce IndexedDB-backed persistence boundaries with recovery policy.
+- [x] Introduce IndexedDB-backed persistence boundaries with recovery policy.
       (AC: 1, 2)
-  - [ ] Add repository/adapter structure under `app/platform/persistence` for
+  - [x] Add repository/adapter structure under `app/platform/persistence` for
         browser-backed storage and typed load/save results.
-  - [ ] Keep direct IndexedDB access out of React, XState, and Phaser runtime
+  - [x] Keep direct IndexedDB access out of React, XState, and Phaser runtime
         code.
-  - [ ] Implement corruption/invalid-payload recovery behavior as typed handled
+  - [x] Implement corruption/invalid-payload recovery behavior as typed handled
         paths, not uncaught exceptions.
-- [ ] Implement XP and level reward application in progression orchestration.
+- [x] Implement XP and level reward application in progression orchestration.
       (AC: 1)
-  - [ ] Define a minimal XP earning policy tied to completed gameplay sessions
+  - [x] Define a minimal XP earning policy tied to completed gameplay sessions
         or stage results.
-  - [ ] Apply level-up and unlock projection through orchestration/repository
+  - [x] Apply level-up and unlock projection through orchestration/repository
         boundaries rather than inside Scene logic.
-  - [ ] Ensure existing stars/unlock flags persist within the same save flow.
-- [ ] Persist and reload player settings with schema versioned save payloads.
+  - [x] Ensure existing stars/unlock flags persist within the same save flow.
+- [x] Persist and reload player settings with schema versioned save payloads.
       (AC: 1, 2)
-  - [ ] Add a typed settings shape for basic player preferences that belongs in
+  - [x] Add a typed settings shape for basic player preferences that belongs in
         the long-term save payload.
-  - [ ] Ensure app boot reads the persisted payload and hydrates progression
+  - [x] Ensure app boot reads the persisted payload and hydrates progression
         state from repository results.
-  - [ ] Keep save writes structured so later migrations and cloud sync remain
+  - [x] Keep save writes structured so later migrations and cloud sync remain
         possible.
-- [ ] Add focused verification for persistence and recovery behavior. (AC: 1, 2)
-  - [ ] Add tests for schema version metadata, XP/level persistence, and stage
+- [x] Add focused verification for persistence and recovery behavior. (AC: 1, 2)
+  - [x] Add tests for schema version metadata, XP/level persistence, and stage
         progression coexistence in one save payload.
-  - [ ] Add tests for corrupted/invalid payload recovery returning typed results.
-  - [ ] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
-  - [ ] Manually verify: progress survives reload and recoverable invalid data
+  - [x] Add tests for corrupted/invalid payload recovery returning typed results.
+  - [x] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
+  - [x] Manually verify: progress survives reload and recoverable invalid data
         does not hard-crash boot.
 
 ## Dev Notes
@@ -261,15 +261,30 @@ GPT-5 Codex
 
 ### Completion Notes List
 
-- Prepared Story 4.1 as the transition from session-scoped progression to
-  long-term persistence.
-- Framed the story around `save model + IndexedDB-backed repository + recovery
-  policy + XP/level orchestration`, while preserving Story 3.x world/stage
-  progression as the baseline data to migrate forward.
-- Kept Story 4.2/4.3 concerns such as ads, IAP, and event rewards out of this
-  story so the save foundation can stabilize first.
+- Added `save-model.ts` and a schema-versioned progression save envelope that
+  stores world progression, XP, level, and player settings together.
+- Added `save-recovery.ts` plus typed payload parsing/validation so corrupted or
+  invalid save data now returns handled `SAVE_LOAD_FAILED` results instead of
+  uncaught exceptions.
+- Reworked `progression.repository.ts` to use an IndexedDB-ready storage driver,
+  persist the envelope through typed `Result` paths, and award XP/level on stage
+  completion while preserving Story 3.x stars/unlock logic.
+- Updated `GameShell.tsx` to hydrate progression through typed repository load
+  results and recover boot safely to default progression when persistence data
+  is invalid.
+- Added unit tests for settings persistence, save schema metadata, and invalid
+  payload recovery, then verified with `npm run test`, `npm run typecheck`, and
+  `npm run build`.
 
 ### File List
 
 - _bmad-output/implementation-artifacts/4-1-xp-level-unlock-persistence.md
 - _bmad-output/implementation-artifacts/sprint-status.yaml
+- app/domain/models/progression-model.ts
+- app/domain/models/save-model.ts
+- app/platform/persistence/indexeddb/progression-storage.ts
+- app/platform/persistence/progression.repository.ts
+- app/platform/persistence/save-recovery.ts
+- app/tests/unit/progression.repository.test.mjs
+- app/tests/unit/save-recovery.test.mjs
+- app/ui/screens/GameShell.tsx
