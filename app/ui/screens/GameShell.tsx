@@ -200,29 +200,66 @@ export default function GameShell() {
 
   useEffect(() => {
     let isDisposed = false;
-
-    progressionRepositoryRef.current.load().then((result) => {
-      if (isDisposed) {
+    let hasResolvedProgressionLoad = false;
+    const loadFallbackTimeout = window.setTimeout(() => {
+      if (isDisposed || hasResolvedProgressionLoad) {
         return;
       }
 
-      if (result.isErr()) {
+      hasResolvedProgressionLoad = true;
+      loggerRef.current.warn('progression.load_timeout_recovered', {
+        reason: 'repository_load_timeout'
+      });
+      progressionActor.send({
+        type: 'PROGRESSION_LOADED',
+        snapshot: createInitialProgressionSnapshot()
+      });
+    }, 1500);
+
+    progressionRepositoryRef.current
+      .load()
+      .then((result) => {
+        if (isDisposed || hasResolvedProgressionLoad) {
+          return;
+        }
+
+        hasResolvedProgressionLoad = true;
+        window.clearTimeout(loadFallbackTimeout);
+
+        if (result.isErr()) {
+          loggerRef.current.warn('progression.load_recovered', {
+            code: result.error.code,
+            message: result.error.message
+          });
+          progressionActor.send({
+            type: 'PROGRESSION_LOADED',
+            snapshot: createInitialProgressionSnapshot()
+          });
+          return;
+        }
+
+        progressionActor.send({ type: 'PROGRESSION_LOADED', snapshot: result.value });
+      })
+      .catch((error: unknown) => {
+        if (isDisposed || hasResolvedProgressionLoad) {
+          return;
+        }
+
+        hasResolvedProgressionLoad = true;
+        window.clearTimeout(loadFallbackTimeout);
         loggerRef.current.warn('progression.load_recovered', {
-          code: result.error.code,
-          message: result.error.message
+          code: 'SAVE_LOAD_FAILED',
+          message: error instanceof Error ? error.message : 'Unexpected progression load failure.'
         });
         progressionActor.send({
           type: 'PROGRESSION_LOADED',
           snapshot: createInitialProgressionSnapshot()
         });
-        return;
-      }
-
-      progressionActor.send({ type: 'PROGRESSION_LOADED', snapshot: result.value });
-    });
+      });
 
     return () => {
       isDisposed = true;
+      window.clearTimeout(loadFallbackTimeout);
     };
   }, []);
 
