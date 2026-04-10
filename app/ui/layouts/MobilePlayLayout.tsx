@@ -127,7 +127,7 @@ export default function MobilePlayLayout({
         {overlayContent}
       </section>
       <div style={bottomStyle}>
-        <CompactHudStrip columns={2} runtimeHud={runtimeHud} />
+        <CompactHudStrip columns={4} runtimeHud={runtimeHud} />
         <button
           style={{
             ...feverButtonStyle,
@@ -146,21 +146,27 @@ export default function MobilePlayLayout({
 }
 
 const layoutStyle = {
+  width: '100%',
+  maxWidth: '100%',
   height: '100dvh',
   display: 'grid',
-  gridTemplateRows: 'auto auto minmax(0, 1fr) auto',
-  gap: 8,
-  padding: 'calc(env(safe-area-inset-top, 0px) + 8px) 10px calc(env(safe-area-inset-bottom, 0px) + 10px)',
-  overflow: 'hidden'
+  gridTemplateRows: 'auto minmax(0, 1fr) auto',
+  gap: 6,
+  padding: 'calc(env(safe-area-inset-top, 0px) + 6px) 6px calc(env(safe-area-inset-bottom, 0px) + 6px)',
+  overflow: 'hidden',
+  overflowX: 'hidden',
+  boxSizing: 'border-box'
 } as const;
 
 const canvasFrameStyle = {
+  width: '100%',
   minHeight: 0,
   overflow: 'hidden',
-  borderRadius: 18,
+  borderRadius: 16,
   border: '1px solid rgba(120, 227, 255, 0.14)',
   background: 'linear-gradient(180deg, rgba(8, 12, 24, 0.98), rgba(8, 10, 21, 0.98))',
-  position: 'relative'
+  position: 'relative',
+  boxSizing: 'border-box'
 } as const;
 
 const runtimeHostStyle = {
@@ -170,17 +176,21 @@ const runtimeHostStyle = {
 
 const bottomStyle = {
   display: 'grid',
-  gap: 6
+  gap: 3,
+  width: '100%',
+  minWidth: 0
 } as const;
 
 const feverButtonStyle = {
   width: '100%',
-  borderRadius: 999,
-  minHeight: 44,
-  padding: '10px 16px',
+  borderRadius: 14,
+  minHeight: 32,
+  padding: '6px 10px',
   fontWeight: 700,
-  fontSize: 14,
-  border: '1px solid rgba(255, 255, 255, 0.15)'
+  fontSize: 11,
+  lineHeight: 1.1,
+  border: '1px solid rgba(255, 255, 255, 0.15)',
+  boxSizing: 'border-box'
 } as const;
 
 const feverButtonDisabledStyle = {

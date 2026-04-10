@@ -143,17 +143,33 @@ export default function GameShell() {
   }, []);
 
   useEffect(() => {
+    const documentElement = document.documentElement;
     const previousOverflow = document.body.style.overflow;
     const previousTouchAction = document.body.style.touchAction;
+    const previousMargin = document.body.style.margin;
+    const previousPadding = document.body.style.padding;
+    const previousHtmlMargin = documentElement.style.margin;
+    const previousHtmlPadding = documentElement.style.padding;
+    const previousHtmlOverflow = documentElement.style.overflow;
 
     if (viewportWidth < 760) {
       document.body.style.overflow = 'hidden';
       document.body.style.touchAction = 'manipulation';
+      document.body.style.margin = '0';
+      document.body.style.padding = '0';
+      documentElement.style.margin = '0';
+      documentElement.style.padding = '0';
+      documentElement.style.overflow = 'hidden';
     }
 
     return () => {
       document.body.style.overflow = previousOverflow;
       document.body.style.touchAction = previousTouchAction;
+      document.body.style.margin = previousMargin;
+      document.body.style.padding = previousPadding;
+      documentElement.style.margin = previousHtmlMargin;
+      documentElement.style.padding = previousHtmlPadding;
+      documentElement.style.overflow = previousHtmlOverflow;
     };
   }, [viewportWidth]);
 
