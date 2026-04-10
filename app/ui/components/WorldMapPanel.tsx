@@ -22,12 +22,22 @@ interface IWorldMapWorldSection {
 
 interface IWorldMapPanelProps {
   activeStageSelection: IStageSelection | null;
+  featuredPurchaseLabel: string;
+  hasPurchasedFeaturedPack: boolean;
+  isPurchasePending: boolean;
+  purchaseFeedback: string | null;
+  onPurchaseFeatured: () => void;
   onSelectStage: (selection: IStageSelection) => void;
   worldSections: IWorldMapWorldSection[];
 }
 
 export default function WorldMapPanel({
   activeStageSelection,
+  featuredPurchaseLabel,
+  hasPurchasedFeaturedPack,
+  isPurchasePending,
+  purchaseFeedback,
+  onPurchaseFeatured,
   onSelectStage,
   worldSections
 }: IWorldMapPanelProps) {
@@ -104,6 +114,30 @@ export default function WorldMapPanel({
           );
         })}
       </div>
+      <section style={monetizationPanelStyle}>
+        <span style={eyebrowStyle}>Support</span>
+        <strong style={monetizationTitleStyle}>Optional Meta Boost</strong>
+        <p style={monetizationTextStyle}>
+          광고와 구매는 코어 루프 밖 adapter/service 경계에서만 처리됩니다.
+        </p>
+        <button
+          type='button'
+          disabled={isPurchasePending}
+          onClick={onPurchaseFeatured}
+          style={{
+            ...purchaseButtonStyle,
+            ...(isPurchasePending ? purchaseButtonPendingStyle : null),
+            ...(hasPurchasedFeaturedPack ? purchaseButtonOwnedStyle : null)
+          }}
+        >
+          {isPurchasePending
+            ? 'Processing Purchase...'
+            : hasPurchasedFeaturedPack
+              ? `${featuredPurchaseLabel} Owned`
+              : `Buy ${featuredPurchaseLabel}`}
+        </button>
+        {purchaseFeedback ? <p style={monetizationFeedbackStyle}>{purchaseFeedback}</p> : null}
+      </section>
     </aside>
   );
 }
@@ -113,10 +147,11 @@ function renderStars(starCount: number) {
 }
 
 const panelStyle = {
-  width: 280,
+  width: '100%',
   minHeight: '100%',
   padding: '22px 18px',
   display: 'grid',
+  alignContent: 'start',
   gap: 16,
   background: 'linear-gradient(180deg, rgba(7, 11, 22, 0.96), rgba(10, 14, 28, 0.88))',
   borderRight: '1px solid rgba(120, 227, 255, 0.12)'
@@ -140,7 +175,8 @@ const titleStyle = {
 
 const stageListStyle = {
   display: 'grid',
-  gap: 16
+  gap: 16,
+  alignContent: 'start'
 } as const;
 
 const worldSectionStyle = {
@@ -174,6 +210,53 @@ const worldTitleStyle = {
 const worldStageListStyle = {
   display: 'grid',
   gap: 10
+} as const;
+
+const monetizationPanelStyle = {
+  display: 'grid',
+  gap: 10,
+  marginTop: 8,
+  padding: '16px 14px',
+  borderRadius: 18,
+  background: 'rgba(17, 23, 42, 0.88)',
+  border: '1px solid rgba(255, 214, 102, 0.2)'
+} as const;
+
+const monetizationTitleStyle = {
+  fontSize: 16
+} as const;
+
+const monetizationTextStyle = {
+  margin: 0,
+  fontSize: 12,
+  lineHeight: 1.45,
+  color: 'rgba(245, 247, 255, 0.72)'
+} as const;
+
+const monetizationFeedbackStyle = {
+  margin: 0,
+  fontSize: 12,
+  lineHeight: 1.45,
+  color: '#ffe79f'
+} as const;
+
+const purchaseButtonStyle = {
+  borderRadius: 14,
+  border: '1px solid rgba(255, 214, 102, 0.24)',
+  background: 'linear-gradient(135deg, rgba(255, 230, 128, 0.95), rgba(255, 125, 107, 0.95))',
+  color: '#1f1424',
+  fontWeight: 700,
+  padding: '12px 14px',
+  cursor: 'pointer'
+} as const;
+
+const purchaseButtonPendingStyle = {
+  opacity: 0.7,
+  cursor: 'wait'
+} as const;
+
+const purchaseButtonOwnedStyle = {
+  background: 'linear-gradient(135deg, rgba(140, 255, 179, 0.92), rgba(120, 227, 255, 0.92))'
 } as const;
 
 const stageButtonStyle = {

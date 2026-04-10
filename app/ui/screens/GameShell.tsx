@@ -16,8 +16,14 @@ import createGameRuntimeBridge from '../../game/hud-bridges/game-runtime-bridge'
 import HudPanel from '../components/HudPanel';
 import StageProfileBanner from '../components/StageProfileBanner';
 import WorldMapPanel from '../components/WorldMapPanel';
+import { monetizationActor } from '../../state/machines/monetization.machine.ts';
 import { progressionActor } from '../../state/machines/progression.machine';
 import { sessionActor } from '../../state/machines/session.machine';
+import {
+  selectHasPurchasedFeaturedPack,
+  selectIsPurchasePending,
+  selectPurchaseFeedback
+} from '../../state/selectors/monetization.selectors.ts';
 import {
   selectActiveStageSelection,
   selectIsProgressionLoading,
@@ -52,12 +58,18 @@ export default function GameShell() {
   const canActivateFever = useSelector(sessionActor, selectCanActivateFever);
   const canUseRewardedRetry = useSelector(sessionActor, selectCanUseRewardedRetry);
   const feverMeter = useSelector(sessionActor, selectFeverMeter);
+  const hasPurchasedFeaturedPack = useSelector(
+    monetizationActor,
+    selectHasPurchasedFeaturedPack
+  );
   const isFeverActive = useSelector(sessionActor, selectIsFeverActive);
+  const isPurchasePending = useSelector(monetizationActor, selectIsPurchasePending);
   const isSessionFailed = useSelector(sessionActor, selectIsSessionFailed);
   const isRewardedRetryPending = useSelector(sessionActor, selectIsRewardedRetryPending);
   const sessionPhase = useSelector(sessionActor, selectSessionPhase);
   const isSessionBooting = useSelector(sessionActor, selectIsSessionBooting);
   const isSessionRetrying = useSelector(sessionActor, selectIsSessionRetrying);
+  const purchaseFeedback = useSelector(monetizationActor, selectPurchaseFeedback);
   const rewardedRetryFeedback = useSelector(sessionActor, selectRewardedRetryFeedback);
   const retryCount = useSelector(sessionActor, selectRetryCount);
   const activeStageSelection = useSelector(progressionActor, selectActiveStageSelection);
@@ -252,6 +264,9 @@ export default function GameShell() {
       <section style={shellLayoutStyle}>
         <WorldMapPanel
           activeStageSelection={activeStageSelection}
+          featuredPurchaseLabel='Supporter Pack'
+          hasPurchasedFeaturedPack={hasPurchasedFeaturedPack}
+          isPurchasePending={isPurchasePending}
           onSelectStage={(selection: IStageSelection) => {
             progressionRepositoryRef.current
               .saveLastPlayedStageSelection(selection)
@@ -270,6 +285,10 @@ export default function GameShell() {
               });
             sessionActor.send({ type: 'RESET_SESSION' });
           }}
+          onPurchaseFeatured={() => {
+            monetizationActor.send({ type: 'REQUEST_FEATURED_PURCHASE' });
+          }}
+          purchaseFeedback={purchaseFeedback}
           worldSections={worldMapWorldSections}
         />
         <section style={stageShellStyle}>

@@ -1,11 +1,7 @@
 import { assign, createActor, fromPromise, setup } from 'xstate';
 
-import createRewardedAdAdapter from '../../platform/ads/rewarded-ad.adapter.js';
-
-type TRetryAdOutcome =
-  | { status: 'granted' }
-  | { status: 'denied'; reason: 'AD_LOAD_FAILED' }
-  | { status: 'cancelled' };
+import type { TRewardedAdOutcome } from '../../platform/monetization/monetization-result.ts';
+import createMonetizationService from '../services/monetization.service.ts';
 
 const FEVER_CHARGE_PER_BLOCK = 30;
 const FEVER_CHARGE_PER_GATE = 10;
@@ -36,27 +32,22 @@ type TSessionEvent =
   | { type: 'RESET_SESSION' };
 
 interface ICreateSessionMachineOptions {
-  requestRewardedRetry?: () => Promise<TRetryAdOutcome>;
+  requestRewardedRetry?: () => Promise<TRewardedAdOutcome>;
 }
 
 function defaultRequestRewardedRetry() {
-  return createRewardedAdAdapter().requestRetryAd().match(
-    (outcome) => outcome,
-    (error) => ({
-      status: 'denied' as const,
-      reason: error.code
-    })
-  );
+  return createMonetizationService().requestRewardedRetry();
 }
 
-function isRetryAdOutcome(value: unknown): value is TRetryAdOutcome {
+function isRetryAdOutcome(value: unknown): value is TRewardedAdOutcome {
   return (
     typeof value === 'object' &&
     value !== null &&
     'status' in value &&
     (value.status === 'granted' ||
       value.status === 'cancelled' ||
-      value.status === 'denied')
+      value.status === 'denied' ||
+      value.status === 'unavailable')
   );
 }
 
@@ -82,7 +73,11 @@ export function createSessionMachine({
       rewardedRetryCancelled: ({ event }) =>
         'output' in event &&
         isRetryAdOutcome(event.output) &&
-        event.output.status === 'cancelled'
+        event.output.status === 'cancelled',
+      rewardedRetryUnavailable: ({ event }) =>
+        'output' in event &&
+        isRetryAdOutcome(event.output) &&
+        event.output.status === 'unavailable'
     },
     actions: {
       incrementRetryCount: assign({
@@ -192,6 +187,10 @@ export function createSessionMachine({
                 {
                   guard: 'rewardedRetryCancelled',
                   target: 'cancelled'
+                },
+                {
+                  guard: 'rewardedRetryUnavailable',
+                  target: 'denied'
                 },
                 {
                   target: 'denied'

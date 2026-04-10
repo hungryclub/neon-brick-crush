@@ -1,6 +1,6 @@
 # Story 4.2: 보상형 광고와 IAP adapter 구현
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -21,44 +21,44 @@ so that monetization supports rather than pollutes the core loop.
 
 ## Tasks / Subtasks
 
-- [ ] Consolidate monetization adapter boundaries under `app/platform`. (AC: 1, 2)
-  - [ ] Reuse the existing rewarded-ad adapter path as part of a broader
+- [x] Consolidate monetization adapter boundaries under `app/platform`. (AC: 1, 2)
+  - [x] Reuse the existing rewarded-ad adapter path as part of a broader
         monetization boundary rather than leaving it as a one-off retry-only
         implementation.
-  - [ ] Add an IAP adapter contract under `app/platform/iap` with capability
+  - [x] Add an IAP adapter contract under `app/platform/iap` with capability
         detection or mock-ready provider branching.
-  - [ ] Keep provider-facing SDK calls out of Phaser Scene code, React event
+  - [x] Keep provider-facing SDK calls out of Phaser Scene code, React event
         handlers, and repository/domain layers.
-- [ ] Introduce typed monetization result and error contracts. (AC: 2)
-  - [ ] Define shared result shapes and error codes for rewarded ads and IAP
+- [x] Introduce typed monetization result and error contracts. (AC: 2)
+  - [x] Define shared result shapes and error codes for rewarded ads and IAP
         outcomes such as success, denied, cancelled, unavailable, and transport
         failure.
-  - [ ] Ensure recoverable monetization failures return typed `Result` values
+  - [x] Ensure recoverable monetization failures return typed `Result` values
         instead of thrown exceptions.
-  - [ ] Align new error/result contracts with the existing save recovery and
+  - [x] Align new error/result contracts with the existing save recovery and
         platform error handling conventions from Story 4.1.
-- [ ] Route monetization requests through XState-owned service flows. (AC: 1, 2)
-  - [ ] Keep UI intent-only: UI sends events, but does not call ad/IAP adapters
+- [x] Route monetization requests through XState-owned service flows. (AC: 1, 2)
+  - [x] Keep UI intent-only: UI sends events, but does not call ad/IAP adapters
         directly.
-  - [ ] Keep Scene/runtime gameplay paths free of purchase or ad provider
+  - [x] Keep Scene/runtime gameplay paths free of purchase or ad provider
         knowledge.
-  - [ ] Handle success, failure, and cancellation branches explicitly in state
+  - [x] Handle success, failure, and cancellation branches explicitly in state
         machines or adjacent services.
-- [ ] Prepare monetization hooks for future reward and store surfaces. (AC: 1, 2)
-  - [ ] Ensure rewarded retry can continue to use the rewarded-ad adapter
+- [x] Prepare monetization hooks for future reward and store surfaces. (AC: 1, 2)
+  - [x] Ensure rewarded retry can continue to use the rewarded-ad adapter
         through the shared platform boundary.
-  - [ ] Add IAP-facing stubs or service entry points that future store/event
+  - [x] Add IAP-facing stubs or service entry points that future store/event
         stories can reuse without reworking gameplay architecture.
-  - [ ] Preserve save-schema compatibility so rewarded grants and purchases can
+  - [x] Preserve save-schema compatibility so rewarded grants and purchases can
         later extend progression safely.
-- [ ] Add focused verification for monetization isolation and handled outcomes.
+- [x] Add focused verification for monetization isolation and handled outcomes.
       (AC: 1, 2)
-  - [ ] Add tests covering rewarded-ad and IAP adapter success/failure/cancel
+  - [x] Add tests covering rewarded-ad and IAP adapter success/failure/cancel
         paths through typed results.
-  - [ ] Add at least one state-machine or service-layer test confirming
+  - [x] Add at least one state-machine or service-layer test confirming
         explicit branch handling for monetization outcomes.
-  - [ ] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
-  - [ ] Manually verify: monetization UI intents do not crash gameplay flow and
+  - [x] Run `npm run test`, `npm run typecheck`, and `npm run build` in `app/`.
+  - [x] Manually verify: monetization UI intents do not crash gameplay flow and
         handled failures return cleanly to non-blocking UI states.
 
 ## Dev Notes
@@ -232,3 +232,20 @@ write consistency가 정리되었다. 따라서 Story 4.2는 저장 경계를 �
 - `React = presentation only`
 - `platform adapters = all external SDK contact`
 - monetization success/failure/cancel은 로그 검증 대상
+
+## Completion Notes
+
+### GPT-5 Codex
+
+- Promoted rewarded retry into a broader monetization contract by introducing
+  shared monetization outcome types and a platform-level monetization service.
+- Added `app/platform/iap/purchase.adapter.ts` and a dedicated
+  `monetization.machine.ts` so purchase actions now flow through XState-owned
+  service branches instead of UI-local async handling.
+- Expanded the world-map sidebar with a lightweight purchase CTA that sends only
+  machine intents while keeping gameplay and Scene code isolated from provider
+  adapters.
+- Updated rewarded-ad handling to return typed handled outcomes for denied,
+  cancelled, unavailable, and provider-failure paths.
+- Added monetization adapter and machine regression tests, then verified with
+  `npm run test`, `npm run typecheck`, and `npm run build`.
