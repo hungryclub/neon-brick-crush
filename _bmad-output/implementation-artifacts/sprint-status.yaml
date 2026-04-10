@@ -1,7 +1,7 @@
 generated_at: '2026-04-08'
 project: 'neo-brick-crush'
 status: 'active'
-last_updated: '2026-04-09'
+last_updated: '2026-04-10'
 development_status:
   epic-1: in-progress
   1-1-app-root-and-runtime-shell: review
@@ -18,7 +18,7 @@ development_status:
   3-3-tutorial-challenge-climax-flow: done
   epic-4: in-progress
   4-1-xp-level-unlock-persistence: done
-  4-2-rewarded-ads-and-iap-adapters: backlog
+  4-2-rewarded-ads-and-iap-adapters: ready-for-dev
   4-3-event-reward-structure: backlog
   epic-5: backlog
   5-1-neon-feedback-and-audio-base: backlog
