@@ -7,8 +7,8 @@ import {
 } from '../../game/systems/fever-overdrive.ts';
 import createMonetizationService from '../services/monetization.service.ts';
 
-const FEVER_CHARGE_PER_BLOCK = 30;
-const FEVER_CHARGE_PER_GATE = 10;
+const FEVER_CHARGE_PER_BLOCK = 20;
+const FEVER_CHARGE_PER_GATE = 8;
 const FEVER_METER_MAX = 100;
 
 interface ISessionContext {

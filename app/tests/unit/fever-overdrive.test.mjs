@@ -6,6 +6,7 @@ import {
   resolveFeverButtonLabel,
   resolveFeverCollisionBonus,
   resolveFeverHudValue,
+  resolveFeverStatusPrompt,
   resolveFeverTier,
   resolveFeverTone,
   resolveReadyFeverMode
@@ -41,10 +42,10 @@ test('fever collision bonus stops after the configured overdrive limit', () => {
 
 test('tiered fever helpers map meter into ready mode, label, hud value, and tone', () => {
   assert.equal(resolveFeverTier(0), 0);
-  assert.equal(resolveFeverTier(40), 1);
+  assert.equal(resolveFeverTier(35), 1);
   assert.equal(resolveFeverTier(70), 2);
   assert.equal(resolveFeverTier(100), 3);
-  assert.equal(resolveReadyFeverMode(40), 'breaker');
+  assert.equal(resolveReadyFeverMode(35), 'breaker');
   assert.equal(resolveReadyFeverMode(70), 'pierce');
   assert.equal(resolveReadyFeverMode(100), 'pulse');
   assert.equal(
@@ -58,5 +59,13 @@ test('tiered fever helpers map meter into ready mode, label, hud value, and tone
   assert.equal(
     resolveFeverTone({ activeMode: null, readyMode: 'pierce' }),
     'pierce'
+  );
+  assert.equal(
+    resolveFeverStatusPrompt({ activeMode: null, readyMode: 'pulse' }),
+    'Pulse Ready: save this for dense clusters'
+  );
+  assert.equal(
+    resolveFeverStatusPrompt({ activeMode: 'breaker', readyMode: 'pulse' }),
+    'Breaker Active: your next turn smashes durable blocks'
   );
 });

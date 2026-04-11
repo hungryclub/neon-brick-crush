@@ -99,6 +99,8 @@ Fever는 다음 조건을 만족해야 한다.
 추가 규칙:
 
 - Fever가 여러 종류로 확장될 경우, mode/tier 정책은 `tiered-fever-system-spec.md`를 우선 기준으로 삼는다.
+- 모바일 플레이 화면에서는 기존 stage prompt 위치를 Fever 상태 안내와 공유해야 하며, `active > ready > base prompt` 우선순위를 따른다.
+- 밸런스 기본값은 `block +20`, `gate +8`, tier threshold `35 / 70 / 100`을 기준으로 잡는다.
 
 ## Recommended Behavior
 

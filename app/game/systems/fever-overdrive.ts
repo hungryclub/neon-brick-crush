@@ -19,7 +19,7 @@ export function resolveFeverTier(feverMeter: number): TFeverTier {
     return 2;
   }
 
-  if (feverMeter >= 40) {
+  if (feverMeter >= 35) {
     return 1;
   }
 
@@ -122,6 +122,40 @@ export function resolveFeverHudValue({
   }
 
   return `${Math.round(feverMeter)}%`;
+}
+
+export function resolveFeverStatusPrompt({
+  activeMode,
+  readyMode
+}: {
+  activeMode: TFeverMode | null;
+  readyMode: TFeverMode | null;
+}) {
+  if (activeMode === 'breaker') {
+    return 'Breaker Active: your next turn smashes durable blocks';
+  }
+
+  if (activeMode === 'pierce') {
+    return 'Pierce Active: your next turn pierces through the lane';
+  }
+
+  if (activeMode === 'pulse') {
+    return 'Pulse Active: your next turn emits splash pulses';
+  }
+
+  if (readyMode === 'breaker') {
+    return 'Breaker Ready: activate to crush high-HP blocks';
+  }
+
+  if (readyMode === 'pierce') {
+    return 'Pierce Ready: line up a clean angle for piercing hits';
+  }
+
+  if (readyMode === 'pulse') {
+    return 'Pulse Ready: save this for dense clusters';
+  }
+
+  return null;
 }
 
 export function resolveFeverCollisionBonus({

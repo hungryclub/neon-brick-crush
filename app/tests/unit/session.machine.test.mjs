@@ -152,7 +152,7 @@ test('session machine charges fever meter from turn results up to ready state', 
   actor.send({
     type: 'TURN_RESOLVED',
     payload: {
-      destroyedBlocksThisTurn: 2,
+      destroyedBlocksThisTurn: 3,
       feverApplied: false,
       gateTriggeredCount: 0
     }
@@ -195,7 +195,7 @@ test('session machine activates breaker once tier 1 is ready and clears it after
 
   assert.equal(actor.getSnapshot().context.isFeverActive, false);
   assert.equal(actor.getSnapshot().context.activeFeverMode, null);
-  assert.equal(actor.getSnapshot().context.feverMeter, 30);
+  assert.equal(actor.getSnapshot().context.feverMeter, 20);
 });
 
 test('session machine escalates ready fever mode by tier before activation', () => {
@@ -205,7 +205,7 @@ test('session machine escalates ready fever mode by tier before activation', () 
   actor.send({
     type: 'TURN_RESOLVED',
     payload: {
-      destroyedBlocksThisTurn: 3,
+      destroyedBlocksThisTurn: 4,
       feverApplied: false,
       gateTriggeredCount: 0
     }
@@ -216,7 +216,7 @@ test('session machine escalates ready fever mode by tier before activation', () 
   actor.send({
     type: 'TURN_RESOLVED',
     payload: {
-      destroyedBlocksThisTurn: 4,
+      destroyedBlocksThisTurn: 5,
       feverApplied: false,
       gateTriggeredCount: 0
     }
@@ -252,5 +252,5 @@ test('session machine clears active fever even when the fever phase finds no tar
   });
 
   assert.equal(actor.getSnapshot().context.isFeverActive, false);
-  assert.equal(actor.getSnapshot().context.feverMeter, 10);
+  assert.equal(actor.getSnapshot().context.feverMeter, 8);
 });

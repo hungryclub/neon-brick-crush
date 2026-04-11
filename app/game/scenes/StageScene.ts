@@ -226,7 +226,8 @@ export default class StageScene extends Phaser.Scene {
           fontSize: isMobileWidth ? '12px' : '16px'
         }
       )
-      .setOrigin(0.5, 0);
+      .setOrigin(0.5, 0)
+      .setVisible(!isMobileWidth);
 
     this.aimGuide = this.add.graphics();
     this.neonFeedbackLayer = createNeonFeedbackLayer(this);
@@ -1073,6 +1074,10 @@ export default class StageScene extends Phaser.Scene {
 
   private updateStagePrompt() {
     if (!this.stagePromptLabel) {
+      return;
+    }
+
+    if (this.scale.width < 760) {
       return;
     }
 

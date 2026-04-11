@@ -15,6 +15,8 @@ import createProgressionRepository from '../../platform/persistence/progression.
 import { createInitialProgressionSnapshot } from '../../platform/persistence/save-recovery.ts';
 import createGameRuntime from '../../game/core/create-game-runtime';
 import createLogger from '../../shared/logging/create-logger';
+import { resolveStagePromptText } from '../../game/systems/stage-rule-profile';
+import { resolveFeverStatusPrompt } from '../../game/systems/fever-overdrive.ts';
 import {
   createInitialRuntimeDebugSnapshot,
   createInitialRuntimeHudSnapshot,
@@ -52,11 +54,13 @@ import {
   selectWorldMapWorlds
 } from '../../state/selectors/progression.selectors';
 import {
+  selectActiveFeverMode,
   selectCanActivateFever,
   selectFeverButtonLabel,
   selectCanUseRewardedRetry,
   selectFeverHudValue,
   selectFeverMeter,
+  selectFeverReadyMode,
   selectFeverTone,
   selectIsFeverActive,
   selectIsSessionBooting,
@@ -84,6 +88,7 @@ export default function GameShell() {
   const storeToggleDebugVisible = useUiStore((state) => state.storeToggleDebugVisible);
   const runtimeHud = useUiStore((state) => state.storeRuntimeHud);
   const canActivateFever = useSelector(sessionActor, selectCanActivateFever);
+  const activeFeverMode = useSelector(sessionActor, selectActiveFeverMode);
   const canUseRewardedRetry = useSelector(sessionActor, selectCanUseRewardedRetry);
   const feverButtonLabel = useSelector(sessionActor, selectFeverButtonLabel);
   const feverHudValue = useSelector(sessionActor, selectFeverHudValue);
@@ -91,6 +96,7 @@ export default function GameShell() {
   const isEventClaimPending = useSelector(eventActor, selectIsEventClaimPending);
   const latestEventClaimError = useSelector(eventActor, selectLatestEventClaimError);
   const feverMeter = useSelector(sessionActor, selectFeverMeter);
+  const readyFeverMode = useSelector(sessionActor, selectFeverReadyMode);
   const feverTone = useSelector(sessionActor, selectFeverTone);
   const hasPurchasedFeaturedPack = useSelector(
     monetizationActor,
@@ -592,6 +598,18 @@ export default function GameShell() {
       feverTone={feverTone}
     />
   );
+  const mobilePromptText =
+    resolveFeverStatusPrompt({
+      activeMode: activeFeverMode,
+      readyMode: readyFeverMode
+    }) ??
+    (activeStageRuntimeConfig
+      ? resolveStagePromptText(
+          activeStageRuntimeConfig,
+          runtimeHud.turnNumber,
+          runtimeHud.shotState
+        )
+      : '');
 
   if (isMobileLayout) {
     return (
@@ -632,6 +650,18 @@ export default function GameShell() {
             sessionPhase={sessionPhase}
             stageRuntimeConfig={activeStageRuntimeConfig}
             feverTone={feverTone}
+            overlayContent={
+              mobilePromptText ? (
+                <div
+                  style={resolveMobileFeverPromptStyle({
+                    feverTone,
+                    isEmphasized: Boolean(activeFeverMode || readyFeverMode)
+                  })}
+                >
+                  {mobilePromptText}
+                </div>
+              ) : null
+            }
           />
         ) : (
           <MobileMapLayout
@@ -1114,3 +1144,54 @@ const debugToggleButtonStyle = {
   border: '1px solid rgba(120, 227, 255, 0.18)',
   cursor: 'pointer'
 } as const;
+
+function resolveMobileFeverPromptStyle({
+  feverTone,
+  isEmphasized
+}: {
+  feverTone: 'neutral' | 'breaker' | 'pierce' | 'pulse';
+  isEmphasized: boolean;
+}) {
+  const baseStyle = {
+    position: 'absolute',
+    left: '50%',
+    bottom: 42,
+    transform: 'translateX(-50%)',
+    width: 'min(88%, 320px)',
+    textAlign: 'center',
+    fontSize: 10,
+    lineHeight: 1.35,
+    letterSpacing: '0.02em',
+    color: 'rgba(199, 212, 255, 0.9)',
+    textShadow: '0 2px 10px rgba(0, 0, 0, 0.35)',
+    zIndex: 3,
+    pointerEvents: 'none'
+  } as const;
+
+  if (!isEmphasized) {
+    return baseStyle;
+  }
+
+  if (feverTone === 'breaker') {
+    return {
+      ...baseStyle,
+      color: '#ffd2a7'
+    } as const;
+  }
+
+  if (feverTone === 'pierce') {
+    return {
+      ...baseStyle,
+      color: '#b9f4ff'
+    } as const;
+  }
+
+  if (feverTone === 'pulse') {
+    return {
+      ...baseStyle,
+      color: '#ffc2df'
+    } as const;
+  }
+
+  return baseStyle;
+}

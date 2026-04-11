@@ -31,10 +31,17 @@ Fever는 더 이상 단순한 `ready / active` 버프가 아니라, 게이지 �
 
 추천 threshold:
 
-- `0 ~ 39`: 미충전
-- `40 ~ 69`: `Breaker Ready`
+- `0 ~ 34`: 미충전
+- `35 ~ 69`: `Breaker Ready`
 - `70 ~ 99`: `Pierce Ready`
 - `100`: `Pulse Ready`
+
+권장 충전량:
+
+- 블록 파괴당 `+20`
+- 게이트 트리거당 `+8`
+
+위 수치는 `Pulse`가 너무 빨리 노출되지 않게 하면서, `Breaker`와 `Pierce`가 실제 플레이 중 눈에 띄도록 유지하는 기준값이다.
 
 ## Core Rule
 
@@ -116,6 +123,21 @@ Fever는 더 이상 단순한 `ready / active` 버프가 아니라, 게이지 �
 
 - HUD의 `Fever` 카드도 버튼과 같은 tier tone을 공유해야 한다.
 - active 상태는 ready 상태보다 더 강한 시각 강조를 사용해야 한다.
+
+### Prompt Contract
+
+- 모바일의 기존 `keep playing ...` 텍스트 영역은 Fever 상태 설명 영역으로 겸용한다.
+- 표시 우선순위는 `active mode > ready mode > 기본 스테이지 안내` 순서를 따른다.
+- 모바일에서는 현재 activatable 또는 active 상태의 Fever 설명이 같은 자리에서 한 줄 또는 두 줄로 읽혀야 한다.
+
+예시:
+
+- `Breaker Ready: activate to crush high-HP blocks`
+- `Pierce Ready: line up a clean angle for piercing hits`
+- `Pulse Ready: save this for dense clusters`
+- `Breaker Active: your next turn smashes durable blocks`
+- `Pierce Active: your next turn pierces through the lane`
+- `Pulse Active: your next turn emits splash pulses`
 
 ## Architecture Contract
 
