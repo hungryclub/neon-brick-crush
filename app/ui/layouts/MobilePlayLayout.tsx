@@ -62,6 +62,15 @@ export default function MobilePlayLayout({
   return (
     <section style={layoutStyle}>
       <CompactStageChip onOpenMap={onOpenMap} stageRuntimeConfig={stageRuntimeConfig} />
+      <div style={bottomStyle}>
+        <CompactHudStrip
+          canActivateFever={canActivateFever}
+          feverMeter={feverMeter}
+          isFeverActive={isFeverActive}
+          runtimeHud={runtimeHud}
+          sessionPhase={sessionPhase}
+        />
+      </div>
       <section style={canvasFrameStyle}>
         <div ref={runtimeHostRef} id='game-runtime-host' style={runtimeHostStyle} />
         {isSessionBooting || isProgressionLoading ? (
@@ -142,15 +151,6 @@ export default function MobilePlayLayout({
         </button>
         {overlayContent}
       </section>
-      <div style={bottomStyle}>
-        <CompactHudStrip
-          canActivateFever={canActivateFever}
-          feverMeter={feverMeter}
-          isFeverActive={isFeverActive}
-          runtimeHud={runtimeHud}
-          sessionPhase={sessionPhase}
-        />
-      </div>
     </section>
   );
 }
@@ -160,7 +160,7 @@ const layoutStyle = {
   maxWidth: '100%',
   height: '100dvh',
   display: 'grid',
-  gridTemplateRows: '36px minmax(0, 1fr) 28px',
+  gridTemplateRows: '36px 28px minmax(0, 1fr)',
   gap: 4,
   padding: 'calc(env(safe-area-inset-top, 0px) + 4px) 4px calc(env(safe-area-inset-bottom, 0px) + 4px)',
   overflow: 'hidden',
@@ -201,15 +201,17 @@ const feverButtonStyle = {
   bottom: 6,
   transform: 'translateX(-50%)',
   zIndex: 3,
-  width: '96px',
+  width: '25vw',
   borderRadius: 14,
-  minHeight: 20,
-  padding: '2px 6px',
+  minHeight: 30,
+  padding: '4px 8px',
   fontWeight: 700,
-  fontSize: 8,
+  fontSize: 9,
   lineHeight: 1.1,
   border: '1px solid rgba(255, 255, 255, 0.15)',
-  boxSizing: 'border-box'
+  boxSizing: 'border-box',
+  minWidth: 88,
+  maxWidth: 120
 } as const;
 
 const feverButtonDisabledStyle = {

@@ -51,7 +51,7 @@ import {
 } from '../../platform/audio/game-audio.adapter.js';
 import { resolveTurn } from '../systems/turn-resolver';
 
-const BALL_RADIUS = 10;
+const BALL_RADIUS = 7;
 const BLOCK_WIDTH = 142;
 const BLOCK_HEIGHT = 54;
 const BLOCK_GAP = 12;
@@ -147,7 +147,8 @@ export default class StageScene extends Phaser.Scene {
     const width = this.scale.width;
     const height = this.scale.height;
     const isMobileWidth = width < 760;
-    const launcherY = height - (isMobileWidth ? 42 : 86);
+    const launcherY = height - (isMobileWidth ? 44 : 86);
+    const lossLineY = launcherY - (isMobileWidth ? 78 : 98);
     const stageRuntimeConfig = this.registry.get(
       STAGE_RUNTIME_CONFIG_REGISTRY_KEY
     ) as IStageRuntimeConfig | undefined;
@@ -168,7 +169,7 @@ export default class StageScene extends Phaser.Scene {
       blockHeight: boardMetrics.blockHeight,
       blockGap: boardMetrics.blockGap,
       initialBoard: initialBoardState,
-      launcherY,
+      lossLineY,
       lossRowBufferRows: stageRuntimeConfig.rulesProfile.lossRowBufferRows
     });
     this.gates = createStageGates({
@@ -193,7 +194,7 @@ export default class StageScene extends Phaser.Scene {
 
     this.dangerLine = this.add.rectangle(
       width / 2,
-      launcherY - (isMobileWidth ? 78 : 98),
+      lossLineY,
       width - (isMobileWidth ? 28 : 96),
       4,
       0xff4d8d,
@@ -205,12 +206,12 @@ export default class StageScene extends Phaser.Scene {
       fontSize: isMobileWidth ? '11px' : '13px'
     });
 
-    this.add.circle(this.launcherPosition.x, this.launcherPosition.y, 16, 0x78e3ff, 0.3);
-    this.add.circle(this.launcherPosition.x, this.launcherPosition.y, 8, 0xffffff, 0.88);
+    this.add.circle(this.launcherPosition.x, this.launcherPosition.y, 12, 0x78e3ff, 0.3);
+    this.add.circle(this.launcherPosition.x, this.launcherPosition.y, BALL_RADIUS, 0xffffff, 0.88);
     this.stagePromptLabel = this.add
       .text(
         this.launcherPosition.x,
-        this.launcherPosition.y + 28,
+        this.launcherPosition.y + (isMobileWidth ? -26 : 28),
         resolveStagePromptText(stageRuntimeConfig, this.turnNumber, this.shotState),
         {
           color: '#c7d4ff',
@@ -779,22 +780,22 @@ export default class StageScene extends Phaser.Scene {
 
   private resolveBoardMetrics(): IBoardMetrics {
     const isMobileWidth = this.scale.width < 760;
-    const horizontalPadding = isMobileWidth ? 32 : 48;
-    const blockGap = isMobileWidth ? 2 : BLOCK_GAP;
+    const horizontalPadding = isMobileWidth ? 52 : 48;
+    const blockGap = isMobileWidth ? 1 : BLOCK_GAP;
     const usableWidth = Math.max(this.scale.width - horizontalPadding * 2, 240);
     const blockWidth = Math.max(
       Math.floor(
         (usableWidth - (this.stageRuntimeConfig.boardColumns - 1) * blockGap) /
           this.stageRuntimeConfig.boardColumns
       ),
-      isMobileWidth ? 24 : BLOCK_WIDTH
+      isMobileWidth ? 20 : BLOCK_WIDTH
     );
     const totalWidth =
       this.stageRuntimeConfig.boardColumns * blockWidth +
       (this.stageRuntimeConfig.boardColumns - 1) * blockGap;
     const blockHeight = Math.max(
       Math.round(blockWidth * (BLOCK_HEIGHT / BLOCK_WIDTH)),
-      isMobileWidth ? 24 : BLOCK_HEIGHT
+      isMobileWidth ? 18 : BLOCK_HEIGHT
     );
 
     return {

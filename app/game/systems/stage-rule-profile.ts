@@ -9,18 +9,18 @@ export function resolveLossRow({
   blockHeight,
   blockGap,
   initialBoard,
-  launcherY,
+  lossLineY,
   lossRowBufferRows
 }: {
   boardTop: number;
   blockHeight: number;
   blockGap: number;
   initialBoard: IStageBoardCell[];
-  launcherY: number;
+  lossLineY: number;
   lossRowBufferRows: number;
 }) {
   const maxPlayableRow =
-    Math.floor((launcherY - boardTop) / (blockHeight + blockGap)) - 1;
+    Math.floor((lossLineY - boardTop) / (blockHeight + blockGap)) - 1;
   const highestInitialRow = initialBoard.reduce((highestRow, cell) => {
     return Math.max(highestRow, cell.row);
   }, 0);
