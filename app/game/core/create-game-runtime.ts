@@ -24,18 +24,23 @@ export default function createGameRuntime({
 }: ICreateGameRuntimeProps) {
   const logger = createLogger();
   const stageRuntimeConfig = resolveRuntimeStageConfig(stageSelection, logger);
+  const parentBounds = parent.getBoundingClientRect();
+  const runtimeWidth = Math.max(Math.round(parentBounds.width), 320);
+  const runtimeHeight = Math.max(Math.round(parentBounds.height), 320);
 
   logger.info('runtime.stage_config_loaded', {
     worldId: stageRuntimeConfig.worldId,
     stageId: stageRuntimeConfig.stageId,
     stageKind: stageRuntimeConfig.stageKind,
-    assetBundleIds: stageRuntimeConfig.assetBundleIds
+    assetBundleIds: stageRuntimeConfig.assetBundleIds,
+    runtimeWidth,
+    runtimeHeight
   });
 
   const game = new Phaser.Game({
     type: Phaser.AUTO,
-    width: 1280,
-    height: 720,
+    width: runtimeWidth,
+    height: runtimeHeight,
     parent,
     backgroundColor: '#050711',
     physics: {
@@ -50,8 +55,8 @@ export default function createGameRuntime({
     },
     scene: [BootScene, StageScene],
     scale: {
-      mode: Phaser.Scale.FIT,
-      autoCenter: Phaser.Scale.CENTER_BOTH
+      mode: Phaser.Scale.RESIZE,
+      autoCenter: Phaser.Scale.NO_CENTER
     },
     callbacks: {
       preBoot(game) {

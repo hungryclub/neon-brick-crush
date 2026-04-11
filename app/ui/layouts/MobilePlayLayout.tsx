@@ -161,6 +161,7 @@ const layoutStyle = {
 const canvasFrameStyle = {
   width: '100%',
   minHeight: 0,
+  display: 'grid',
   overflow: 'hidden',
   borderRadius: 16,
   border: '1px solid rgba(120, 227, 255, 0.14)',
@@ -171,18 +172,21 @@ const canvasFrameStyle = {
 
 const runtimeHostStyle = {
   width: '100%',
-  height: '100%'
+  height: '100%',
+  minWidth: 0,
+  minHeight: 0
 } as const;
 
 const bottomStyle = {
   display: 'grid',
   gap: 3,
   width: '100%',
-  minWidth: 0
+  minWidth: 0,
+  justifyItems: 'stretch'
 } as const;
 
 const feverButtonStyle = {
-  width: '100%',
+  width: 'min(156px, 42vw)',
   borderRadius: 14,
   minHeight: 32,
   padding: '6px 10px',
@@ -190,7 +194,8 @@ const feverButtonStyle = {
   fontSize: 11,
   lineHeight: 1.1,
   border: '1px solid rgba(255, 255, 255, 0.15)',
-  boxSizing: 'border-box'
+  boxSizing: 'border-box',
+  justifySelf: 'center'
 } as const;
 
 const feverButtonDisabledStyle = {

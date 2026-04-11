@@ -56,6 +56,15 @@ const BLOCK_WIDTH = 142;
 const BLOCK_HEIGHT = 54;
 const BLOCK_GAP = 12;
 const IMPACT_EFFECTS_PER_TURN_CAP = 8;
+
+interface IBoardMetrics {
+  blockGap: number;
+  blockHeight: number;
+  blockWidth: number;
+  boardTop: number;
+  fontSize: number;
+  startX: number;
+}
 interface IBlockView {
   cell: IStageBoardCell;
   label: Phaser.GameObjects.Text;
@@ -137,7 +146,6 @@ export default class StageScene extends Phaser.Scene {
   create() {
     const width = this.scale.width;
     const height = this.scale.height;
-    const boardTop = 112;
     const launcherY = height - 86;
     const stageRuntimeConfig = this.registry.get(
       STAGE_RUNTIME_CONFIG_REGISTRY_KEY
@@ -150,11 +158,14 @@ export default class StageScene extends Phaser.Scene {
     this.stageRuntimeConfig = stageRuntimeConfig;
 
     const initialBoardState = createInitialStageBoard(stageRuntimeConfig);
+    const boardMetrics = this.resolveBoardMetrics();
 
     this.launcherPosition.x = width / 2;
     this.launcherPosition.y = launcherY;
     this.lossRow = resolveLossRow({
-      boardTop,
+      boardTop: boardMetrics.boardTop,
+      blockHeight: boardMetrics.blockHeight,
+      blockGap: boardMetrics.blockGap,
       initialBoard: initialBoardState,
       launcherY,
       lossRowBufferRows: stageRuntimeConfig.rulesProfile.lossRowBufferRows
@@ -611,6 +622,8 @@ export default class StageScene extends Phaser.Scene {
   }
 
   private renderBoard() {
+    const boardMetrics = this.resolveBoardMetrics();
+
     this.blockViews.forEach((blockView) => {
       blockView.rectangle.destroy();
       blockView.label.destroy();
@@ -622,8 +635,8 @@ export default class StageScene extends Phaser.Scene {
       const rectangle = this.add.rectangle(
         position.x,
         position.y,
-        BLOCK_WIDTH,
-        BLOCK_HEIGHT,
+        boardMetrics.blockWidth,
+        boardMetrics.blockHeight,
         resolveBlockColor(cell.hp),
         0.9
       );
@@ -638,7 +651,7 @@ export default class StageScene extends Phaser.Scene {
       const label = this.add.text(position.x, position.y, String(cell.hp), {
         color: '#f5f7ff',
         fontFamily: 'Arial Black',
-        fontSize: '24px'
+        fontSize: `${boardMetrics.fontSize}px`
       });
       label.setOrigin(0.5);
 
@@ -743,15 +756,46 @@ export default class StageScene extends Phaser.Scene {
   }
 
   private resolveBlockPosition(cell: IStageBoardCell) {
-    const totalWidth =
-      this.stageRuntimeConfig.boardColumns * BLOCK_WIDTH +
-      (this.stageRuntimeConfig.boardColumns - 1) * BLOCK_GAP;
-    const startX = (this.scale.width - totalWidth) / 2 + BLOCK_WIDTH / 2;
-    const startY = 120 + BLOCK_HEIGHT / 2;
+    const boardMetrics = this.resolveBoardMetrics();
+    const startY = boardMetrics.boardTop + boardMetrics.blockHeight / 2;
 
     return {
-      x: startX + cell.col * (BLOCK_WIDTH + BLOCK_GAP),
-      y: startY + cell.row * (BLOCK_HEIGHT + BLOCK_GAP)
+      x:
+        boardMetrics.startX +
+        cell.col * (boardMetrics.blockWidth + boardMetrics.blockGap),
+      y:
+        startY +
+        cell.row * (boardMetrics.blockHeight + boardMetrics.blockGap)
+    };
+  }
+
+  private resolveBoardMetrics(): IBoardMetrics {
+    const isMobileWidth = this.scale.width < 760;
+    const horizontalPadding = isMobileWidth ? 18 : 48;
+    const blockGap = isMobileWidth ? 4 : BLOCK_GAP;
+    const usableWidth = Math.max(this.scale.width - horizontalPadding * 2, 240);
+    const blockWidth = Math.max(
+      Math.floor(
+        (usableWidth - (this.stageRuntimeConfig.boardColumns - 1) * blockGap) /
+          this.stageRuntimeConfig.boardColumns
+      ),
+      isMobileWidth ? 34 : BLOCK_WIDTH
+    );
+    const totalWidth =
+      this.stageRuntimeConfig.boardColumns * blockWidth +
+      (this.stageRuntimeConfig.boardColumns - 1) * blockGap;
+    const blockHeight = Math.max(
+      Math.round(blockWidth * (BLOCK_HEIGHT / BLOCK_WIDTH)),
+      isMobileWidth ? 24 : BLOCK_HEIGHT
+    );
+
+    return {
+      blockGap,
+      blockHeight,
+      blockWidth,
+      boardTop: isMobileWidth ? 84 : 120,
+      fontSize: Math.max(Math.round(blockHeight * 0.42), isMobileWidth ? 14 : 24),
+      startX: (this.scale.width - totalWidth) / 2 + blockWidth / 2
     };
   }
 

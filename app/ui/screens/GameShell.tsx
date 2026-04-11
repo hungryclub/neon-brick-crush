@@ -843,11 +843,16 @@ function resolveStageStarCount(retryCount: number) {
 
 function resolveLayoutStyle(isMobileLayout: boolean) {
   return {
+    width: '100%',
+    maxWidth: '100vw',
+    height: isMobileLayout ? '100dvh' : 'auto',
     minHeight: '100vh',
     margin: 0,
     padding: isMobileLayout ? '0' : '24px',
     display: 'grid',
     placeItems: 'stretch',
+    overflow: 'hidden',
+    boxSizing: 'border-box',
     background:
       'radial-gradient(circle at top, #1e2b5f 0%, #090b17 48%, #030409 100%)',
     color: '#f5f7ff',

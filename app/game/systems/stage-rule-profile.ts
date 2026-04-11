@@ -2,23 +2,25 @@ import type { IStageBoardCell } from '../entities/stage-board';
 import type { IStageRuntimeConfig } from '../../domain/models/stage-model';
 import type { TRuntimeShotState } from '../hud-bridges/game-runtime-bridge';
 
-const BLOCK_HEIGHT = 54;
-const BLOCK_GAP = 12;
 const MAX_STAGE_BUFFER_ROWS = 3;
 
 export function resolveLossRow({
   boardTop,
+  blockHeight,
+  blockGap,
   initialBoard,
   launcherY,
   lossRowBufferRows
 }: {
   boardTop: number;
+  blockHeight: number;
+  blockGap: number;
   initialBoard: IStageBoardCell[];
   launcherY: number;
   lossRowBufferRows: number;
 }) {
   const maxPlayableRow =
-    Math.floor((launcherY - boardTop) / (BLOCK_HEIGHT + BLOCK_GAP)) - 1;
+    Math.floor((launcherY - boardTop) / (blockHeight + blockGap)) - 1;
   const highestInitialRow = initialBoard.reduce((highestRow, cell) => {
     return Math.max(highestRow, cell.row);
   }, 0);
