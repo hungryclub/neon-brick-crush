@@ -160,10 +160,12 @@ export default function MobileMapLayout({
 
 const layoutStyle = {
   height: '100dvh',
+  boxSizing: 'border-box',
   display: 'grid',
   gridTemplateRows: 'auto minmax(0, 1fr) auto',
   gap: 8,
-  padding: 'calc(env(safe-area-inset-top, 0px) + 6px) 12px calc(env(safe-area-inset-bottom, 0px) + 8px)',
+  padding:
+    'calc(env(safe-area-inset-top, 0px) + 8px) 12px calc(env(safe-area-inset-bottom, 0px) + 10px)',
   overflow: 'hidden'
 } as const;
 
@@ -220,31 +222,33 @@ const mapCardStyle = {
   borderRadius: 22,
   border: '1px solid rgba(120, 227, 255, 0.14)',
   background: 'rgba(7, 11, 22, 0.9)',
-  padding: 10,
-  display: 'grid',
-  gridTemplateRows: 'auto auto',
-  gap: 8,
-  overflow: 'hidden'
+  padding: 13,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 10,
+  overflowX: 'hidden',
+  overflowY: 'auto',
+  overscrollBehavior: 'contain'
 } as const;
 
 const gridStyle = {
   display: 'grid',
   gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-  gap: 8,
+  gap: 10,
   alignContent: 'start',
-  gridAutoRows: '84px'
+  gridAutoRows: '114px'
 } as const;
 
 const stageCardStyle = {
   minWidth: 0,
   borderRadius: 18,
-  height: 84,
-  minHeight: 84,
-  padding: '8px 8px 6px',
+  height: 114,
+  minHeight: 114,
+  padding: '11px 13px 10px',
   border: '1px solid rgba(255, 255, 255, 0.1)',
   textAlign: 'left',
   display: 'grid',
-  gap: 2,
+  gap: 3,
   alignContent: 'start'
 } as const;
 
@@ -266,42 +270,48 @@ const activeStageCardStyle = {
 } as const;
 
 const stageIndexStyle = {
-  fontSize: 9,
+  fontSize: 13,
   opacity: 0.8
 } as const;
 
 const stageTitleStyle = {
-  fontSize: 11,
-  lineHeight: 1.12
+  fontSize: 16,
+  lineHeight: 1.05,
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis'
 } as const;
 
 const stageMetaStyle = {
-  fontSize: 8,
+  fontSize: 12,
   textTransform: 'uppercase',
-  opacity: 0.72
+  opacity: 0.72,
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis'
 } as const;
 
 const stageStarsStyle = {
-  fontSize: 10
+  fontSize: 15
 } as const;
 
 const selectedStageCardStyle = {
-  padding: '10px 10px 8px',
+  padding: '13px 13px 11px',
   borderRadius: 18,
   border: '1px solid rgba(120, 227, 255, 0.24)',
   background: 'rgba(12, 17, 31, 0.92)',
   display: 'grid',
-  gap: 5
+  gap: 6
 } as const;
 
 const selectedStageTitleStyle = {
-  fontSize: 17
+  fontSize: 15
 } as const;
 
 const selectedStageTextStyle = {
   margin: 0,
-  fontSize: 11,
-  lineHeight: 1.3,
+  fontSize: 10,
+  lineHeight: 1.25,
   color: 'rgba(245, 247, 255, 0.76)',
   display: '-webkit-box',
   WebkitLineClamp: 2,
@@ -312,7 +322,8 @@ const selectedStageTextStyle = {
 const primaryActionStyle = {
   border: 'none',
   borderRadius: 999,
-  padding: '10px 14px',
+  height: 42,
+  padding: '0 14px',
   background: 'linear-gradient(135deg, #78e3ff, #ff67b0)',
   color: '#08101f',
   fontWeight: 700,
@@ -322,11 +333,12 @@ const primaryActionStyle = {
 const metaCardStyle = {
   display: 'grid',
   gap: 6,
-  padding: '10px 10px 8px',
+  padding: '13px 13px 11px',
   borderRadius: 18,
   background: 'rgba(17, 23, 42, 0.88)',
   border: '1px solid rgba(255, 214, 102, 0.2)',
-  marginBottom: 'max(env(safe-area-inset-bottom, 0px), 2px)'
+  marginBottom: '5px',
+  boxSizing: 'border-box'
 } as const;
 
 const supportCopyStyle = {
@@ -335,7 +347,7 @@ const supportCopyStyle = {
 } as const;
 
 const supportTitleStyle = {
-  fontSize: 13
+  fontSize: 12
 } as const;
 
 const supportButtonStyle = {
@@ -344,7 +356,8 @@ const supportButtonStyle = {
   background: 'linear-gradient(135deg, rgba(255, 230, 128, 0.95), rgba(255, 125, 107, 0.95))',
   color: '#1f1424',
   fontWeight: 700,
-  padding: '9px 12px',
+  height: 40,
+  padding: '0 12px',
   cursor: 'pointer'
 } as const;
 
