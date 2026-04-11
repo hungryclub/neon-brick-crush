@@ -22,6 +22,7 @@ game_name: '네온 브릭 크러시 (Neon Brick Crush)'
 **Game Type:** puzzle
 **Target Platform(s):** 모바일 (iOS/Android), 웹, PC
 **Mobile Layout Spec:** [/Users/dhlee/Desktop/projects/ai-orchestrator/bmad-projects/neo-brick-crush/_bmad-output/planning-artifacts/mobile-layout-spec.md](/Users/dhlee/Desktop/projects/ai-orchestrator/bmad-projects/neo-brick-crush/_bmad-output/planning-artifacts/mobile-layout-spec.md)
+**Fever Enhancement Spec:** [/Users/dhlee/Desktop/projects/ai-orchestrator/bmad-projects/neo-brick-crush/_bmad-output/planning-artifacts/fever-enhancement-spec.md](/Users/dhlee/Desktop/projects/ai-orchestrator/bmad-projects/neo-brick-crush/_bmad-output/planning-artifacts/fever-enhancement-spec.md)
 
 ---
 
@@ -42,6 +43,7 @@ game_name: '네온 브릭 크러시 (Neon Brick Crush)'
 - 좋은 각도와 경로 설계가 한 턴의 결과를 크게 바꾸는 샷 설계형 플레이
 - 게이트 기반 전개 변화로 매 턴 예상 밖의 연쇄 결과가 발생하는 구조
 - 플레이어가 직접 타이밍을 선택해 판세를 뒤집는 수동 피버 시스템
+- 피버는 `다음 1턴을 확실히 바꾸는 강화 상태`로 읽혀야 하며, 현재/향후 구현 기준은 `fever-enhancement-spec.md`를 따른다
 - 쉬운 진입과 깊은 숙련, 그리고 짧은 세션 기반의 강한 재도전 루프
 
 ---
@@ -126,6 +128,7 @@ game_name: '네온 브릭 크러시 (Neon Brick Crush)'
 
 - **직접 발동하는 수동 피버**  
   피버는 자동 보상이 아니라 플레이어가 타이밍을 선택해 발동하는 판세 전환 수단이며, 강한 주도감과 역전 쾌감을 만든다.
+  구현 기준은 `fever-enhancement-spec.md`를 우선 참고하며, 최종 목표는 단순한 정산 보정이 아니라 플레이 중 즉시 체감되는 `1턴 오버드라이브` 경험이다.
 
 - **시선을 붙잡는 다양한 임팩트와 모바일 촉각 피드백**  
   네온 연출, 연쇄 파괴 효과, 피버 순간의 시청각 폭발감, 그리고 진동을 포함한 모바일 피드백이 결합되어 짧은 플레이 안에서도 강한 몰입과 손맛을 만든다.

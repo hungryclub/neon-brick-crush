@@ -14,6 +14,7 @@ gdd: '/Users/dhlee/Desktop/projects/ai-orchestrator/bmad-projects/neo-brick-crus
 epics: '/Users/dhlee/Desktop/projects/ai-orchestrator/bmad-projects/neo-brick-crush/_bmad-output/planning-artifacts/epics.md'
 brief: '/Users/dhlee/Desktop/projects/ai-orchestrator/bmad-projects/neo-brick-crush/_bmad-output/planning-artifacts/game-brief.md'
 mobileLayout: '/Users/dhlee/Desktop/projects/ai-orchestrator/bmad-projects/neo-brick-crush/_bmad-output/planning-artifacts/mobile-layout-spec.md'
+feverEnhancement: '/Users/dhlee/Desktop/projects/ai-orchestrator/bmad-projects/neo-brick-crush/_bmad-output/planning-artifacts/fever-enhancement-spec.md'
 ---
 
 # Game Architecture
@@ -94,6 +95,7 @@ _Architecture handoff ready._
 - `턴 상태`, `샷 결과`, `광고/보상 분기`가 명시적으로 구분되는 상태 전이 구조를 갖는다
 - QA와 자동화가 가능한 수준으로 분기와 상태를 테스트 가능하게 유지한다
 - 모바일 레이아웃은 `mobile-layout-spec.md`를 우선 참조하고, 현재 구현 코드보다 문서 기준을 우선한다
+- Fever 체감 강화 방향은 `fever-enhancement-spec.md`를 우선 참조하고, 현재의 약한 정산형 효과를 최종안으로 간주하지 않는다
 
 ### Technical Risks
 
@@ -223,6 +225,15 @@ Phaser 버전은 아키텍처 결정으로 고정하며, 나머지 dependency의
 - Fever 버튼은 게임 영역 내부 하단 중앙의 오버레이 액션으로 유지한다.
 - Phaser 런타임은 부모 프레임의 실제 폭/높이를 사용해 resize 되어야 한다.
 - Scene의 보드 메트릭은 모바일 폭에 맞게 재계산되어야 하며, 좌우 블록 잘림이 있으면 구현이 잘못된 것이다.
+
+### Fever Enhancement Contract
+
+Fever 구현은 `fever-enhancement-spec.md`를 따른다. 아키텍처 관점의 핵심 규칙은 다음과 같다.
+
+- Fever는 단순 `블록 1개 추가 제거` 수준에 머물면 안 된다.
+- 플레이어는 버튼을 누른 직후와 다음 턴 플레이 중 모두 Fever 상태를 체감해야 한다.
+- 권장 기본안은 `다음 1턴 오버드라이브`이며, Scene/feedback/resolver가 함께 강화되어야 한다.
+- Gate와 Fever의 동시 적용은 별도 combo branch로 더 강한 결과를 제공해야 한다.
 
 ### Data Persistence
 
