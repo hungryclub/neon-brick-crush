@@ -593,6 +593,7 @@ export default function GameShell() {
             feverButtonLabel={
               isFeverActive ? 'Fever Active' : canActivateFever ? 'Activate Fever' : 'Build Fever'
             }
+            feverMeter={feverMeter}
             isFeverActive={isFeverActive}
             isProgressionLoading={isProgressionLoading}
             isRewardedRetryPending={isRewardedRetryPending}
@@ -619,6 +620,7 @@ export default function GameShell() {
             runtimeHostRef={runtimeHostRef}
             runtimeHud={runtimeHud}
             saveErrorMessage={saveErrorMessage}
+            sessionPhase={sessionPhase}
             stageRuntimeConfig={activeStageRuntimeConfig}
           />
         ) : (

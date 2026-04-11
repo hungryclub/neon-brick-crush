@@ -10,6 +10,7 @@ interface IMobilePlayLayoutProps {
   canActivateFever: boolean;
   canUseRewardedRetry: boolean;
   feverButtonLabel: string;
+  feverMeter: number;
   isFeverActive: boolean;
   isProgressionLoading: boolean;
   isRewardedRetryPending: boolean;
@@ -21,6 +22,7 @@ interface IMobilePlayLayoutProps {
   runtimeHostRef: RefObject<HTMLDivElement>;
   runtimeHud: IRuntimeHudSnapshot;
   saveErrorMessage: string | null;
+  sessionPhase: string;
   stageRuntimeConfig: IStageRuntimeConfig | null;
   onActivateFever: () => void;
   onBackToMap: () => void;
@@ -35,6 +37,7 @@ export default function MobilePlayLayout({
   canActivateFever,
   canUseRewardedRetry,
   feverButtonLabel,
+  feverMeter,
   isFeverActive,
   isProgressionLoading,
   isRewardedRetryPending,
@@ -46,6 +49,7 @@ export default function MobilePlayLayout({
   runtimeHostRef,
   runtimeHud,
   saveErrorMessage,
+  sessionPhase,
   stageRuntimeConfig,
   onActivateFever,
   onBackToMap,
@@ -139,7 +143,13 @@ export default function MobilePlayLayout({
         {overlayContent}
       </section>
       <div style={bottomStyle}>
-        <CompactHudStrip columns={4} runtimeHud={runtimeHud} />
+        <CompactHudStrip
+          canActivateFever={canActivateFever}
+          feverMeter={feverMeter}
+          isFeverActive={isFeverActive}
+          runtimeHud={runtimeHud}
+          sessionPhase={sessionPhase}
+        />
       </div>
     </section>
   );
@@ -150,9 +160,9 @@ const layoutStyle = {
   maxWidth: '100%',
   height: '100dvh',
   display: 'grid',
-  gridTemplateRows: 'auto minmax(0, 1fr) auto',
-  gap: 6,
-  padding: 'calc(env(safe-area-inset-top, 0px) + 6px) 6px calc(env(safe-area-inset-bottom, 0px) + 6px)',
+  gridTemplateRows: '36px minmax(0, 1fr) 28px',
+  gap: 4,
+  padding: 'calc(env(safe-area-inset-top, 0px) + 4px) 4px calc(env(safe-area-inset-bottom, 0px) + 4px)',
   overflow: 'hidden',
   overflowX: 'hidden',
   boxSizing: 'border-box'
@@ -163,7 +173,7 @@ const canvasFrameStyle = {
   minHeight: 0,
   display: 'grid',
   overflow: 'hidden',
-  borderRadius: 16,
+  borderRadius: 14,
   border: '1px solid rgba(120, 227, 255, 0.14)',
   background: 'linear-gradient(180deg, rgba(8, 12, 24, 0.98), rgba(8, 10, 21, 0.98))',
   position: 'relative',
@@ -180,21 +190,23 @@ const runtimeHostStyle = {
 const bottomStyle = {
   display: 'block',
   width: '100%',
-  minWidth: 0
+  minWidth: 0,
+  height: 28,
+  overflow: 'hidden'
 } as const;
 
 const feverButtonStyle = {
   position: 'absolute',
   left: '50%',
-  bottom: 8,
+  bottom: 6,
   transform: 'translateX(-50%)',
   zIndex: 3,
-  width: 'min(132px, 36vw)',
+  width: '96px',
   borderRadius: 14,
-  minHeight: 28,
-  padding: '5px 10px',
+  minHeight: 20,
+  padding: '2px 6px',
   fontWeight: 700,
-  fontSize: 10,
+  fontSize: 8,
   lineHeight: 1.1,
   border: '1px solid rgba(255, 255, 255, 0.15)',
   boxSizing: 'border-box'

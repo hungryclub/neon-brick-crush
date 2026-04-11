@@ -1,21 +1,33 @@
 import type { IRuntimeHudSnapshot } from '../../game/hud-bridges/game-runtime-bridge';
 
 interface ICompactHudStripProps {
-  columns?: 2 | 4;
+  canActivateFever: boolean;
+  feverMeter: number;
+  isFeverActive: boolean;
   runtimeHud: IRuntimeHudSnapshot;
+  sessionPhase: string;
 }
 
 export default function CompactHudStrip({
-  columns: _columns = 4,
-  runtimeHud
+  canActivateFever,
+  feverMeter,
+  isFeverActive,
+  runtimeHud,
+  sessionPhase
 }: ICompactHudStripProps) {
+  const aimAngleLabel =
+    runtimeHud.aimAngle === null ? 'ready' : `${Math.round(runtimeHud.aimAngle)}d`;
   const dangerPercent = `${Math.round(runtimeHud.dangerLevel * 100)}%`;
+  const feverLabel = isFeverActive ? 'on' : canActivateFever ? 'ready' : `${Math.round(feverMeter)}%`;
 
   return (
     <div style={stripStyle}>
+      <HudPill label='Sess' value={sessionPhase} />
       <HudPill label='Turn' value={String(runtimeHud.turnNumber)} />
-      <HudPill label='Blocks' value={String(runtimeHud.remainingBlocks)} />
-      <HudPill label='Danger' value={dangerPercent} />
+      <HudPill label='Aim' value={aimAngleLabel} />
+      <HudPill label='Blk' value={String(runtimeHud.remainingBlocks)} />
+      <HudPill label='Dng' value={dangerPercent} />
+      <HudPill label='Fvr' value={feverLabel} />
       <HudPill label='Shot' value={runtimeHud.shotState} />
     </div>
   );
@@ -40,7 +52,7 @@ const stripStyle = {
   display: 'flex',
   flexWrap: 'nowrap',
   alignItems: 'stretch',
-  gap: 2,
+  gap: 1,
   width: '100%',
   minWidth: 0,
   maxWidth: '100%',
@@ -49,28 +61,33 @@ const stripStyle = {
 } as const;
 
 const pillStyle = {
-  flex: '1 1 0',
+  flex: '0 0 calc((100% - 6px) / 7)',
+  width: 'calc((100% - 6px) / 7)',
   minWidth: 0,
-  minHeight: 32,
-  padding: '4px 5px 5px',
-  borderRadius: 9,
+  minHeight: 26,
+  padding: '2px 3px 3px',
+  borderRadius: 7,
   background: 'rgba(255, 0, 145, 0.18)',
   border: '1px solid rgba(255, 120, 199, 0.28)',
   display: 'grid',
   alignContent: 'center',
-  gap: 1,
+  gap: 0,
+  overflow: 'hidden',
   boxSizing: 'border-box'
 } as const;
 
 const labelStyle = {
-  fontSize: 6,
+  fontSize: 4,
   textTransform: 'uppercase',
-  letterSpacing: '0.06em',
+  letterSpacing: '0.04em',
   color: 'rgba(245, 247, 255, 0.72)'
 } as const;
 
 const valueStyle = {
-  fontSize: 9,
+  fontSize: 7,
   lineHeight: 1,
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
   wordBreak: 'break-word'
 } as const;
