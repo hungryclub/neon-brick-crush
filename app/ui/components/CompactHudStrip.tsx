@@ -1,4 +1,5 @@
 import type { IRuntimeHudSnapshot } from '../../game/hud-bridges/game-runtime-bridge';
+import { FEVER_METER_MAX } from '../../game/systems/fever-overdrive.ts';
 
 interface ICompactHudStripProps {
   canActivateFever: boolean;
@@ -22,7 +23,10 @@ export default function CompactHudStrip({
   const aimAngleLabel =
     runtimeHud.aimAngle === null ? 'ready' : `${Math.round(runtimeHud.aimAngle)}d`;
   const dangerPercent = `${Math.round(runtimeHud.dangerLevel * 100)}%`;
-  const feverLabel = isFeverActive || canActivateFever ? feverHudValue : `${Math.round(feverMeter)}%`;
+  const feverLabel =
+    isFeverActive || canActivateFever
+      ? feverHudValue
+      : `${Math.round((feverMeter / FEVER_METER_MAX) * 100)}%`;
 
   return (
     <div style={stripStyle}>

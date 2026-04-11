@@ -141,6 +141,8 @@ export default class StageScene extends Phaser.Scene {
 
   private stagePromptLabel!: Phaser.GameObjects.Text;
 
+  private pierceTrailLayer!: Phaser.GameObjects.Graphics;
+
   private readonly launcherPosition = {
     x: 0,
     y: 0
@@ -154,7 +156,7 @@ export default class StageScene extends Phaser.Scene {
     const width = this.scale.width;
     const height = this.scale.height;
     const isMobileWidth = width < 760;
-    const launcherY = height - (isMobileWidth ? 58 : 86);
+    const launcherY = height - (isMobileWidth ? 72 : 86);
     const lossLineY = isMobileWidth ? height - 122 : launcherY - 98;
     const stageRuntimeConfig = this.registry.get(
       STAGE_RUNTIME_CONFIG_REGISTRY_KEY
@@ -190,14 +192,16 @@ export default class StageScene extends Phaser.Scene {
 
     this.add.rectangle(width / 2, height / 2, width, height, 0x090d18, 1);
     this.add.rectangle(width / 2, height / 2, width, height, 0x14224c, 0.08);
-    this.add.rectangle(
-      width / 2,
-      launcherY + (isMobileWidth ? 18 : 22),
-      width - (isMobileWidth ? 24 : 64),
-      3,
-      0x78e3ff,
-      0.35
-    );
+    if (!isMobileWidth) {
+      this.add.rectangle(
+        width / 2,
+        launcherY + 22,
+        width - 64,
+        3,
+        0x78e3ff,
+        0.35
+      );
+    }
 
     this.dangerLine = this.add.rectangle(
       width / 2,
@@ -230,11 +234,13 @@ export default class StageScene extends Phaser.Scene {
       .setVisible(!isMobileWidth);
 
     this.aimGuide = this.add.graphics();
+    this.pierceTrailLayer = this.add.graphics().setDepth(8);
     this.neonFeedbackLayer = createNeonFeedbackLayer(this);
     this.audioAdapter = createGameAudioAdapter({
       logger: this.logger
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.pierceTrailLayer.destroy();
       this.neonFeedbackLayer.destroy();
       this.audioAdapter.destroy();
     });
@@ -774,6 +780,12 @@ export default class StageScene extends Phaser.Scene {
     }
 
     this.runtimeProfiler.incrementCounter('block_hit_events');
+    if (collisionResolution.splashTargetIds.length > 0 || collisionResolution.chainPulseTargetIds.length > 0) {
+      this.highlightPulseArea([
+        ...collisionResolution.splashTargetIds,
+        ...collisionResolution.chainPulseTargetIds
+      ]);
+    }
     this.emitBlockImpactFeedback({
       x: blockView.rectangle.x,
       y: blockView.rectangle.y,
@@ -1067,7 +1079,9 @@ export default class StageScene extends Phaser.Scene {
 
     const direction = new Phaser.Math.Vector2(directionX, directionY).normalize();
     const pierceOffset =
-      Math.max(targetRectangle.displayWidth, targetRectangle.displayHeight) * 0.42 + BALL_RADIUS;
+      Math.max(targetRectangle.displayWidth, targetRectangle.displayHeight) * 0.9 + BALL_RADIUS;
+
+    this.emitPierceTrail(targetRectangle, direction);
 
     this.ball.setPosition(
       targetRectangle.x + direction.x * pierceOffset,
@@ -1075,6 +1089,66 @@ export default class StageScene extends Phaser.Scene {
     );
     ballBody.reset(this.ball.x, this.ball.y);
     ballBody.setVelocity(direction.x * speed, direction.y * speed);
+  }
+
+  private emitPierceTrail(
+    targetRectangle: Phaser.GameObjects.Rectangle,
+    direction: Phaser.Math.Vector2
+  ) {
+    const trailLength = Math.max(targetRectangle.displayWidth * 1.4, 96);
+    const startX = targetRectangle.x - direction.x * (targetRectangle.displayWidth * 0.35);
+    const startY = targetRectangle.y - direction.y * (targetRectangle.displayHeight * 0.35);
+    const endX = targetRectangle.x + direction.x * trailLength;
+    const endY = targetRectangle.y + direction.y * trailLength;
+
+    this.pierceTrailLayer.clear();
+    this.pierceTrailLayer.lineStyle(5, 0x52d9ff, 0.95);
+    this.pierceTrailLayer.beginPath();
+    this.pierceTrailLayer.moveTo(startX, startY);
+    this.pierceTrailLayer.lineTo(endX, endY);
+    this.pierceTrailLayer.strokePath();
+
+    this.tweens.add({
+      targets: this.pierceTrailLayer,
+      alpha: 0,
+      duration: 110,
+      onComplete: () => {
+        this.pierceTrailLayer.clear();
+        this.pierceTrailLayer.setAlpha(1);
+      }
+    });
+  }
+
+  private highlightPulseArea(targetIds: string[]) {
+    targetIds.forEach((targetId) => {
+      const blockView = this.blockViews.get(targetId);
+
+      if (!blockView) {
+        return;
+      }
+
+      const highlight = this.add.rectangle(
+        blockView.rectangle.x,
+        blockView.rectangle.y,
+        blockView.rectangle.width + 10,
+        blockView.rectangle.height + 10,
+        0xff77cd,
+        0.22
+      );
+      highlight.setStrokeStyle(2, 0xffc0e8, 0.8);
+      highlight.setDepth(9);
+
+      this.tweens.add({
+        targets: highlight,
+        alpha: 0,
+        scaleX: 1.12,
+        scaleY: 1.12,
+        duration: 140,
+        onComplete: () => {
+          highlight.destroy();
+        }
+      });
+    });
   }
 
   private applySplashDamage(blockId: string) {

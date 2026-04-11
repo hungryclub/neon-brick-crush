@@ -77,18 +77,18 @@ test('pulse fever expands to splash and follow-up chain targets', () => {
 
 test('tiered fever helpers map meter into ready mode, label, hud value, and tone', () => {
   assert.equal(resolveFeverTier(0), 0);
-  assert.equal(resolveFeverTier(35), 1);
-  assert.equal(resolveFeverTier(70), 2);
-  assert.equal(resolveFeverTier(100), 3);
-  assert.equal(resolveReadyFeverMode(35), 'breaker');
-  assert.equal(resolveReadyFeverMode(70), 'pierce');
-  assert.equal(resolveReadyFeverMode(100), 'pulse');
+  assert.equal(resolveFeverTier(45), 1);
+  assert.equal(resolveFeverTier(85), 2);
+  assert.equal(resolveFeverTier(130), 3);
+  assert.equal(resolveReadyFeverMode(45), 'breaker');
+  assert.equal(resolveReadyFeverMode(85), 'pierce');
+  assert.equal(resolveReadyFeverMode(130), 'pulse');
   assert.equal(
     resolveFeverButtonLabel({ activeMode: null, readyMode: 'breaker' }),
     'Activate Breaker'
   );
   assert.equal(
-    resolveFeverHudValue({ activeMode: 'pulse', feverMeter: 100, readyMode: 'pulse' }),
+    resolveFeverHudValue({ activeMode: 'pulse', feverMeter: 130, readyMode: 'pulse' }),
     'PLS'
   );
   assert.equal(
@@ -97,7 +97,7 @@ test('tiered fever helpers map meter into ready mode, label, hud value, and tone
   );
   assert.equal(
     resolveFeverStatusPrompt({ activeMode: null, readyMode: 'pulse' }),
-    'Pulse Ready: save this for dense clusters'
+    'Pulse Ready: save this for the densest cluster'
   );
   assert.equal(
     resolveFeverStatusPrompt({ activeMode: 'breaker', readyMode: 'pulse' }),

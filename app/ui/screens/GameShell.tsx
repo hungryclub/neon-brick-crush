@@ -16,7 +16,10 @@ import { createInitialProgressionSnapshot } from '../../platform/persistence/sav
 import createGameRuntime from '../../game/core/create-game-runtime';
 import createLogger from '../../shared/logging/create-logger';
 import { resolveStagePromptText } from '../../game/systems/stage-rule-profile';
-import { resolveFeverStatusPrompt } from '../../game/systems/fever-overdrive.ts';
+import {
+  FEVER_METER_MAX,
+  resolveFeverStatusPrompt
+} from '../../game/systems/fever-overdrive.ts';
 import {
   createInitialRuntimeDebugSnapshot,
   createInitialRuntimeHudSnapshot,
@@ -652,13 +655,24 @@ export default function GameShell() {
             feverTone={feverTone}
             overlayContent={
               mobilePromptText ? (
-                <div
-                  style={resolveMobileFeverPromptStyle({
-                    feverTone,
-                    isEmphasized: Boolean(activeFeverMode || readyFeverMode)
-                  })}
-                >
-                  {mobilePromptText}
+                <div style={mobileFeverOverlayStyle}>
+                  <div
+                    style={resolveMobileFeverPromptStyle({
+                      feverTone,
+                      isEmphasized: Boolean(activeFeverMode || readyFeverMode)
+                    })}
+                  >
+                    {mobilePromptText}
+                  </div>
+                  <div style={mobileFeverRailTrackStyle}>
+                    <div
+                      style={resolveMobileFeverRailFillStyle({
+                        feverMeter,
+                        feverTone,
+                        isFeverActive
+                      })}
+                    />
+                  </div>
                 </div>
               ) : null
             }
@@ -1145,6 +1159,28 @@ const debugToggleButtonStyle = {
   cursor: 'pointer'
 } as const;
 
+const mobileFeverOverlayStyle = {
+  position: 'absolute',
+  left: '50%',
+  bottom: 44,
+  transform: 'translateX(-50%)',
+  width: 'min(88%, 320px)',
+  display: 'grid',
+  gap: 4,
+  zIndex: 3,
+  pointerEvents: 'none'
+} as const;
+
+const mobileFeverRailTrackStyle = {
+  width: '100%',
+  height: 4,
+  borderRadius: 999,
+  overflow: 'hidden',
+  background: 'rgba(34, 79, 104, 0.88)',
+  border: '1px solid rgba(120, 227, 255, 0.12)',
+  boxSizing: 'border-box'
+} as const;
+
 function resolveMobileFeverPromptStyle({
   feverTone,
   isEmphasized
@@ -1194,4 +1230,52 @@ function resolveMobileFeverPromptStyle({
   }
 
   return baseStyle;
+}
+
+function resolveMobileFeverRailFillStyle({
+  feverMeter,
+  feverTone,
+  isFeverActive
+}: {
+  feverMeter: number;
+  feverTone: 'neutral' | 'breaker' | 'pierce' | 'pulse';
+  isFeverActive: boolean;
+}) {
+  const fillRatio = Math.max(0, Math.min(feverMeter / FEVER_METER_MAX, 1));
+  const baseStyle = {
+    width: `${fillRatio * 100}%`,
+    height: '100%',
+    borderRadius: 999,
+    transition: 'width 180ms ease, background 180ms ease, box-shadow 180ms ease'
+  } as const;
+
+  if (feverTone === 'breaker') {
+    return {
+      ...baseStyle,
+      background: 'linear-gradient(90deg, #ffb96f, #ff8a57)',
+      boxShadow: isFeverActive ? '0 0 12px rgba(255, 177, 97, 0.75)' : '0 0 8px rgba(255, 177, 97, 0.35)'
+    } as const;
+  }
+
+  if (feverTone === 'pierce') {
+    return {
+      ...baseStyle,
+      background: 'linear-gradient(90deg, #78ecff, #42beff)',
+      boxShadow: isFeverActive ? '0 0 12px rgba(122, 231, 255, 0.75)' : '0 0 8px rgba(122, 231, 255, 0.35)'
+    } as const;
+  }
+
+  if (feverTone === 'pulse') {
+    return {
+      ...baseStyle,
+      background: 'linear-gradient(90deg, #ff9ed8, #ff5db1)',
+      boxShadow: isFeverActive ? '0 0 14px rgba(255, 120, 220, 0.85)' : '0 0 10px rgba(255, 120, 220, 0.45)'
+    } as const;
+  }
+
+  return {
+    ...baseStyle,
+    background: 'linear-gradient(90deg, #4bbcf0, #6fd8ff)',
+    boxShadow: '0 0 6px rgba(120, 227, 255, 0.22)'
+  } as const;
 }

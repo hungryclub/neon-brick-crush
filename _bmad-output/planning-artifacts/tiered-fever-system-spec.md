@@ -31,17 +31,22 @@ Fever는 더 이상 단순한 `ready / active` 버프가 아니라, 게이지 �
 
 추천 threshold:
 
-- `0 ~ 34`: 미충전
-- `35 ~ 69`: `Breaker Ready`
-- `70 ~ 99`: `Pierce Ready`
-- `100`: `Pulse Ready`
+- `0 ~ 44`: 미충전
+- `45 ~ 84`: `Breaker Ready`
+- `85 ~ 129`: `Pierce Ready`
+- `130`: `Pulse Ready`
 
 권장 충전량:
 
-- 블록 파괴당 `+20`
-- 게이트 트리거당 `+8`
+- 블록 파괴당 `+15`
+- 게이트 트리거당 `+5`
 
 위 수치는 `Pulse`가 너무 빨리 노출되지 않게 하면서, `Breaker`와 `Pierce`가 실제 플레이 중 눈에 띄도록 유지하는 기준값이다.
+
+현재 최종안은 추천안 A를 채택한다.
+
+- threshold: `45 / 85 / 130`
+- charge: `block +15`, `gate +5`
 
 ## Core Rule
 

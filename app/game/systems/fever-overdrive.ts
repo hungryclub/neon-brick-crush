@@ -4,6 +4,11 @@ export type TFeverMode = 'breaker' | 'pierce' | 'pulse';
 export type TFeverTier = 0 | 1 | 2 | 3;
 export type TFeverTone = 'neutral' | 'breaker' | 'pierce' | 'pulse';
 
+export const FEVER_METER_MAX = 130;
+export const FEVER_TIER_BREAKER_THRESHOLD = 45;
+export const FEVER_TIER_PIERCE_THRESHOLD = 85;
+export const FEVER_TIER_PULSE_THRESHOLD = 130;
+
 export const FEVER_COLLISION_BONUS_HIT_LIMIT = {
   breaker: 3,
   pierce: 2,
@@ -11,15 +16,15 @@ export const FEVER_COLLISION_BONUS_HIT_LIMIT = {
 } as const;
 
 export function resolveFeverTier(feverMeter: number): TFeverTier {
-  if (feverMeter >= 100) {
+  if (feverMeter >= FEVER_TIER_PULSE_THRESHOLD) {
     return 3;
   }
 
-  if (feverMeter >= 70) {
+  if (feverMeter >= FEVER_TIER_PIERCE_THRESHOLD) {
     return 2;
   }
 
-  if (feverMeter >= 35) {
+  if (feverMeter >= FEVER_TIER_BREAKER_THRESHOLD) {
     return 1;
   }
 
@@ -121,7 +126,7 @@ export function resolveFeverHudValue({
     return 'P3';
   }
 
-  return `${Math.round(feverMeter)}%`;
+  return `${Math.round((feverMeter / FEVER_METER_MAX) * 100)}%`;
 }
 
 export function resolveFeverStatusPrompt({
@@ -136,11 +141,11 @@ export function resolveFeverStatusPrompt({
   }
 
   if (activeMode === 'pierce') {
-    return 'Pierce Active: your next turn pierces through the lane';
+    return 'Pierce Active: your next turn cuts through the lane';
   }
 
   if (activeMode === 'pulse') {
-    return 'Pulse Active: your next turn emits splash pulses';
+    return 'Pulse Active: your next turn detonates a block cluster';
   }
 
   if (readyMode === 'breaker') {
@@ -148,11 +153,11 @@ export function resolveFeverStatusPrompt({
   }
 
   if (readyMode === 'pierce') {
-    return 'Pierce Ready: line up a clean angle for piercing hits';
+    return 'Pierce Ready: line up a clean angle for a piercing run';
   }
 
   if (readyMode === 'pulse') {
-    return 'Pulse Ready: save this for dense clusters';
+    return 'Pulse Ready: save this for the densest cluster';
   }
 
   return null;

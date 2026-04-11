@@ -1,4 +1,5 @@
 import type { IRuntimeHudSnapshot } from '../../game/hud-bridges/game-runtime-bridge';
+import { FEVER_METER_MAX } from '../../game/systems/fever-overdrive.ts';
 
 interface IHudPanelProps {
   canActivateFever: boolean;
@@ -24,7 +25,7 @@ export default function HudPanel({
   const aimAngleLabel =
     runtimeHud.aimAngle === null ? 'ready' : `${Math.round(runtimeHud.aimAngle)}deg`;
   const dangerPercent = Math.round(runtimeHud.dangerLevel * 100);
-  const feverPercent = `${Math.round((feverMeter / 100) * 100)}%`;
+  const feverPercent = `${Math.round((feverMeter / FEVER_METER_MAX) * 100)}%`;
 
   return (
     <div style={{ ...panelStyle, ...(compact ? compactPanelStyle : null) }}>
