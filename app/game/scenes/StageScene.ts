@@ -147,8 +147,8 @@ export default class StageScene extends Phaser.Scene {
     const width = this.scale.width;
     const height = this.scale.height;
     const isMobileWidth = width < 760;
-    const launcherY = height - (isMobileWidth ? 44 : 86);
-    const lossLineY = launcherY - (isMobileWidth ? 78 : 98);
+    const launcherY = height - (isMobileWidth ? 58 : 86);
+    const lossLineY = isMobileWidth ? height - 122 : launcherY - 98;
     const stageRuntimeConfig = this.registry.get(
       STAGE_RUNTIME_CONFIG_REGISTRY_KEY
     ) as IStageRuntimeConfig | undefined;

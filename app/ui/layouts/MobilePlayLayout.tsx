@@ -198,7 +198,7 @@ const bottomStyle = {
 const feverButtonStyle = {
   position: 'absolute',
   left: '50%',
-  bottom: 6,
+  bottom: 4,
   transform: 'translateX(-50%)',
   zIndex: 3,
   width: '25vw',
