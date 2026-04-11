@@ -124,10 +124,6 @@ export default function MobilePlayLayout({
             </div>
           </div>
         ) : null}
-        {overlayContent}
-      </section>
-      <div style={bottomStyle}>
-        <CompactHudStrip columns={4} runtimeHud={runtimeHud} />
         <button
           style={{
             ...feverButtonStyle,
@@ -140,6 +136,10 @@ export default function MobilePlayLayout({
         >
           {feverButtonLabel}
         </button>
+        {overlayContent}
+      </section>
+      <div style={bottomStyle}>
+        <CompactHudStrip columns={4} runtimeHud={runtimeHud} />
       </div>
     </section>
   );
@@ -178,24 +178,26 @@ const runtimeHostStyle = {
 } as const;
 
 const bottomStyle = {
-  display: 'grid',
-  gap: 3,
+  display: 'block',
   width: '100%',
-  minWidth: 0,
-  justifyItems: 'stretch'
+  minWidth: 0
 } as const;
 
 const feverButtonStyle = {
-  width: 'min(156px, 42vw)',
+  position: 'absolute',
+  left: '50%',
+  bottom: 8,
+  transform: 'translateX(-50%)',
+  zIndex: 3,
+  width: 'min(132px, 36vw)',
   borderRadius: 14,
-  minHeight: 32,
-  padding: '6px 10px',
+  minHeight: 28,
+  padding: '5px 10px',
   fontWeight: 700,
-  fontSize: 11,
+  fontSize: 10,
   lineHeight: 1.1,
   border: '1px solid rgba(255, 255, 255, 0.15)',
-  boxSizing: 'border-box',
-  justifySelf: 'center'
+  boxSizing: 'border-box'
 } as const;
 
 const feverButtonDisabledStyle = {

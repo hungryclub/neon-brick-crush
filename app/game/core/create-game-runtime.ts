@@ -68,6 +68,10 @@ export default function createGameRuntime({
 
   const bootScene = game.scene.getScene(BOOT_SCENE_KEY) as BootScene | undefined;
   bootScene?.notifyRuntimeReady();
+  game.canvas.style.display = 'block';
+  game.canvas.style.width = '100%';
+  game.canvas.style.height = '100%';
+  game.scale.resize(runtimeWidth, runtimeHeight);
 
   return {
     destroy() {

@@ -146,7 +146,8 @@ export default class StageScene extends Phaser.Scene {
   create() {
     const width = this.scale.width;
     const height = this.scale.height;
-    const launcherY = height - 86;
+    const isMobileWidth = width < 760;
+    const launcherY = height - (isMobileWidth ? 42 : 86);
     const stageRuntimeConfig = this.registry.get(
       STAGE_RUNTIME_CONFIG_REGISTRY_KEY
     ) as IStageRuntimeConfig | undefined;
@@ -183,18 +184,25 @@ export default class StageScene extends Phaser.Scene {
     this.add.rectangle(width / 2, height / 2, width, height, 0x14224c, 0.08);
     this.add.rectangle(
       width / 2,
-      launcherY + 22,
-      width - 64,
+      launcherY + (isMobileWidth ? 18 : 22),
+      width - (isMobileWidth ? 24 : 64),
       3,
       0x78e3ff,
       0.35
     );
 
-    this.dangerLine = this.add.rectangle(width / 2, launcherY - 98, width - 96, 4, 0xff4d8d, 0.2);
-    this.add.text(56, launcherY - 122, 'LOSS LINE', {
+    this.dangerLine = this.add.rectangle(
+      width / 2,
+      launcherY - (isMobileWidth ? 78 : 98),
+      width - (isMobileWidth ? 28 : 96),
+      4,
+      0xff4d8d,
+      0.2
+    );
+    this.add.text(isMobileWidth ? 20 : 56, launcherY - (isMobileWidth ? 100 : 122), 'LOSS LINE', {
       color: '#ff9cc7',
       fontFamily: 'Arial',
-      fontSize: '13px'
+      fontSize: isMobileWidth ? '11px' : '13px'
     });
 
     this.add.circle(this.launcherPosition.x, this.launcherPosition.y, 16, 0x78e3ff, 0.3);
@@ -207,7 +215,7 @@ export default class StageScene extends Phaser.Scene {
         {
           color: '#c7d4ff',
           fontFamily: 'Arial',
-          fontSize: '16px'
+          fontSize: isMobileWidth ? '12px' : '16px'
         }
       )
       .setOrigin(0.5, 0);
@@ -771,15 +779,15 @@ export default class StageScene extends Phaser.Scene {
 
   private resolveBoardMetrics(): IBoardMetrics {
     const isMobileWidth = this.scale.width < 760;
-    const horizontalPadding = isMobileWidth ? 18 : 48;
-    const blockGap = isMobileWidth ? 4 : BLOCK_GAP;
+    const horizontalPadding = isMobileWidth ? 32 : 48;
+    const blockGap = isMobileWidth ? 2 : BLOCK_GAP;
     const usableWidth = Math.max(this.scale.width - horizontalPadding * 2, 240);
     const blockWidth = Math.max(
       Math.floor(
         (usableWidth - (this.stageRuntimeConfig.boardColumns - 1) * blockGap) /
           this.stageRuntimeConfig.boardColumns
       ),
-      isMobileWidth ? 34 : BLOCK_WIDTH
+      isMobileWidth ? 24 : BLOCK_WIDTH
     );
     const totalWidth =
       this.stageRuntimeConfig.boardColumns * blockWidth +
@@ -793,8 +801,8 @@ export default class StageScene extends Phaser.Scene {
       blockGap,
       blockHeight,
       blockWidth,
-      boardTop: isMobileWidth ? 84 : 120,
-      fontSize: Math.max(Math.round(blockHeight * 0.42), isMobileWidth ? 14 : 24),
+      boardTop: isMobileWidth ? 28 : 120,
+      fontSize: Math.max(Math.round(blockHeight * 0.42), isMobileWidth ? 12 : 24),
       startX: (this.scale.width - totalWidth) / 2 + blockWidth / 2
     };
   }
