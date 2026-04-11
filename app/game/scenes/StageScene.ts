@@ -794,6 +794,16 @@ export default class StageScene extends Phaser.Scene {
         this.handleStageClear();
       }
 
+      if (collisionResolution.chainPulseTargetIds.length > 0) {
+        collisionResolution.chainPulseTargetIds.forEach((targetId) => {
+          this.applySplashDamage(targetId);
+        });
+      }
+
+      if (collisionResolution.pierceThrough) {
+        this.continuePierceTrajectory(blockView.rectangle);
+      }
+
       return;
     }
 
@@ -801,9 +811,19 @@ export default class StageScene extends Phaser.Scene {
       this.applySplashDamage(targetId);
     });
 
+    if (collisionResolution.chainPulseTargetIds.length > 0) {
+      collisionResolution.chainPulseTargetIds.forEach((targetId) => {
+        this.applySplashDamage(targetId);
+      });
+    }
+
     blockView.cell.hp = nextHp;
     blockView.label.setText(String(nextHp));
     blockView.rectangle.setFillStyle(resolveBlockColor(nextHp), 0.92);
+
+    if (collisionResolution.pierceThrough) {
+      this.continuePierceTrajectory(blockView.rectangle);
+    }
   }
 
   private resolveBlockPosition(cell: IStageBoardCell) {
@@ -1031,6 +1051,30 @@ export default class StageScene extends Phaser.Scene {
     this.ball.setFillStyle(0xffffff, 1);
     this.ball.setStrokeStyle(2, 0x78e3ff, 0.9);
     this.ball.setScale(1);
+  }
+
+  private continuePierceTrajectory(targetRectangle: Phaser.GameObjects.Rectangle) {
+    const ballBody = this.ball.body as Phaser.Physics.Arcade.Body;
+    const speed = Math.max(ballBody.velocity.length(), 420);
+    const latestSegment = this.shotPathSegments[this.shotPathSegments.length - 1];
+
+    let directionX = latestSegment ? latestSegment.end.x - latestSegment.start.x : ballBody.velocity.x;
+    let directionY = latestSegment ? latestSegment.end.y - latestSegment.start.y : ballBody.velocity.y;
+
+    if (directionX === 0 && directionY === 0) {
+      directionY = -1;
+    }
+
+    const direction = new Phaser.Math.Vector2(directionX, directionY).normalize();
+    const pierceOffset =
+      Math.max(targetRectangle.displayWidth, targetRectangle.displayHeight) * 0.42 + BALL_RADIUS;
+
+    this.ball.setPosition(
+      targetRectangle.x + direction.x * pierceOffset,
+      targetRectangle.y + direction.y * pierceOffset
+    );
+    ballBody.reset(this.ball.x, this.ball.y);
+    ballBody.setVelocity(direction.x * speed, direction.y * speed);
   }
 
   private applySplashDamage(blockId: string) {

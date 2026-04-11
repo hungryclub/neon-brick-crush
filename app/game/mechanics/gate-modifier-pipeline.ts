@@ -117,7 +117,10 @@ export function applyFeverModifiers(
     });
   }
 
-  const targetCount = state.comboBranch === 'gate-only' ? 3 : 2;
+  const targetCount = resolveFeverTargetCount({
+    activeFeverMode: context.activeFeverMode,
+    comboBranch: state.comboBranch
+  });
   const affectedCells = resolveFeverTargetCells({
     activeFeverMode: context.activeFeverMode,
     board: state.board,
@@ -258,6 +261,20 @@ function resolveFeverTargetCells({
 
       return left.col - right.col;
     })].slice(0, targetCount);
+}
+
+function resolveFeverTargetCount({
+  activeFeverMode,
+  comboBranch
+}: {
+  activeFeverMode: TFeverMode;
+  comboBranch: TTurnComboBranch;
+}) {
+  if (activeFeverMode === 'pulse') {
+    return comboBranch === 'gate-only' ? 4 : 3;
+  }
+
+  return comboBranch === 'gate-only' ? 3 : 2;
 }
 
 function sortByBreakerPriority(board: IStageBoardCell[]) {

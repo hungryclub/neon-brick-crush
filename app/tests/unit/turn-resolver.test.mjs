@@ -239,8 +239,8 @@ test('resolveTurn uses clustered targeting for pulse fever', () => {
     result.feedbackEvents.find((event) => event.type === 'fever.activated'),
     {
       type: 'fever.activated',
-      affectedCellIds: ['anchor', 'adjacent-b'],
-      bonusHits: 2,
+      affectedCellIds: ['anchor', 'adjacent-b', 'adjacent-a'],
+      bonusHits: 3,
       mode: 'pulse'
     }
   );

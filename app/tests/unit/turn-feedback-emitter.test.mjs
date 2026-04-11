@@ -25,7 +25,15 @@ test('turn feedback emitter escalates combo moments through dedicated commands',
   assert.equal(plan.branch, 'gate-fever-combo');
   assert.deepEqual(
     plan.commands.map((command) => command.type),
-    ['gate-pulse', 'camera-flash', 'camera-shake', 'haptic-pulse', 'camera-flash', 'sfx-cue']
+    [
+      'gate-pulse',
+      'camera-flash',
+      'camera-shake',
+      'haptic-pulse',
+      'camera-flash',
+      'camera-flash',
+      'sfx-cue'
+    ]
   );
 });
 
@@ -45,5 +53,24 @@ test('turn feedback emitter gives fever-only turns a stronger overdrive plan', (
   assert.deepEqual(
     plan.commands.map((command) => command.type),
     ['camera-flash', 'camera-shake', 'haptic-pulse', 'sfx-cue']
+  );
+});
+
+test('turn feedback emitter makes pulse fever-only turns feel more explosive', () => {
+  const plan = createTurnFeedbackPlan({
+    branch: 'fever-only',
+    feedbackEvents: [
+      {
+        type: 'fever.activated',
+        affectedCellIds: ['center', 'north', 'east'],
+        bonusHits: 3,
+        mode: 'pulse'
+      }
+    ]
+  });
+
+  assert.deepEqual(
+    plan.commands.map((command) => command.type),
+    ['camera-flash', 'camera-shake', 'haptic-pulse', 'camera-flash', 'sfx-cue']
   );
 });

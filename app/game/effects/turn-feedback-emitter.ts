@@ -51,10 +51,17 @@ export function createTurnFeedbackPlan({
               ? [255, 120, 220]
               : [255, 196, 120]
       },
-      { type: 'camera-shake', duration: 180, intensity: 0.0048 },
+      {
+        type: 'camera-shake',
+        duration: dominantFeverMode === 'pulse' ? 210 : 180,
+        intensity: dominantFeverMode === 'pulse' ? 0.0056 : 0.0048
+      },
       { type: 'haptic-pulse', intensity: 'strong' },
       ...(feverBonusHits >= 3
         ? ([{ type: 'camera-flash', duration: 140, color: [255, 120, 220] }] satisfies TTurnFeedbackCommand[])
+        : []),
+      ...(dominantFeverMode === 'pulse'
+        ? ([{ type: 'camera-flash', duration: 180, color: [255, 188, 233] }] satisfies TTurnFeedbackCommand[])
         : []),
       { type: 'sfx-cue', cue: 'combo-burst' }
     );
@@ -73,9 +80,17 @@ export function createTurnFeedbackPlan({
       {
         type: 'camera-shake',
         duration: 130,
-        intensity: dominantFeverMode === 'breaker' ? 0.0042 : 0.0036
+        intensity:
+          dominantFeverMode === 'breaker'
+            ? 0.0042
+            : dominantFeverMode === 'pulse'
+              ? 0.0046
+              : 0.0036
       },
       { type: 'haptic-pulse', intensity: 'medium' },
+      ...(dominantFeverMode === 'pulse'
+        ? ([{ type: 'camera-flash', duration: 150, color: [255, 188, 233] }] satisfies TTurnFeedbackCommand[])
+        : []),
       { type: 'sfx-cue', cue: 'fever-hit' }
     );
   } else if (gateEvents.length > 0) {

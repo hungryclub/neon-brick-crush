@@ -40,6 +40,41 @@ test('fever collision bonus stops after the configured overdrive limit', () => {
   assert.equal(result.hitsUsed, FEVER_COLLISION_BONUS_HIT_LIMIT.breaker);
 });
 
+test('pierce fever marks early durable hits as pass-through hits', () => {
+  const result = resolveFeverCollisionBonus({
+    activeFeverMode: 'pierce',
+    board: [],
+    currentHp: 3,
+    hitsUsed: 0,
+    targetCell: { id: 'cell-p', row: 1, col: 2, hp: 3 }
+  });
+
+  assert.equal(result.bonusApplied, true);
+  assert.equal(result.nextHp, 1);
+  assert.equal(result.pierceThrough, true);
+});
+
+test('pulse fever expands to splash and follow-up chain targets', () => {
+  const result = resolveFeverCollisionBonus({
+    activeFeverMode: 'pulse',
+    board: [
+      { id: 'center', row: 3, col: 3, hp: 2 },
+      { id: 'north', row: 2, col: 3, hp: 1 },
+      { id: 'east', row: 3, col: 4, hp: 1 },
+      { id: 'diag', row: 2, col: 4, hp: 1 },
+      { id: 'chain', row: 1, col: 4, hp: 1 }
+    ],
+    currentHp: 2,
+    hitsUsed: 0,
+    targetCell: { id: 'center', row: 3, col: 3, hp: 2 }
+  });
+
+  assert.equal(result.bonusApplied, true);
+  assert.equal(result.nextHp, 0);
+  assert.deepEqual(result.splashTargetIds, ['east', 'north', 'diag']);
+  assert.deepEqual(result.chainPulseTargetIds, ['chain']);
+});
+
 test('tiered fever helpers map meter into ready mode, label, hud value, and tone', () => {
   assert.equal(resolveFeverTier(0), 0);
   assert.equal(resolveFeverTier(35), 1);

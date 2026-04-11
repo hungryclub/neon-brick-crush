@@ -176,7 +176,9 @@ export function resolveFeverCollisionBonus({
       bonusApplied: false,
       hitsUsed,
       nextHp: currentHp - 1,
-      splashTargetIds: []
+      pierceThrough: false,
+      splashTargetIds: [],
+      chainPulseTargetIds: []
     };
   }
 
@@ -191,7 +193,9 @@ export function resolveFeverCollisionBonus({
       bonusApplied: shouldSpendBonus,
       hitsUsed: shouldSpendBonus ? hitsUsed + 1 : hitsUsed,
       nextHp: shouldSpendBonus ? 0 : nextHp,
-      splashTargetIds: []
+      pierceThrough: false,
+      splashTargetIds: [],
+      chainPulseTargetIds: []
     };
   }
 
@@ -202,7 +206,9 @@ export function resolveFeverCollisionBonus({
       bonusApplied: shouldSpendBonus,
       hitsUsed: shouldSpendBonus ? hitsUsed + 1 : hitsUsed,
       nextHp: shouldSpendBonus ? Math.max(currentHp - 2, 0) : nextHp,
-      splashTargetIds: []
+      pierceThrough: shouldSpendBonus,
+      splashTargetIds: [],
+      chainPulseTargetIds: []
     };
   }
 
@@ -211,15 +217,23 @@ export function resolveFeverCollisionBonus({
       bonusApplied: false,
       hitsUsed,
       nextHp,
-      splashTargetIds: []
+      pierceThrough: false,
+      splashTargetIds: [],
+      chainPulseTargetIds: []
     };
   }
+
+  const pulseNextHp = Math.max(currentHp - 2, 0);
+  const splashTargetIds = resolvePulseSplashTargetIds(board, targetCell.id);
 
   return {
     bonusApplied: true,
     hitsUsed: hitsUsed + 1,
-    nextHp,
-    splashTargetIds: resolvePulseSplashTargetIds(board, targetCell.id)
+    nextHp: pulseNextHp,
+    pierceThrough: false,
+    splashTargetIds,
+    chainPulseTargetIds:
+      pulseNextHp <= 0 ? resolvePulseChainTargetIds(board, targetCell.id, splashTargetIds) : []
   };
 }
 
@@ -233,12 +247,19 @@ function resolvePulseSplashTargetIds(board: IStageBoardCell[], targetCellId: str
   return board
     .filter((cell) => cell.id !== targetCell.id)
     .filter((cell) => {
-      const manhattanDistance =
-        Math.abs(cell.row - targetCell.row) + Math.abs(cell.col - targetCell.col);
+      const rowDistance = Math.abs(cell.row - targetCell.row);
+      const colDistance = Math.abs(cell.col - targetCell.col);
 
-      return manhattanDistance === 1;
+      return rowDistance <= 1 && colDistance <= 1;
     })
     .sort((left, right) => {
+      const leftDistance = resolvePulseDistance(left, targetCell);
+      const rightDistance = resolvePulseDistance(right, targetCell);
+
+      if (leftDistance !== rightDistance) {
+        return leftDistance - rightDistance;
+      }
+
       if (right.hp !== left.hp) {
         return right.hp - left.hp;
       }
@@ -249,6 +270,54 @@ function resolvePulseSplashTargetIds(board: IStageBoardCell[], targetCellId: str
 
       return left.col - right.col;
     })
-    .slice(0, 2)
+    .slice(0, 4)
     .map((cell) => cell.id);
+}
+
+function resolvePulseChainTargetIds(
+  board: IStageBoardCell[],
+  targetCellId: string,
+  splashTargetIds: string[]
+) {
+  const excludedIds = new Set([targetCellId, ...splashTargetIds]);
+  const originIds = [targetCellId, ...splashTargetIds];
+
+  return board
+    .filter((cell) => !excludedIds.has(cell.id))
+    .map((cell) => ({
+      cell,
+      distance: Math.min(
+        ...originIds.map((originId) => {
+          const originCell = board.find((candidate) => candidate.id === originId);
+
+          if (!originCell) {
+            return Number.POSITIVE_INFINITY;
+          }
+
+          return resolvePulseDistance(cell, originCell);
+        })
+      )
+    }))
+    .filter((entry) => Number.isFinite(entry.distance) && entry.distance <= 2)
+    .sort((left, right) => {
+      if (left.distance !== right.distance) {
+        return left.distance - right.distance;
+      }
+
+      if (right.cell.hp !== left.cell.hp) {
+        return right.cell.hp - left.cell.hp;
+      }
+
+      if (right.cell.row !== left.cell.row) {
+        return right.cell.row - left.cell.row;
+      }
+
+      return left.cell.col - right.cell.col;
+    })
+    .slice(0, 2)
+    .map((entry) => entry.cell.id);
+}
+
+function resolvePulseDistance(cell: IStageBoardCell, targetCell: IStageBoardCell) {
+  return Math.max(Math.abs(cell.row - targetCell.row), Math.abs(cell.col - targetCell.col));
 }

@@ -101,6 +101,8 @@ Fever는 다음 조건을 만족해야 한다.
 - Fever가 여러 종류로 확장될 경우, mode/tier 정책은 `tiered-fever-system-spec.md`를 우선 기준으로 삼는다.
 - 모바일 플레이 화면에서는 기존 stage prompt 위치를 Fever 상태 안내와 공유해야 하며, `active > ready > base prompt` 우선순위를 따른다.
 - 밸런스 기본값은 `block +20`, `gate +8`, tier threshold `35 / 70 / 100`을 기준으로 잡는다.
+- `Pierce`는 이름만 관통형이어서는 안 되며, 실제 Scene 충돌에서 반사 없이 다음 타깃으로 이어지는 체감이 있어야 한다.
+- `Pulse`는 최상위 티어이므로 중심 강타 + 다방향 splash + 연쇄 mini pulse를 기본 방향으로 삼는다.
 
 ## Recommended Behavior
 
