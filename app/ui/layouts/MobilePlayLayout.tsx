@@ -169,7 +169,7 @@ const layoutStyle = {
   maxWidth: '100%',
   height: '100dvh',
   display: 'grid',
-  gridTemplateRows: '36px 28px minmax(0, 1fr)',
+  gridTemplateRows: '36px 56px minmax(0, 1fr)',
   gap: 4,
   padding: 'calc(env(safe-area-inset-top, 0px) + 4px) 4px calc(env(safe-area-inset-bottom, 0px) + 4px)',
   overflow: 'hidden',
@@ -200,8 +200,7 @@ const bottomStyle = {
   display: 'block',
   width: '100%',
   minWidth: 0,
-  height: 28,
-  overflow: 'hidden'
+  height: 56
 } as const;
 
 const feverButtonStyle = {

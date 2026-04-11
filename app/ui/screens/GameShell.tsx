@@ -1169,7 +1169,7 @@ const debugToggleButtonStyle = {
 const mobileFeverOverlayStyle = {
   position: 'absolute',
   left: '50%',
-  bottom: 44,
+  bottom: 47,
   transform: 'translateX(-50%)',
   width: 'min(88%, 320px)',
   display: 'grid',
@@ -1198,7 +1198,7 @@ function resolveMobileFeverPromptStyle({
   const baseStyle = {
     position: 'absolute',
     left: '50%',
-    bottom: 42,
+    bottom: 45,
     transform: 'translateX(-50%)',
     width: 'min(88%, 320px)',
     textAlign: 'center',
