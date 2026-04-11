@@ -42,6 +42,10 @@ import {
   resolveStagePromptText
 } from '../systems/stage-rule-profile';
 import {
+  FEVER_COLLISION_BONUS_HIT_LIMIT,
+  resolveFeverCollisionBonus
+} from '../systems/fever-overdrive';
+import {
   GAME_RUNTIME_BRIDGE_REGISTRY_KEY,
   STAGE_RUNTIME_CONFIG_REGISTRY_KEY
 } from '../core/runtime-registry-keys';
@@ -129,6 +133,8 @@ export default class StageScene extends Phaser.Scene {
   private destroyedBlocksThisTurn = 0;
 
   private impactEffectsThisTurn = 0;
+
+  private feverCollisionBonusHitsUsed = 0;
 
   private stageRuntimeConfig!: IStageRuntimeConfig;
 
@@ -318,6 +324,8 @@ export default class StageScene extends Phaser.Scene {
     });
     runtimeBridge?.onFeverActivationRequested(() => {
       this.isFeverActive = true;
+      this.feverCollisionBonusHitsUsed = 0;
+      this.updateBallVisualState();
       this.logger.info('stage.fever_activation_requested', {
         turnNumber: this.turnNumber
       });
@@ -361,6 +369,7 @@ export default class StageScene extends Phaser.Scene {
     ballBody.onWorldBounds = false;
 
     this.resetBall();
+    this.updateBallVisualState();
   }
 
   private drawAimGuide(pointer: Phaser.Input.Pointer) {
@@ -483,6 +492,7 @@ export default class StageScene extends Phaser.Scene {
     this.turnNumber = 1;
     this.destroyedBlocksThisTurn = 0;
     this.impactEffectsThisTurn = 0;
+    this.feverCollisionBonusHitsUsed = 0;
     this.isFeverActive = false;
     this.lastTrackedBallPosition = null;
     this.shotPathSegments = [];
@@ -566,6 +576,7 @@ export default class StageScene extends Phaser.Scene {
       destroyedBlocksThisTurn: this.destroyedBlocksThisTurn,
       comboBranch: resolution.comboBranch,
       feverApplied: resolution.feedbackEvents.some((event) => event.type === 'fever.activated'),
+      feverCollisionBonusHitsUsed: this.feverCollisionBonusHitsUsed,
       hasReachedLossLine: resolution.hasReachedLossLine,
       modifierTrace: resolution.modifierTrace.map((entry) => `${entry.phase}:${entry.applied}`),
       feedbackEvents: resolution.feedbackEvents.map((event) => event.type)
@@ -576,6 +587,7 @@ export default class StageScene extends Phaser.Scene {
 
     this.destroyedBlocksThisTurn = 0;
     this.impactEffectsThisTurn = 0;
+    this.feverCollisionBonusHitsUsed = 0;
     this.isFeverActive = false;
     this.lastTrackedBallPosition = null;
     this.shotPathSegments = [];
@@ -583,6 +595,7 @@ export default class StageScene extends Phaser.Scene {
     this.runtimeHud.shotState = 'idle';
     this.runtimeHud.destroyedBlocksThisTurn = 0;
     this.runtimeHud.canShoot = !resolution.hasReachedLossLine;
+    this.updateBallVisualState();
     this.updateStagePrompt();
     this.syncHud();
 
@@ -628,6 +641,7 @@ export default class StageScene extends Phaser.Scene {
     ballBody.stop();
     ballBody.reset(this.launcherPosition.x, this.launcherPosition.y);
     this.activeCollisionBlockIds.clear();
+    this.updateBallVisualState();
   }
 
   private renderBoard() {
@@ -734,7 +748,24 @@ export default class StageScene extends Phaser.Scene {
 
     this.activeCollisionBlockIds.add(blockId);
 
-    const nextHp = blockView.cell.hp - 1;
+    const collisionResolution = resolveFeverCollisionBonus({
+      currentHp: blockView.cell.hp,
+      hitsUsed: this.feverCollisionBonusHitsUsed,
+      isFeverActive: this.isFeverActive
+    });
+    const nextHp = collisionResolution.nextHp;
+
+    if (collisionResolution.bonusApplied) {
+      this.feverCollisionBonusHitsUsed = collisionResolution.hitsUsed;
+      this.runtimeProfiler.incrementCounter('fever_collision_bonus_hits');
+      this.logger.info('stage.fever_collision_bonus_applied', {
+        turnNumber: this.turnNumber,
+        blockId,
+        hitsUsed: this.feverCollisionBonusHitsUsed,
+        hitLimit: FEVER_COLLISION_BONUS_HIT_LIMIT
+      });
+    }
+
     this.runtimeProfiler.incrementCounter('block_hit_events');
     this.emitBlockImpactFeedback({
       x: blockView.rectangle.x,
@@ -958,6 +989,23 @@ export default class StageScene extends Phaser.Scene {
     runtimeBridge.signalRuntimeHudChanged({
       ...(this.runtimeHud satisfies IRuntimeHudSnapshot)
     });
+  }
+
+  private updateBallVisualState() {
+    if (!this.ball) {
+      return;
+    }
+
+    if (this.isFeverActive) {
+      this.ball.setFillStyle(0xfff2c7, 1);
+      this.ball.setStrokeStyle(3, 0xff6fb0, 1);
+      this.ball.setScale(1.08);
+      return;
+    }
+
+    this.ball.setFillStyle(0xffffff, 1);
+    this.ball.setStrokeStyle(2, 0x78e3ff, 0.9);
+    this.ball.setScale(1);
   }
 
   private updateStagePrompt() {

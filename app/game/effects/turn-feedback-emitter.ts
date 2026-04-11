@@ -28,7 +28,10 @@ export function createTurnFeedbackPlan({
   const gateEvents = feedbackEvents.filter(
     (event): event is ITurnFeedbackEvent => event.type === 'gate.triggered'
   );
-  const hasFeverEvent = feedbackEvents.some((event) => event.type === 'fever.activated');
+  const feverEvents = feedbackEvents.filter(
+    (event): event is IFeverFeedbackEvent => event.type === 'fever.activated'
+  );
+  const feverBonusHits = feverEvents.reduce((total, event) => total + event.bonusHits, 0);
 
   gateEvents.forEach((event) => {
     commands.push({ type: 'gate-pulse', gateId: event.gateId });
@@ -39,11 +42,15 @@ export function createTurnFeedbackPlan({
       { type: 'camera-flash', duration: 220, color: [255, 196, 120] },
       { type: 'camera-shake', duration: 180, intensity: 0.0048 },
       { type: 'haptic-pulse', intensity: 'strong' },
+      ...(feverBonusHits >= 3
+        ? ([{ type: 'camera-flash', duration: 140, color: [255, 120, 220] }] satisfies TTurnFeedbackCommand[])
+        : []),
       { type: 'sfx-cue', cue: 'combo-burst' }
     );
-  } else if (hasFeverEvent) {
+  } else if (feverEvents.length > 0) {
     commands.push(
-      { type: 'camera-flash', duration: 180, color: [255, 120, 220] },
+      { type: 'camera-flash', duration: 200, color: [255, 120, 220] },
+      { type: 'camera-shake', duration: 130, intensity: 0.0036 },
       { type: 'haptic-pulse', intensity: 'medium' },
       { type: 'sfx-cue', cue: 'fever-hit' }
     );

@@ -150,6 +150,39 @@ test('resolveTurn records gate-fever combo branch when both modifiers apply', ()
     result.feedbackEvents.map((event) => event.type),
     ['gate.triggered', 'fever.activated']
   );
+  assert.deepEqual(result.feedbackEvents[1], {
+    type: 'fever.activated',
+    affectedCellIds: ['block-a', 'spawn-a'],
+    bonusHits: 2
+  });
+});
+
+test('resolveTurn upgrades fever-only turns into multi-target overdrive clears', () => {
+  const result = resolveTurn({
+    board: [
+      { id: 'block-a', col: 0, row: 1, hp: 1 },
+      { id: 'block-b', col: 1, row: 2, hp: 4 },
+      { id: 'block-c', col: 2, row: 3, hp: 3 }
+    ],
+    feverActive: true,
+    turnNumber: 5,
+    lossRow: 8,
+    spawnRow() {
+      return [{ id: 'spawn-a', col: 0, row: 0, hp: 2 }];
+    }
+  });
+
+  assert.equal(result.comboBranch, 'fever-only');
+  assert.deepEqual(
+    result.feedbackEvents.find((event) => event.type === 'fever.activated'),
+    {
+      type: 'fever.activated',
+      affectedCellIds: ['block-b', 'block-c'],
+      bonusHits: 2
+    }
+  );
+  assert.equal(result.board.some((cell) => cell.id === 'block-b'), false);
+  assert.equal(result.board.some((cell) => cell.id === 'block-c'), false);
 });
 
 test('resolveTurn keeps deterministic output for identical inputs', () => {

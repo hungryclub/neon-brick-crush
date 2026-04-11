@@ -12,7 +12,8 @@ export interface ITurnFeedbackEvent {
 
 export interface IFeverFeedbackEvent {
   type: 'fever.activated';
-  affectedCellId: string | null;
+  affectedCellIds: string[];
+  bonusHits: number;
 }
 
 export type TTurnComboBranch = 'base' | 'gate-only' | 'fever-only' | 'gate-fever-combo';
@@ -114,9 +115,10 @@ export function applyFeverModifiers(
     });
   }
 
-  const affectedCell = resolveFeverTargetCell(state.board);
+  const targetCount = state.comboBranch === 'gate-only' ? 3 : 2;
+  const affectedCells = resolveFeverTargetCells(state.board, targetCount);
 
-  if (!affectedCell) {
+  if (affectedCells.length === 0) {
     return appendModifierTrace(state, {
       phase: 'fever',
       applied: false
@@ -124,14 +126,15 @@ export function applyFeverModifiers(
   }
 
   return {
-    board: state.board.filter((cell) => cell.id !== affectedCell.id),
+    board: state.board.filter((cell) => !affectedCells.some((targetCell) => targetCell.id === cell.id)),
     comboBranch: state.comboBranch === 'gate-only' ? 'gate-fever-combo' : 'fever-only',
     turnNumber: state.turnNumber,
     feedbackEvents: [
       ...state.feedbackEvents,
       {
         type: 'fever.activated',
-        affectedCellId: affectedCell.id
+        affectedCellIds: affectedCells.map((cell) => cell.id),
+        bonusHits: affectedCells.length
       }
     ],
     modifierTrace: [
@@ -177,22 +180,24 @@ function resolveGateTargetCell(board: IStageBoardCell[]) {
   })[0];
 }
 
-function resolveFeverTargetCell(board: IStageBoardCell[]) {
-  if (board.length === 0) {
-    return null;
+function resolveFeverTargetCells(board: IStageBoardCell[], targetCount: number) {
+  if (board.length === 0 || targetCount <= 0) {
+    return [];
   }
 
-  return [...board].sort((left, right) => {
-    if (right.hp !== left.hp) {
-      return right.hp - left.hp;
-    }
+  return [...board]
+    .sort((left, right) => {
+      if (right.hp !== left.hp) {
+        return right.hp - left.hp;
+      }
 
-    if (right.row !== left.row) {
-      return right.row - left.row;
-    }
+      if (right.row !== left.row) {
+        return right.row - left.row;
+      }
 
-    return left.col - right.col;
-  })[0];
+      return left.col - right.col;
+    })
+    .slice(0, targetCount);
 }
 
 function doesLineIntersectRect({

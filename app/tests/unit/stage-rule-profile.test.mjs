@@ -11,14 +11,18 @@ test('stage rule profile changes the effective loss row by stage buffer', () => 
 
   const tutorialLossRow = resolveLossRow({
     boardTop: 112,
+    blockHeight: 40,
+    blockGap: 8,
     initialBoard,
-    launcherY: 634,
+    lossLineY: 480,
     lossRowBufferRows: 3
   });
   const challengeLossRow = resolveLossRow({
     boardTop: 112,
+    blockHeight: 40,
+    blockGap: 8,
     initialBoard,
-    launcherY: 634,
+    lossLineY: 480,
     lossRowBufferRows: 1
   });
 
