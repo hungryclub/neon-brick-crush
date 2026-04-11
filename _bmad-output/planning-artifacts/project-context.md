@@ -35,6 +35,15 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 ## Critical Implementation Rules
 
+### Mobile Layout Rules
+
+- 모바일 구현은 `/Users/dhlee/Desktop/projects/ai-orchestrator/bmad-projects/neo-brick-crush/_bmad-output/planning-artifacts/mobile-layout-spec.md`를 우선 기준으로 삼는다.
+- 모바일 플레이 화면은 `스테이지 정보 바 -> 게임 영역 -> HUD 7개 한 줄` 구조를 유지한다.
+- 모바일 HUD는 절대 두 줄로 래핑되면 안 된다.
+- Fever 버튼은 별도 하단 행이 아니라 게임 영역 하단 중앙의 보조 액션이다.
+- 모바일 게임 영역은 스테이지 정보 바와 HUD 사이의 남는 높이를 거의 전부 사용해야 한다.
+- Phaser 보드/블록/런처 위치는 모바일 폭과 높이에 맞게 재계산되어야 하며, 블록이 잘리면 구현이 잘못된 것이다.
+
 ### Engine-Specific Rules
 
 - `Phaser = runtime only`. Scene code must not call ads, IAP, persistence, or analytics directly.

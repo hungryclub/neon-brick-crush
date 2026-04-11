@@ -13,6 +13,7 @@ platform: '모바일 우선, 웹/PC 보조 확장'
 gdd: '/Users/dhlee/Desktop/projects/ai-orchestrator/bmad-projects/neo-brick-crush/_bmad-output/planning-artifacts/gdd.md'
 epics: '/Users/dhlee/Desktop/projects/ai-orchestrator/bmad-projects/neo-brick-crush/_bmad-output/planning-artifacts/epics.md'
 brief: '/Users/dhlee/Desktop/projects/ai-orchestrator/bmad-projects/neo-brick-crush/_bmad-output/planning-artifacts/game-brief.md'
+mobileLayout: '/Users/dhlee/Desktop/projects/ai-orchestrator/bmad-projects/neo-brick-crush/_bmad-output/planning-artifacts/mobile-layout-spec.md'
 ---
 
 # Game Architecture
@@ -73,6 +74,7 @@ _Architecture handoff ready._
 - 보상형 광고와 IAP 지원
 - 웹 빌드 용량 제한 고려
 - 강한 네온 연출과 가독성/성능의 균형 필요
+- 모바일 플레이 화면은 `스테이지 정보 바 -> 남는 높이를 모두 쓰는 게임 영역 -> HUD 7개 한 줄` 구조를 따른다
 
 ### Complexity Drivers
 
@@ -91,6 +93,7 @@ _Architecture handoff ready._
 - 판정 로직과 연출/VFX/진동 피드백을 분리해 유지보수성과 성능을 확보한다
 - `턴 상태`, `샷 결과`, `광고/보상 분기`가 명시적으로 구분되는 상태 전이 구조를 갖는다
 - QA와 자동화가 가능한 수준으로 분기와 상태를 테스트 가능하게 유지한다
+- 모바일 레이아웃은 `mobile-layout-spec.md`를 우선 참조하고, 현재 구현 코드보다 문서 기준을 우선한다
 
 ### Technical Risks
 
@@ -210,6 +213,16 @@ Phaser 버전은 아키텍처 결정으로 고정하며, 나머지 dependency의
 - 컴포넌트 내부에서만 의미가 있는 임시 UI 상태는 React local state를 사용한다.
 - 같은 값을 `XState`와 `Zustand`가 동시에 소유하지 않는다.
 - 화면은 반드시 필요한 값만 selector로 구독한다.
+
+### Mobile Layout Contract
+
+모바일 레이아웃 구현은 `mobile-layout-spec.md`를 따른다. 아키텍처 관점의 핵심 규칙은 다음과 같다.
+
+- 모바일 플레이 화면은 `스테이지 정보`, `게임 플레이`, `HUD`만 유지한다.
+- 모바일 HUD는 7개 항목을 모두 한 줄에 표시한다.
+- Fever 버튼은 게임 영역 내부 하단 중앙의 오버레이 액션으로 유지한다.
+- Phaser 런타임은 부모 프레임의 실제 폭/높이를 사용해 resize 되어야 한다.
+- Scene의 보드 메트릭은 모바일 폭에 맞게 재계산되어야 하며, 좌우 블록 잘림이 있으면 구현이 잘못된 것이다.
 
 ### Data Persistence
 

@@ -21,6 +21,7 @@ game_name: '네온 브릭 크러시 (Neon Brick Crush)'
 **Author:** Dhlee
 **Game Type:** puzzle
 **Target Platform(s):** 모바일 (iOS/Android), 웹, PC
+**Mobile Layout Spec:** [/Users/dhlee/Desktop/projects/ai-orchestrator/bmad-projects/neo-brick-crush/_bmad-output/planning-artifacts/mobile-layout-spec.md](/Users/dhlee/Desktop/projects/ai-orchestrator/bmad-projects/neo-brick-crush/_bmad-output/planning-artifacts/mobile-layout-spec.md)
 
 ---
 
@@ -56,6 +57,8 @@ game_name: '네온 브릭 크러시 (Neon Brick Crush)'
 네온 브릭 크러시의 설계 기준 플랫폼은 모바일이다. 이 게임의 핵심 재미는 짧은 세션 안에서 빠르게 조준하고, 결과를 확인하고, 곧바로 다시 도전하는 흐름에 있으므로 모바일 환경이 가장 자연스럽다. 터치 기반 조작, 빠른 재시작 루프, 짧은 소비 패턴은 이 게임의 구조와 높은 적합성을 가진다.
 
 웹과 PC는 접근성 확대와 후속 확장을 위한 보조 플랫폼으로 고려한다. 웹은 설치 없이 즉시 플레이 가능한 접근성이 강점이고, PC는 넓은 화면과 안정적인 성능을 바탕으로 테스트 플레이와 확장 배포에 유리하다. 다만 초기 밸런싱과 UX 판단의 기준은 모바일 경험에 맞춘다.
+
+모바일 플레이 화면의 구체적 레이아웃 기준은 `mobile-layout-spec.md`를 따른다. 이후 새로 구현할 때에도 모바일은 `스테이지 정보 바 -> 게임 영역 -> HUD 7개 한 줄` 구조를 유지해야 하며, 게임 영역은 그 사이 남는 높이를 대부분 사용해야 한다.
 
 ### Control Scheme
 
@@ -230,6 +233,14 @@ game_name: '네온 브릭 크러시 (Neon Brick Crush)'
 - 피버 버튼 가시성 및 터치 영역 최적화
 
 강한 이펙트와 진동이 이 게임의 손맛을 강화하지만, 사용자 환경에 따라 이를 조절하거나 끌 수 있어야 한다. 플레이어는 화려한 연출 속에서도 입력 안정성과 화면 가독성을 잃지 않아야 한다.
+
+### Mobile HUD and Playfield Layout
+
+- 모바일 HUD는 `Session / Turn / Aim / Blocks / Danger / Fever / Shot` 7개 항목을 모두 한 줄에 표시한다.
+- 모바일 HUD는 두 줄 이상으로 래핑되면 안 된다.
+- Fever 버튼은 모바일에서 별도 하단 행을 차지하지 않고, 게임 영역 안 하단 중앙의 보조 액션으로 배치한다.
+- 모바일 게임 보드는 좌우로 잘리면 안 되며, 블록 폭과 간격은 모바일 폭에 맞춰 동적으로 조정되어야 한다.
+- 블록은 스테이지 정보 바 바로 아래부터 시작하고, 공은 HUD 바로 위에 위치해야 한다.
 
 ---
 
