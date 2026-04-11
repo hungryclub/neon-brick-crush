@@ -840,6 +840,12 @@ export default class StageScene extends Phaser.Scene {
       destroyed: nextHp <= 0
     });
 
+    const applyPulseBlast = () => {
+      pulseTargetIds.forEach((targetId) => {
+        this.applySplashDamage(targetId);
+      });
+    };
+
     if (nextHp <= 0) {
       blockView.rectangle.destroy();
       blockView.label.destroy();
@@ -850,27 +856,30 @@ export default class StageScene extends Phaser.Scene {
       this.runtimeHud.remainingBlocks = this.boardState.length;
       this.syncHud();
 
-      if (this.boardState.length === 0) {
-        this.handleStageClear();
-      }
+      applyPulseBlast();
 
       if (collisionResolution.pierceThrough) {
         this.continuePierceTrajectory(blockView.rectangle);
       }
 
+      if (this.boardState.length === 0) {
+        this.handleStageClear();
+      }
+
       return;
     }
-
-    pulseTargetIds.forEach((targetId) => {
-      this.applySplashDamage(targetId);
-    });
 
     blockView.cell.hp = nextHp;
     blockView.label.setText(String(nextHp));
     blockView.rectangle.setFillStyle(resolveBlockColor(nextHp), 0.92);
+    applyPulseBlast();
 
     if (collisionResolution.pierceThrough) {
       this.continuePierceTrajectory(blockView.rectangle);
+    }
+
+    if (this.boardState.length === 0) {
+      this.handleStageClear();
     }
   }
 
@@ -1303,33 +1312,17 @@ export default class StageScene extends Phaser.Scene {
     this.emitBlockImpactFeedback({
       x: splashBlockView.rectangle.x,
       y: splashBlockView.rectangle.y,
-      destroyed: splashBlockView.cell.hp <= 1
+      destroyed: true
     });
-
-    const splashNextHp = splashBlockView.cell.hp - 1;
-
-    if (splashNextHp <= 0) {
-      splashBlockView.rectangle.destroy();
-      splashBlockView.label.destroy();
-      this.blockViews.delete(blockId);
-      this.boardState = this.boardState.filter((cell) => cell.id !== blockId);
-      this.destroyedBlocksThisTurn += 1;
-      this.runtimeHud.destroyedBlocksThisTurn = this.destroyedBlocksThisTurn;
-      this.runtimeHud.remainingBlocks = this.boardState.length;
-      this.runtimeProfiler.incrementCounter('fever_pulse_splash_destroyed');
-      this.syncHud();
-
-      if (this.boardState.length === 0) {
-        this.handleStageClear();
-      }
-
-      return;
-    }
-
-    splashBlockView.cell.hp = splashNextHp;
-    splashBlockView.label.setText(String(splashNextHp));
-    splashBlockView.rectangle.setFillStyle(resolveBlockColor(splashNextHp), 0.92);
-    this.runtimeProfiler.incrementCounter('fever_pulse_splash_damaged');
+    splashBlockView.rectangle.destroy();
+    splashBlockView.label.destroy();
+    this.blockViews.delete(blockId);
+    this.boardState = this.boardState.filter((cell) => cell.id !== blockId);
+    this.destroyedBlocksThisTurn += 1;
+    this.runtimeHud.destroyedBlocksThisTurn = this.destroyedBlocksThisTurn;
+    this.runtimeHud.remainingBlocks = this.boardState.length;
+    this.runtimeProfiler.incrementCounter('fever_pulse_splash_destroyed');
+    this.syncHud();
   }
 
   private updateStagePrompt() {

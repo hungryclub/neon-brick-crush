@@ -54,7 +54,7 @@ test('pierce fever marks early durable hits as pass-through hits', () => {
   assert.equal(result.pierceThrough, true);
 });
 
-test('pulse fever marks the center hit strongly and leaves area targeting to the scene layer', () => {
+test('pulse fever instantly destroys the center hit and leaves area destruction to the scene layer', () => {
   const result = resolveFeverCollisionBonus({
     activeFeverMode: 'pulse',
     board: [
@@ -71,6 +71,7 @@ test('pulse fever marks the center hit strongly and leaves area targeting to the
 
   assert.equal(result.bonusApplied, true);
   assert.equal(result.nextHp, 0);
+  assert.equal(result.pierceThrough, false);
   assert.deepEqual(result.splashTargetIds, []);
   assert.deepEqual(result.chainPulseTargetIds, []);
 });
