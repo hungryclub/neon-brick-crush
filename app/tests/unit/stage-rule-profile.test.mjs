@@ -28,3 +28,16 @@ test('stage rule profile changes the effective loss row by stage buffer', () => 
 
   assert.equal(tutorialLossRow > challengeLossRow, true);
 });
+
+test('stage rule profile returns the first row that actually crosses the visible loss line', () => {
+  const firstFailingRow = resolveLossRow({
+    boardTop: 112,
+    blockHeight: 40,
+    blockGap: 8,
+    initialBoard: [{ id: 'cell-0', row: 0, col: 0, hp: 1 }],
+    lossLineY: 480,
+    lossRowBufferRows: 3
+  });
+
+  assert.equal(firstFailingRow, 7);
+});

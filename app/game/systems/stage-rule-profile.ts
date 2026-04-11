@@ -19,13 +19,13 @@ export function resolveLossRow({
   lossLineY: number;
   lossRowBufferRows: number;
 }) {
-  const maxPlayableRow =
-    Math.floor((lossLineY - boardTop) / (blockHeight + blockGap)) - 1;
+  const rowStep = blockHeight + blockGap;
+  const firstFailingRow = Math.ceil((lossLineY - boardTop - blockHeight) / rowStep);
   const highestInitialRow = initialBoard.reduce((highestRow, cell) => {
     return Math.max(highestRow, cell.row);
   }, 0);
   const strictnessOffset = Math.max(MAX_STAGE_BUFFER_ROWS - lossRowBufferRows, 0);
-  const profiledLossRow = maxPlayableRow - strictnessOffset;
+  const profiledLossRow = firstFailingRow - strictnessOffset;
 
   return Math.max(profiledLossRow, highestInitialRow + 1, 1);
 }
