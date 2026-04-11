@@ -8,6 +8,7 @@ status: 'active'
 relatedDocuments:
   gdd: '/Users/dhlee/Desktop/projects/ai-orchestrator/bmad-projects/neo-brick-crush/_bmad-output/planning-artifacts/gdd.md'
   architecture: '/Users/dhlee/Desktop/projects/ai-orchestrator/bmad-projects/neo-brick-crush/_bmad-output/planning-artifacts/game-architecture.md'
+  tieredSpec: '/Users/dhlee/Desktop/projects/ai-orchestrator/bmad-projects/neo-brick-crush/_bmad-output/planning-artifacts/tiered-fever-system-spec.md'
   story22: '/Users/dhlee/Desktop/projects/ai-orchestrator/bmad-projects/neo-brick-crush/_bmad-output/implementation-artifacts/2-2-fever-meter-and-manual-activation.md'
   story23: '/Users/dhlee/Desktop/projects/ai-orchestrator/bmad-projects/neo-brick-crush/_bmad-output/implementation-artifacts/2-3-gate-fever-combo-feedback.md'
 ---
@@ -94,6 +95,10 @@ Fever는 다음 조건을 만족해야 한다.
 - 현재 구조를 유지하면서도 체감이 가장 크게 좋아진다.
 - `수동 발동 -> 다음 턴 강화 -> 큰 결과`라는 플레이어 기대와 잘 맞는다.
 - Gate와의 조합을 선명하게 만들 수 있다.
+
+추가 규칙:
+
+- Fever가 여러 종류로 확장될 경우, mode/tier 정책은 `tiered-fever-system-spec.md`를 우선 기준으로 삼는다.
 
 ## Recommended Behavior
 

@@ -98,6 +98,7 @@ _Architecture handoff ready._
 - QA와 자동화가 가능한 수준으로 분기와 상태를 테스트 가능하게 유지한다
 - 모바일 레이아웃은 `mobile-layout-spec.md`를 우선 참조하고, 현재 구현 코드보다 문서 기준을 우선한다
 - Fever 체감 강화 방향은 `fever-enhancement-spec.md`를 우선 참조하고, 현재의 약한 정산형 효과를 최종안으로 간주하지 않는다
+- Fever tier/mode 구조는 `tiered-fever-system-spec.md`를 우선 참조하고, session이 tier를 소유하고 runtime은 승인된 mode만 실행해야 한다
 - preview/boot 안정성은 기능적 요구사항으로 간주하며, load failure, stale stage selection, physics 설정 누락이 검은 캔버스나 영구 booting 상태를 만들면 안 된다
 
 ### Technical Risks

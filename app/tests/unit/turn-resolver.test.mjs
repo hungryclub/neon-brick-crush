@@ -127,7 +127,7 @@ test('resolveTurn records gate-fever combo branch when both modifiers apply', ()
   });
   const result = resolveTurn({
     board: [{ id: 'block-a', col: 1, row: 1, hp: 2 }],
-    feverActive: true,
+    activeFeverMode: 'breaker',
     gates: [gate],
     shotPath: [
       {
@@ -153,7 +153,8 @@ test('resolveTurn records gate-fever combo branch when both modifiers apply', ()
   assert.deepEqual(result.feedbackEvents[1], {
     type: 'fever.activated',
     affectedCellIds: ['block-a', 'spawn-a'],
-    bonusHits: 2
+    bonusHits: 2,
+    mode: 'breaker'
   });
 });
 
@@ -164,7 +165,7 @@ test('resolveTurn upgrades fever-only turns into multi-target overdrive clears',
       { id: 'block-b', col: 1, row: 2, hp: 4 },
       { id: 'block-c', col: 2, row: 3, hp: 3 }
     ],
-    feverActive: true,
+    activeFeverMode: 'breaker',
     turnNumber: 5,
     lossRow: 8,
     spawnRow() {
@@ -178,11 +179,71 @@ test('resolveTurn upgrades fever-only turns into multi-target overdrive clears',
     {
       type: 'fever.activated',
       affectedCellIds: ['block-b', 'block-c'],
-      bonusHits: 2
+      bonusHits: 2,
+      mode: 'breaker'
     }
   );
   assert.equal(result.board.some((cell) => cell.id === 'block-b'), false);
   assert.equal(result.board.some((cell) => cell.id === 'block-c'), false);
+});
+
+test('resolveTurn uses shot path focused targeting for pierce fever', () => {
+  const result = resolveTurn({
+    board: [
+      { id: 'left', col: 0, row: 3, hp: 3 },
+      { id: 'center', col: 4, row: 2, hp: 2 },
+      { id: 'right', col: 6, row: 3, hp: 4 }
+    ],
+    activeFeverMode: 'pierce',
+    shotPath: [
+      {
+        start: { x: 320, y: 620 },
+        end: { x: 300, y: 120 }
+      }
+    ],
+    turnNumber: 6,
+    lossRow: 8,
+    spawnRow() {
+      return [];
+    }
+  });
+
+  assert.deepEqual(
+    result.feedbackEvents.find((event) => event.type === 'fever.activated'),
+    {
+      type: 'fever.activated',
+      affectedCellIds: ['right', 'center'],
+      bonusHits: 2,
+      mode: 'pierce'
+    }
+  );
+});
+
+test('resolveTurn uses clustered targeting for pulse fever', () => {
+  const result = resolveTurn({
+    board: [
+      { id: 'anchor', col: 3, row: 4, hp: 5 },
+      { id: 'adjacent-a', col: 4, row: 4, hp: 2 },
+      { id: 'adjacent-b', col: 3, row: 5, hp: 2 },
+      { id: 'far', col: 0, row: 0, hp: 4 }
+    ],
+    activeFeverMode: 'pulse',
+    turnNumber: 6,
+    lossRow: 8,
+    spawnRow() {
+      return [];
+    }
+  });
+
+  assert.deepEqual(
+    result.feedbackEvents.find((event) => event.type === 'fever.activated'),
+    {
+      type: 'fever.activated',
+      affectedCellIds: ['anchor', 'adjacent-b'],
+      bonusHits: 2,
+      mode: 'pulse'
+    }
+  );
 });
 
 test('resolveTurn keeps deterministic output for identical inputs', () => {

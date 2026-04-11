@@ -10,7 +10,9 @@ interface IMobilePlayLayoutProps {
   canActivateFever: boolean;
   canUseRewardedRetry: boolean;
   feverButtonLabel: string;
+  feverHudValue: string;
   feverMeter: number;
+  feverTone: 'neutral' | 'breaker' | 'pierce' | 'pulse';
   isFeverActive: boolean;
   isProgressionLoading: boolean;
   isRewardedRetryPending: boolean;
@@ -37,7 +39,9 @@ export default function MobilePlayLayout({
   canActivateFever,
   canUseRewardedRetry,
   feverButtonLabel,
+  feverHudValue,
   feverMeter,
+  feverTone,
   isFeverActive,
   isProgressionLoading,
   isRewardedRetryPending,
@@ -65,7 +69,9 @@ export default function MobilePlayLayout({
       <div style={bottomStyle}>
         <CompactHudStrip
           canActivateFever={canActivateFever}
+          feverHudValue={feverHudValue}
           feverMeter={feverMeter}
+          feverTone={feverTone}
           isFeverActive={isFeverActive}
           runtimeHud={runtimeHud}
           sessionPhase={sessionPhase}
@@ -140,8 +146,11 @@ export default function MobilePlayLayout({
         <button
           style={{
             ...feverButtonStyle,
-            ...(canActivateFever ? feverButtonReadyStyle : feverButtonDisabledStyle),
-            ...(isFeverActive ? feverButtonActiveStyle : null)
+            ...resolveMobileFeverToneStyle({
+              canActivateFever,
+              feverTone,
+              isFeverActive
+            })
           }}
           type='button'
           disabled={!canActivateFever || isSessionFailed || isFeverActive}
@@ -214,23 +223,59 @@ const feverButtonStyle = {
   maxWidth: 120
 } as const;
 
-const feverButtonDisabledStyle = {
-  background: 'rgba(14, 18, 30, 0.78)',
-  color: 'rgba(245, 247, 255, 0.55)',
-  cursor: 'not-allowed'
-} as const;
+function resolveMobileFeverToneStyle({
+  canActivateFever,
+  feverTone,
+  isFeverActive
+}: {
+  canActivateFever: boolean;
+  feverTone: 'neutral' | 'breaker' | 'pierce' | 'pulse';
+  isFeverActive: boolean;
+}) {
+  if (!canActivateFever) {
+    return {
+      background: 'rgba(14, 18, 30, 0.78)',
+      color: 'rgba(245, 247, 255, 0.55)',
+      cursor: 'not-allowed'
+    } as const;
+  }
 
-const feverButtonReadyStyle = {
-  background: 'linear-gradient(135deg, #ffe680, #ff7d6b)',
-  color: '#1a1020',
-  cursor: 'pointer'
-} as const;
+  if (feverTone === 'breaker') {
+    return {
+      background: isFeverActive
+        ? 'linear-gradient(135deg, #ffd37d, #ff9b63)'
+        : 'linear-gradient(135deg, #ffc86b, #ff8a57)',
+      color: '#24120d',
+      cursor: isFeverActive ? 'wait' : 'pointer'
+    } as const;
+  }
 
-const feverButtonActiveStyle = {
-  background: 'linear-gradient(135deg, #fff1a6, #ff8aa0)',
-  color: '#180d1a',
-  cursor: 'wait'
-} as const;
+  if (feverTone === 'pierce') {
+    return {
+      background: isFeverActive
+        ? 'linear-gradient(135deg, #9ff0ff, #63d3ff)'
+        : 'linear-gradient(135deg, #7ae7ff, #3fb8ff)',
+      color: '#071824',
+      cursor: isFeverActive ? 'wait' : 'pointer'
+    } as const;
+  }
+
+  if (feverTone === 'pulse') {
+    return {
+      background: isFeverActive
+        ? 'linear-gradient(135deg, #ffb6e3, #ff74bd)'
+        : 'linear-gradient(135deg, #ff8fd3, #ff5db1)',
+      color: '#230b1a',
+      cursor: isFeverActive ? 'wait' : 'pointer'
+    } as const;
+  }
+
+  return {
+    background: 'rgba(14, 18, 30, 0.78)',
+    color: 'rgba(245, 247, 255, 0.55)',
+    cursor: 'not-allowed'
+  } as const;
+}
 
 const bootOverlayStyle = {
   position: 'absolute',

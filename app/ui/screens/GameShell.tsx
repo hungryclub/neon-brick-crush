@@ -53,8 +53,11 @@ import {
 } from '../../state/selectors/progression.selectors';
 import {
   selectCanActivateFever,
+  selectFeverButtonLabel,
   selectCanUseRewardedRetry,
+  selectFeverHudValue,
   selectFeverMeter,
+  selectFeverTone,
   selectIsFeverActive,
   selectIsSessionBooting,
   selectIsSessionFailed,
@@ -82,10 +85,13 @@ export default function GameShell() {
   const runtimeHud = useUiStore((state) => state.storeRuntimeHud);
   const canActivateFever = useSelector(sessionActor, selectCanActivateFever);
   const canUseRewardedRetry = useSelector(sessionActor, selectCanUseRewardedRetry);
+  const feverButtonLabel = useSelector(sessionActor, selectFeverButtonLabel);
+  const feverHudValue = useSelector(sessionActor, selectFeverHudValue);
   const eventClaimFeedback = useSelector(eventActor, selectEventClaimFeedback);
   const isEventClaimPending = useSelector(eventActor, selectIsEventClaimPending);
   const latestEventClaimError = useSelector(eventActor, selectLatestEventClaimError);
   const feverMeter = useSelector(sessionActor, selectFeverMeter);
+  const feverTone = useSelector(sessionActor, selectFeverTone);
   const hasPurchasedFeaturedPack = useSelector(
     monetizationActor,
     selectHasPurchasedFeaturedPack
@@ -501,8 +507,10 @@ export default function GameShell() {
   function handleFeverActivation() {
     sessionActor.send({ type: 'REQUEST_FEVER_ACTIVATION' });
 
-    if (sessionActor.getSnapshot().context.isFeverActive) {
-      runtimeBridgeRef.current?.requestFeverActivation();
+    const sessionSnapshot = sessionActor.getSnapshot().context;
+
+    if (sessionSnapshot.isFeverActive && sessionSnapshot.activeFeverMode) {
+      runtimeBridgeRef.current?.requestFeverActivation(sessionSnapshot.activeFeverMode);
     }
   }
 
@@ -576,10 +584,12 @@ export default function GameShell() {
     <HudPanel
       canActivateFever={canActivateFever}
       compact={isCompactLayout}
+      feverHudValue={feverHudValue}
       feverMeter={feverMeter}
       isFeverActive={isFeverActive}
       runtimeHud={runtimeHud}
       sessionPhase={sessionPhase}
+      feverTone={feverTone}
     />
   );
 
@@ -590,10 +600,9 @@ export default function GameShell() {
           <MobilePlayLayout
             canActivateFever={canActivateFever}
             canUseRewardedRetry={canUseRewardedRetry}
-            feverButtonLabel={
-              isFeverActive ? 'Fever Active' : canActivateFever ? 'Activate Fever' : 'Build Fever'
-            }
+            feverButtonLabel={feverButtonLabel}
             feverMeter={feverMeter}
+            feverHudValue={feverHudValue}
             isFeverActive={isFeverActive}
             isProgressionLoading={isProgressionLoading}
             isRewardedRetryPending={isRewardedRetryPending}
@@ -622,6 +631,7 @@ export default function GameShell() {
             saveErrorMessage={saveErrorMessage}
             sessionPhase={sessionPhase}
             stageRuntimeConfig={activeStageRuntimeConfig}
+            feverTone={feverTone}
           />
         ) : (
           <MobileMapLayout
@@ -776,14 +786,17 @@ export default function GameShell() {
           <button
             style={{
               ...feverButtonStyle,
-              ...(canActivateFever ? feverButtonReadyStyle : feverButtonDisabledStyle),
-              ...(isFeverActive ? feverButtonActiveStyle : null)
+              ...resolveDesktopFeverToneStyle({
+                canActivateFever,
+                feverTone,
+                isFeverActive
+              })
             }}
             type='button'
             disabled={!canActivateFever || isSessionFailed || isFeverActive}
             onClick={handleFeverActivation}
           >
-            {isFeverActive ? 'Fever Active' : canActivateFever ? 'Activate Fever' : 'Build Fever'}
+            {feverButtonLabel}
           </button>
           </div>
         </section>
@@ -934,23 +947,59 @@ function resolveActionBarStyle(isCompactLayout: boolean) {
   } as const;
 }
 
-const feverButtonDisabledStyle = {
-  background: 'rgba(14, 18, 30, 0.78)',
-  color: 'rgba(245, 247, 255, 0.55)',
-  cursor: 'not-allowed'
-} as const;
+function resolveDesktopFeverToneStyle({
+  canActivateFever,
+  feverTone,
+  isFeverActive
+}: {
+  canActivateFever: boolean;
+  feverTone: 'neutral' | 'breaker' | 'pierce' | 'pulse';
+  isFeverActive: boolean;
+}) {
+  if (!canActivateFever) {
+    return {
+      background: 'rgba(14, 18, 30, 0.78)',
+      color: 'rgba(245, 247, 255, 0.55)',
+      cursor: 'not-allowed'
+    } as const;
+  }
 
-const feverButtonReadyStyle = {
-  background: 'linear-gradient(135deg, #ffe680, #ff7d6b)',
-  color: '#1a1020',
-  cursor: 'pointer'
-} as const;
+  if (feverTone === 'breaker') {
+    return {
+      background: isFeverActive
+        ? 'linear-gradient(135deg, #ffd37d, #ff9b63)'
+        : 'linear-gradient(135deg, #ffc86b, #ff8a57)',
+      color: '#24120d',
+      cursor: isFeverActive ? 'wait' : 'pointer'
+    } as const;
+  }
 
-const feverButtonActiveStyle = {
-  background: 'linear-gradient(135deg, #fff1a6, #ff8aa0)',
-  color: '#180d1a',
-  cursor: 'wait'
-} as const;
+  if (feverTone === 'pierce') {
+    return {
+      background: isFeverActive
+        ? 'linear-gradient(135deg, #9ff0ff, #63d3ff)'
+        : 'linear-gradient(135deg, #7ae7ff, #3fb8ff)',
+      color: '#071824',
+      cursor: isFeverActive ? 'wait' : 'pointer'
+    } as const;
+  }
+
+  if (feverTone === 'pulse') {
+    return {
+      background: isFeverActive
+        ? 'linear-gradient(135deg, #ffb6e3, #ff74bd)'
+        : 'linear-gradient(135deg, #ff8fd3, #ff5db1)',
+      color: '#230b1a',
+      cursor: isFeverActive ? 'wait' : 'pointer'
+    } as const;
+  }
+
+  return {
+    background: 'rgba(14, 18, 30, 0.78)',
+    color: 'rgba(245, 247, 255, 0.55)',
+    cursor: 'not-allowed'
+  } as const;
+}
 
 const bootOverlayStyle = {
   position: 'absolute',

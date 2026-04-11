@@ -43,7 +43,8 @@ import {
 } from '../systems/stage-rule-profile';
 import {
   FEVER_COLLISION_BONUS_HIT_LIMIT,
-  resolveFeverCollisionBonus
+  resolveFeverCollisionBonus,
+  type TFeverMode
 } from '../systems/fever-overdrive';
 import {
   GAME_RUNTIME_BRIDGE_REGISTRY_KEY,
@@ -112,7 +113,7 @@ export default class StageScene extends Phaser.Scene {
 
   private audioAdapter!: IGameAudioAdapter;
 
-  private isFeverActive = false;
+  private activeFeverMode: TFeverMode | null = null;
 
   private lossRow = 6;
 
@@ -322,11 +323,12 @@ export default class StageScene extends Phaser.Scene {
     runtimeBridge?.onStageResetRequested(() => {
       this.resetStageToBaseline();
     });
-    runtimeBridge?.onFeverActivationRequested(() => {
-      this.isFeverActive = true;
+    runtimeBridge?.onFeverActivationRequested((mode) => {
+      this.activeFeverMode = mode;
       this.feverCollisionBonusHitsUsed = 0;
       this.updateBallVisualState();
       this.logger.info('stage.fever_activation_requested', {
+        mode,
         turnNumber: this.turnNumber
       });
     });
@@ -493,7 +495,7 @@ export default class StageScene extends Phaser.Scene {
     this.destroyedBlocksThisTurn = 0;
     this.impactEffectsThisTurn = 0;
     this.feverCollisionBonusHitsUsed = 0;
-    this.isFeverActive = false;
+    this.activeFeverMode = null;
     this.lastTrackedBallPosition = null;
     this.shotPathSegments = [];
     this.activeCollisionBlockIds.clear();
@@ -529,7 +531,7 @@ export default class StageScene extends Phaser.Scene {
     const resolution = this.runtimeProfiler.measure('turn.resolve_ms', () =>
       resolveTurn({
         board: this.boardState,
-        feverActive: this.isFeverActive,
+        activeFeverMode: this.activeFeverMode,
         gates: this.gates,
         shotPath: this.shotPathSegments,
         turnNumber: this.turnNumber,
@@ -576,6 +578,7 @@ export default class StageScene extends Phaser.Scene {
       destroyedBlocksThisTurn: this.destroyedBlocksThisTurn,
       comboBranch: resolution.comboBranch,
       feverApplied: resolution.feedbackEvents.some((event) => event.type === 'fever.activated'),
+      activeFeverMode: this.activeFeverMode,
       feverCollisionBonusHitsUsed: this.feverCollisionBonusHitsUsed,
       hasReachedLossLine: resolution.hasReachedLossLine,
       modifierTrace: resolution.modifierTrace.map((entry) => `${entry.phase}:${entry.applied}`),
@@ -588,7 +591,7 @@ export default class StageScene extends Phaser.Scene {
     this.destroyedBlocksThisTurn = 0;
     this.impactEffectsThisTurn = 0;
     this.feverCollisionBonusHitsUsed = 0;
-    this.isFeverActive = false;
+    this.activeFeverMode = null;
     this.lastTrackedBallPosition = null;
     this.shotPathSegments = [];
     this.shotState = 'idle';
@@ -750,8 +753,10 @@ export default class StageScene extends Phaser.Scene {
 
     const collisionResolution = resolveFeverCollisionBonus({
       currentHp: blockView.cell.hp,
+      activeFeverMode: this.activeFeverMode,
+      board: this.boardState,
       hitsUsed: this.feverCollisionBonusHitsUsed,
-      isFeverActive: this.isFeverActive
+      targetCell: blockView.cell
     });
     const nextHp = collisionResolution.nextHp;
 
@@ -759,10 +764,11 @@ export default class StageScene extends Phaser.Scene {
       this.feverCollisionBonusHitsUsed = collisionResolution.hitsUsed;
       this.runtimeProfiler.incrementCounter('fever_collision_bonus_hits');
       this.logger.info('stage.fever_collision_bonus_applied', {
+        mode: this.activeFeverMode,
         turnNumber: this.turnNumber,
         blockId,
         hitsUsed: this.feverCollisionBonusHitsUsed,
-        hitLimit: FEVER_COLLISION_BONUS_HIT_LIMIT
+        hitLimit: this.activeFeverMode ? FEVER_COLLISION_BONUS_HIT_LIMIT[this.activeFeverMode] : 0
       });
     }
 
@@ -789,6 +795,10 @@ export default class StageScene extends Phaser.Scene {
 
       return;
     }
+
+    collisionResolution.splashTargetIds.forEach((targetId) => {
+      this.applySplashDamage(targetId);
+    });
 
     blockView.cell.hp = nextHp;
     blockView.label.setText(String(nextHp));
@@ -996,9 +1006,23 @@ export default class StageScene extends Phaser.Scene {
       return;
     }
 
-    if (this.isFeverActive) {
+    if (this.activeFeverMode === 'breaker') {
       this.ball.setFillStyle(0xfff2c7, 1);
-      this.ball.setStrokeStyle(3, 0xff6fb0, 1);
+      this.ball.setStrokeStyle(3, 0xff9a54, 1);
+      this.ball.setScale(1.08);
+      return;
+    }
+
+    if (this.activeFeverMode === 'pierce') {
+      this.ball.setFillStyle(0xe3fbff, 1);
+      this.ball.setStrokeStyle(3, 0x52d9ff, 1);
+      this.ball.setScale(1.06);
+      return;
+    }
+
+    if (this.activeFeverMode === 'pulse') {
+      this.ball.setFillStyle(0xffe3f3, 1);
+      this.ball.setStrokeStyle(3, 0xff5db1, 1);
       this.ball.setScale(1.08);
       return;
     }
@@ -1006,6 +1030,45 @@ export default class StageScene extends Phaser.Scene {
     this.ball.setFillStyle(0xffffff, 1);
     this.ball.setStrokeStyle(2, 0x78e3ff, 0.9);
     this.ball.setScale(1);
+  }
+
+  private applySplashDamage(blockId: string) {
+    const splashBlockView = this.blockViews.get(blockId);
+
+    if (!splashBlockView) {
+      return;
+    }
+
+    this.emitBlockImpactFeedback({
+      x: splashBlockView.rectangle.x,
+      y: splashBlockView.rectangle.y,
+      destroyed: splashBlockView.cell.hp <= 1
+    });
+
+    const splashNextHp = splashBlockView.cell.hp - 1;
+
+    if (splashNextHp <= 0) {
+      splashBlockView.rectangle.destroy();
+      splashBlockView.label.destroy();
+      this.blockViews.delete(blockId);
+      this.boardState = this.boardState.filter((cell) => cell.id !== blockId);
+      this.destroyedBlocksThisTurn += 1;
+      this.runtimeHud.destroyedBlocksThisTurn = this.destroyedBlocksThisTurn;
+      this.runtimeHud.remainingBlocks = this.boardState.length;
+      this.runtimeProfiler.incrementCounter('fever_pulse_splash_destroyed');
+      this.syncHud();
+
+      if (this.boardState.length === 0) {
+        this.handleStageClear();
+      }
+
+      return;
+    }
+
+    splashBlockView.cell.hp = splashNextHp;
+    splashBlockView.label.setText(String(splashNextHp));
+    splashBlockView.rectangle.setFillStyle(resolveBlockColor(splashNextHp), 0.92);
+    this.runtimeProfiler.incrementCounter('fever_pulse_splash_damaged');
   }
 
   private updateStagePrompt() {

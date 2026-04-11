@@ -1,5 +1,6 @@
 import type { IStageBoardCell } from '../entities/stage-board';
 import type { IStageGate, TShotPath } from '../entities/stage-gates';
+import type { TFeverMode } from './fever-overdrive';
 import {
   appendModifierTrace,
   applyFeverModifiers,
@@ -12,8 +13,8 @@ import {
 } from '../mechanics/gate-modifier-pipeline.js';
 
 export interface ITurnResolutionInput {
+  activeFeverMode?: TFeverMode | null;
   board: IStageBoardCell[];
-  feverActive?: boolean;
   gates?: IStageGate[];
   shotPath?: TShotPath | null;
   turnNumber: number;
@@ -32,8 +33,8 @@ export interface ITurnResolutionResult {
 }
 
 export function resolveTurn({
+  activeFeverMode,
   board,
-  feverActive,
   gates,
   shotPath,
   turnNumber,
@@ -51,13 +52,13 @@ export function resolveTurn({
         }
       ),
       {
-        feverActive,
+        activeFeverMode,
         gates,
         shotPath
       }
     ),
     {
-      feverActive,
+      activeFeverMode,
       gates,
       shotPath
     }

@@ -16,7 +16,8 @@ test('turn feedback emitter escalates combo moments through dedicated commands',
       {
         type: 'fever.activated',
         affectedCellIds: ['block-z', 'block-y', 'block-x'],
-        bonusHits: 3
+        bonusHits: 3,
+        mode: 'pulse'
       }
     ]
   });
@@ -35,7 +36,8 @@ test('turn feedback emitter gives fever-only turns a stronger overdrive plan', (
       {
         type: 'fever.activated',
         affectedCellIds: ['block-a', 'block-b'],
-        bonusHits: 2
+        bonusHits: 2,
+        mode: 'breaker'
       }
     ]
   });

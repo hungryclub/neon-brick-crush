@@ -1,6 +1,10 @@
 import { assign, createActor, fromPromise, setup } from 'xstate';
 
 import type { TRewardedAdOutcome } from '../../platform/monetization/monetization-result.ts';
+import {
+  resolveReadyFeverMode,
+  type TFeverMode
+} from '../../game/systems/fever-overdrive.ts';
 import createMonetizationService from '../services/monetization.service.ts';
 
 const FEVER_CHARGE_PER_BLOCK = 30;
@@ -8,6 +12,7 @@ const FEVER_CHARGE_PER_GATE = 10;
 const FEVER_METER_MAX = 100;
 
 interface ISessionContext {
+  activeFeverMode: TFeverMode | null;
   feverMeter: number;
   isFeverActive: boolean;
   hasConsumedRewardedRetry: boolean;
@@ -64,7 +69,7 @@ export function createSessionMachine({
     },
     guards: {
       canActivateFever: ({ context }) =>
-        context.feverMeter >= FEVER_METER_MAX && !context.isFeverActive,
+        resolveReadyFeverMode(context.feverMeter) !== null && !context.isFeverActive,
       canUseRewardedRetry: ({ context }) => !context.hasConsumedRewardedRetry,
       rewardedRetryGranted: ({ event }) =>
         'output' in event &&
@@ -83,6 +88,26 @@ export function createSessionMachine({
       incrementRetryCount: assign({
         retryCount: ({ context }) => context.retryCount + 1
       }),
+      activateFever: assign({
+        feverMeter: 0,
+        isFeverActive: true,
+        activeFeverMode: ({ context }) => resolveReadyFeverMode(context.feverMeter)
+      }),
+      consumeRewardedRetry: assign({
+        hasConsumedRewardedRetry: true,
+        retryCount: ({ context }) => context.retryCount + 1
+      }),
+      resetSessionProgress: assign({
+        activeFeverMode: null,
+        feverMeter: 0,
+        isFeverActive: false,
+        hasConsumedRewardedRetry: false,
+        retryCount: 0
+      }),
+      clearActiveFever: assign({
+        activeFeverMode: null,
+        isFeverActive: false
+      }),
       resolveFeverTurn: assign({
         feverMeter: ({ context, event }) => {
           if (event.type !== 'TURN_RESOLVED') {
@@ -92,9 +117,8 @@ export function createSessionMachine({
           const addedCharge =
             event.payload.destroyedBlocksThisTurn * FEVER_CHARGE_PER_BLOCK +
             event.payload.gateTriggeredCount * FEVER_CHARGE_PER_GATE;
-          const nextMeter = Math.min(context.feverMeter + addedCharge, FEVER_METER_MAX);
 
-          return context.isFeverActive ? nextMeter : nextMeter;
+          return Math.min(context.feverMeter + addedCharge, FEVER_METER_MAX);
         },
         isFeverActive: ({ context, event }) => {
           if (event.type !== 'TURN_RESOLVED') {
@@ -102,30 +126,21 @@ export function createSessionMachine({
           }
 
           return context.isFeverActive ? false : context.isFeverActive;
+        },
+        activeFeverMode: ({ context, event }) => {
+          if (event.type !== 'TURN_RESOLVED') {
+            return context.activeFeverMode;
+          }
+
+          return context.isFeverActive ? null : context.activeFeverMode;
         }
-      }),
-      activateFever: assign({
-        feverMeter: 0,
-        isFeverActive: true
-      }),
-      consumeRewardedRetry: assign({
-        hasConsumedRewardedRetry: true,
-        retryCount: ({ context }) => context.retryCount + 1
-      }),
-      resetSessionProgress: assign({
-        feverMeter: 0,
-        isFeverActive: false,
-        hasConsumedRewardedRetry: false,
-        retryCount: 0
-      }),
-      clearActiveFever: assign({
-        isFeverActive: false
       })
     }
   }).createMachine({
     id: 'session',
     initial: 'booting',
     context: {
+      activeFeverMode: null,
       feverMeter: 0,
       isFeverActive: false,
       hasConsumedRewardedRetry: false,

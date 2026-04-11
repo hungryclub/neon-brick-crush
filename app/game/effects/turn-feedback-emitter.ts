@@ -32,6 +32,8 @@ export function createTurnFeedbackPlan({
     (event): event is IFeverFeedbackEvent => event.type === 'fever.activated'
   );
   const feverBonusHits = feverEvents.reduce((total, event) => total + event.bonusHits, 0);
+  const dominantFeverMode =
+    feverEvents.length > 0 ? feverEvents[feverEvents.length - 1]?.mode ?? null : null;
 
   gateEvents.forEach((event) => {
     commands.push({ type: 'gate-pulse', gateId: event.gateId });
@@ -39,7 +41,16 @@ export function createTurnFeedbackPlan({
 
   if (branch === 'gate-fever-combo') {
     commands.push(
-      { type: 'camera-flash', duration: 220, color: [255, 196, 120] },
+      {
+        type: 'camera-flash',
+        duration: 220,
+        color:
+          dominantFeverMode === 'pierce'
+            ? [122, 231, 255]
+            : dominantFeverMode === 'pulse'
+              ? [255, 120, 220]
+              : [255, 196, 120]
+      },
       { type: 'camera-shake', duration: 180, intensity: 0.0048 },
       { type: 'haptic-pulse', intensity: 'strong' },
       ...(feverBonusHits >= 3
@@ -49,8 +60,21 @@ export function createTurnFeedbackPlan({
     );
   } else if (feverEvents.length > 0) {
     commands.push(
-      { type: 'camera-flash', duration: 200, color: [255, 120, 220] },
-      { type: 'camera-shake', duration: 130, intensity: 0.0036 },
+      {
+        type: 'camera-flash',
+        duration: dominantFeverMode === 'pierce' ? 170 : 200,
+        color:
+          dominantFeverMode === 'pierce'
+            ? [122, 231, 255]
+            : dominantFeverMode === 'breaker'
+              ? [255, 188, 96]
+              : [255, 120, 220]
+      },
+      {
+        type: 'camera-shake',
+        duration: 130,
+        intensity: dominantFeverMode === 'breaker' ? 0.0042 : 0.0036
+      },
       { type: 'haptic-pulse', intensity: 'medium' },
       { type: 'sfx-cue', cue: 'fever-hit' }
     );

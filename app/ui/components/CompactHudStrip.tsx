@@ -2,7 +2,9 @@ import type { IRuntimeHudSnapshot } from '../../game/hud-bridges/game-runtime-br
 
 interface ICompactHudStripProps {
   canActivateFever: boolean;
+  feverHudValue: string;
   feverMeter: number;
+  feverTone: 'neutral' | 'breaker' | 'pierce' | 'pulse';
   isFeverActive: boolean;
   runtimeHud: IRuntimeHudSnapshot;
   sessionPhase: string;
@@ -10,7 +12,9 @@ interface ICompactHudStripProps {
 
 export default function CompactHudStrip({
   canActivateFever,
+  feverHudValue,
   feverMeter,
+  feverTone,
   isFeverActive,
   runtimeHud,
   sessionPhase
@@ -18,7 +22,7 @@ export default function CompactHudStrip({
   const aimAngleLabel =
     runtimeHud.aimAngle === null ? 'ready' : `${Math.round(runtimeHud.aimAngle)}d`;
   const dangerPercent = `${Math.round(runtimeHud.dangerLevel * 100)}%`;
-  const feverLabel = isFeverActive ? 'on' : canActivateFever ? 'ready' : `${Math.round(feverMeter)}%`;
+  const feverLabel = isFeverActive || canActivateFever ? feverHudValue : `${Math.round(feverMeter)}%`;
 
   return (
     <div style={stripStyle}>
@@ -27,7 +31,7 @@ export default function CompactHudStrip({
       <HudPill label='Aim' value={aimAngleLabel} />
       <HudPill label='Blk' value={String(runtimeHud.remainingBlocks)} />
       <HudPill label='Dng' value={dangerPercent} />
-      <HudPill label='Fvr' value={feverLabel} />
+      <HudPill label='Fvr' tone={feverTone} value={feverLabel} />
       <HudPill label='Shot' value={runtimeHud.shotState} />
     </div>
   );
@@ -35,17 +39,44 @@ export default function CompactHudStrip({
 
 function HudPill({
   label,
+  tone = 'neutral',
   value
 }: {
   label: string;
+  tone?: 'neutral' | 'breaker' | 'pierce' | 'pulse';
   value: string;
 }) {
   return (
-    <div style={pillStyle}>
+    <div style={{ ...pillStyle, ...resolveToneStyle(tone) }}>
       <span style={labelStyle}>{label}</span>
       <strong style={valueStyle}>{value}</strong>
     </div>
   );
+}
+
+function resolveToneStyle(tone: 'neutral' | 'breaker' | 'pierce' | 'pulse') {
+  if (tone === 'breaker') {
+    return {
+      background: 'rgba(255, 181, 71, 0.22)',
+      border: '1px solid rgba(255, 196, 120, 0.34)'
+    } as const;
+  }
+
+  if (tone === 'pierce') {
+    return {
+      background: 'rgba(82, 217, 255, 0.18)',
+      border: '1px solid rgba(128, 235, 255, 0.34)'
+    } as const;
+  }
+
+  if (tone === 'pulse') {
+    return {
+      background: 'rgba(255, 93, 177, 0.22)',
+      border: '1px solid rgba(255, 143, 211, 0.34)'
+    } as const;
+  }
+
+  return {};
 }
 
 const stripStyle = {

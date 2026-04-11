@@ -1,3 +1,5 @@
+import type { TFeverMode } from '../systems/fever-overdrive.ts';
+
 type RuntimeReadyListener = () => void;
 type RuntimeHudListener = (snapshot: IRuntimeHudSnapshot) => void;
 type RuntimeStageFailedListener = () => void;
@@ -5,7 +7,7 @@ type RuntimeStageClearedListener = () => void;
 type RuntimeStageResetCompletedListener = () => void;
 type RuntimeStageResetRequestedListener = () => void;
 type RuntimeTurnResolvedListener = (payload: ITurnResolvedPayload) => void;
-type RuntimeFeverActivationRequestedListener = () => void;
+type RuntimeFeverActivationRequestedListener = (mode: TFeverMode) => void;
 type RuntimeForceFailureRequestedListener = () => void;
 type RuntimeDebugListener = (snapshot: IRuntimeDebugSnapshot) => void;
 
@@ -73,7 +75,7 @@ export interface IGameRuntimeBridge {
   onStageResetCompleted: (listener: RuntimeStageResetCompletedListener) => () => void;
   signalTurnResolved: (payload: ITurnResolvedPayload) => void;
   onTurnResolved: (listener: RuntimeTurnResolvedListener) => () => void;
-  requestFeverActivation: () => void;
+  requestFeverActivation: (mode: TFeverMode) => void;
   onFeverActivationRequested: (listener: RuntimeFeverActivationRequestedListener) => () => void;
   requestForcedFailure: () => void;
   onForcedFailureRequested: (listener: RuntimeForceFailureRequestedListener) => () => void;
@@ -164,8 +166,8 @@ export default function createGameRuntimeBridge(): IGameRuntimeBridge {
         runtimeTurnResolvedListeners.delete(listener);
       };
     },
-    requestFeverActivation() {
-      runtimeFeverActivationRequestedListeners.forEach((listener) => listener());
+    requestFeverActivation(mode) {
+      runtimeFeverActivationRequestedListeners.forEach((listener) => listener(mode));
     },
     onFeverActivationRequested(listener) {
       runtimeFeverActivationRequestedListeners.add(listener);

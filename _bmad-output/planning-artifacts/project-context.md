@@ -38,6 +38,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 ### Mobile Layout Rules
 
 - 모바일 구현은 `/Users/dhlee/Desktop/projects/ai-orchestrator/bmad-projects/neo-brick-crush/_bmad-output/planning-artifacts/mobile-layout-spec.md`를 우선 기준으로 삼는다.
+- Fever tier/mode 구현은 `/Users/dhlee/Desktop/projects/ai-orchestrator/bmad-projects/neo-brick-crush/_bmad-output/planning-artifacts/tiered-fever-system-spec.md`를 우선 기준으로 삼는다.
 - 모바일 플레이 화면은 `스테이지 정보 바 -> 게임 영역 -> HUD 7개 한 줄` 구조를 유지한다.
 - 모바일 HUD는 절대 두 줄로 래핑되면 안 된다.
 - Fever 버튼은 별도 하단 행이 아니라 게임 영역 하단 중앙의 보조 액션이다.
