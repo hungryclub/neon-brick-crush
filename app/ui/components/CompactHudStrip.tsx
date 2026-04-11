@@ -6,18 +6,13 @@ interface ICompactHudStripProps {
 }
 
 export default function CompactHudStrip({
-  columns = 4,
+  columns: _columns = 4,
   runtimeHud
 }: ICompactHudStripProps) {
   const dangerPercent = `${Math.round(runtimeHud.dangerLevel * 100)}%`;
 
   return (
-    <div
-      style={{
-        ...stripStyle,
-        gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`
-      }}
-    >
+    <div style={stripStyle}>
       <HudPill label='Turn' value={String(runtimeHud.turnNumber)} />
       <HudPill label='Blocks' value={String(runtimeHud.remainingBlocks)} />
       <HudPill label='Danger' value={dangerPercent} />
@@ -42,14 +37,19 @@ function HudPill({
 }
 
 const stripStyle = {
-  display: 'grid',
+  display: 'flex',
+  flexWrap: 'nowrap',
+  alignItems: 'stretch',
   gap: 2,
   width: '100%',
   minWidth: 0,
+  maxWidth: '100%',
+  overflow: 'hidden',
   boxSizing: 'border-box'
 } as const;
 
 const pillStyle = {
+  flex: '1 1 0',
   minWidth: 0,
   minHeight: 32,
   padding: '4px 5px 5px',
