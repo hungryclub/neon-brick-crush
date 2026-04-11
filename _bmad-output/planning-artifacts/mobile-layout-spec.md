@@ -74,6 +74,13 @@ relatedDocuments:
 - HUD보다 큰 세로 공간 차지 금지
 - 프롬프트/공/조준선과 겹침 최소화
 
+## Mobile Map Contract
+
+- 모바일 `Play Selected Stage` CTA는 단순히 화면만 `map -> play`로 전환하면 안 된다.
+- 해당 CTA는 현재 선택된 stage를 실제 플레이 부팅 경로로 다시 태워야 한다.
+- 모바일에서 map mode를 나와 play mode로 돌아올 때는 선택된 stage의 runtime이 유효한 부모 DOM에서 다시 생성되거나 reset되어야 한다.
+- `shot launched` 같은 이전 runtime 잔상이 남은 채 빈 게임 프레임만 보이는 상태는 실패한 구현이다.
+
 ## Game Area Contract
 
 ### Height

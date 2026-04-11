@@ -26,6 +26,7 @@ interface IMobileMapLayoutProps {
   hasPurchasedFeaturedPack: boolean;
   isPurchasePending: boolean;
   onBackToPlay: () => void;
+  onPlaySelectedStage: (selection: IStageSelection) => void;
   onPurchaseFeatured: () => void;
   onSelectStage: (selection: IStageSelection) => void;
   purchaseFeedback: string | null;
@@ -38,6 +39,7 @@ export default function MobileMapLayout({
   hasPurchasedFeaturedPack,
   isPurchasePending,
   onBackToPlay,
+  onPlaySelectedStage,
   onPurchaseFeatured,
   onSelectStage,
   purchaseFeedback,
@@ -116,7 +118,12 @@ export default function MobileMapLayout({
               style={primaryActionStyle}
               type='button'
               disabled={!selectedStageCard.isUnlocked}
-              onClick={onBackToPlay}
+              onClick={() => {
+                onPlaySelectedStage({
+                  worldId: selectedStageCard.worldId,
+                  stageId: selectedStageCard.stageId
+                });
+              }}
             >
               Play Selected Stage
             </button>

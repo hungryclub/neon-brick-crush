@@ -144,6 +144,9 @@ export default function GameShell() {
         () => null
       )
     : null;
+  const isCompactLayout = viewportWidth < 1080;
+  const isMobileLayout = viewportWidth < 760;
+  const shouldMountRuntime = !isMobileLayout || mobileView === 'play';
 
   useEffect(() => {
     const handleResize = () => {
@@ -372,7 +375,7 @@ export default function GameShell() {
   }, [latestEventClaimError]);
 
   useEffect(() => {
-    if (!runtimeHostRef.current || isProgressionLoading) return;
+    if (!shouldMountRuntime || !runtimeHostRef.current || isProgressionLoading) return;
 
     const runtimeBridge = createGameRuntimeBridge();
     runtimeBridgeRef.current = runtimeBridge;
@@ -438,6 +441,7 @@ export default function GameShell() {
   }, [
     activeStageSelection,
     isProgressionLoading,
+    shouldMountRuntime,
     storeSetHasRuntime,
     storeSetRuntimeDebug,
     storeSetRuntimeHud
@@ -523,12 +527,11 @@ export default function GameShell() {
     }
   }
 
-  const isCompactLayout = viewportWidth < 1080;
-  const isMobileLayout = viewportWidth < 760;
   const handleOpenMobileMap = () => {
     setMobileView('map');
   };
   const handleReturnToPlay = () => {
+    sessionActor.send({ type: 'RESET_SESSION' });
     setMobileView('play');
   };
   const handleSelectStage = (selection: IStageSelection) => {
@@ -549,6 +552,9 @@ export default function GameShell() {
       });
     sessionActor.send({ type: 'RESET_SESSION' });
     setMobileView('play');
+  };
+  const handlePlaySelectedStage = (selection: IStageSelection) => {
+    handleSelectStage(selection);
   };
   const handleClaimEventReward = (claim: { eventId: string; rewardId: string }) => {
     loggerRef.current.info('event.claim_attempted', {
@@ -684,6 +690,7 @@ export default function GameShell() {
             hasPurchasedFeaturedPack={hasPurchasedFeaturedPack}
             isPurchasePending={isPurchasePending}
             onBackToPlay={handleReturnToPlay}
+            onPlaySelectedStage={handlePlaySelectedStage}
             onPurchaseFeatured={handlePurchaseFeatured}
             onSelectStage={handleSelectStage}
             purchaseFeedback={purchaseFeedback}
