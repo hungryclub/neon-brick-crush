@@ -76,6 +76,8 @@ _Architecture handoff ready._
 - 웹 빌드 용량 제한 고려
 - 강한 네온 연출과 가독성/성능의 균형 필요
 - 모바일 플레이 화면은 `스테이지 정보 바 -> 남는 높이를 모두 쓰는 게임 영역 -> HUD 7개 한 줄` 구조를 따른다
+- 모바일 입력은 런처의 작은 터치 타깃이 아니라 플레이 영역 기반 조준 시작을 허용해야 한다
+- 모바일 실패 판정은 보이는 `LOSS LINE`을 실제로 넘는 첫 row에 맞춰야 한다
 
 ### Complexity Drivers
 
@@ -96,6 +98,7 @@ _Architecture handoff ready._
 - QA와 자동화가 가능한 수준으로 분기와 상태를 테스트 가능하게 유지한다
 - 모바일 레이아웃은 `mobile-layout-spec.md`를 우선 참조하고, 현재 구현 코드보다 문서 기준을 우선한다
 - Fever 체감 강화 방향은 `fever-enhancement-spec.md`를 우선 참조하고, 현재의 약한 정산형 효과를 최종안으로 간주하지 않는다
+- preview/boot 안정성은 기능적 요구사항으로 간주하며, load failure, stale stage selection, physics 설정 누락이 검은 캔버스나 영구 booting 상태를 만들면 안 된다
 
 ### Technical Risks
 

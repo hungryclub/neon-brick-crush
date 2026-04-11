@@ -43,6 +43,8 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - Fever 버튼은 별도 하단 행이 아니라 게임 영역 하단 중앙의 보조 액션이다.
 - 모바일 게임 영역은 스테이지 정보 바와 HUD 사이의 남는 높이를 거의 전부 사용해야 한다.
 - Phaser 보드/블록/런처 위치는 모바일 폭과 높이에 맞게 재계산되어야 하며, 블록이 잘리면 구현이 잘못된 것이다.
+- 모바일 조준 시작은 좁은 런처 히트존이 아니라 플레이 가능 영역 드래그를 허용해야 한다.
+- 모바일 `LOSS LINE`은 보이는 선을 실제로 넘는 row에서만 실패해야 하며, 선 바로 위 row에서 조기 종료되면 안 된다.
 
 ### Engine-Specific Rules
 
@@ -51,6 +53,9 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - `Zustand = lightweight UI/view state only`. Do not duplicate session truth in Zustand.
 - `React = presentation only`. UI renders state and dispatches intents; it does not own gameplay rules.
 - Use `GameRuntimeBridge` / HUD bridge for Phaser-to-XState-to-React wiring. Do not couple Scene code to React state.
+- Phaser runtime boot must always include the required physics system; a mounted canvas without a working Scene is not a successful boot.
+- preview or persistence load failures must degrade to a safe default boot path rather than trapping the shell in `booting`.
+- stale saved stage ids must fall back to the default stage instead of crashing the shell.
 
 ### Performance Rules
 
