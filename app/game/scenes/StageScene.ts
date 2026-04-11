@@ -46,6 +46,7 @@ import {
   resolveFeverCollisionBonus,
   type TFeverMode
 } from '../systems/fever-overdrive';
+import { resolvePulseBlastTargetIds as resolvePulseBlastTargets } from '../systems/pulse-blast';
 import {
   GAME_RUNTIME_BRIDGE_REGISTRY_KEY,
   STAGE_RUNTIME_CONFIG_REGISTRY_KEY
@@ -820,12 +821,12 @@ export default class StageScene extends Phaser.Scene {
     this.runtimeProfiler.incrementCounter('block_hit_events');
     const pulseTargetIds =
       collisionResolution.bonusApplied && this.activeFeverMode === 'pulse'
-        ? this.resolvePulseBlastTargetIds(blockId)
+        ? this.resolvePulseBlastTargetIds(blockId, this.ball.x, this.ball.y)
         : [];
 
     if (pulseTargetIds.length > 0) {
       this.highlightPulseArea(pulseTargetIds);
-      this.emitPulseBlast(blockView.rectangle);
+      this.emitPulseBlast(this.ball.x, this.ball.y);
     }
 
     if (collisionResolution.splashTargetIds.length > 0 || collisionResolution.chainPulseTargetIds.length > 0) {
@@ -1173,56 +1174,27 @@ export default class StageScene extends Phaser.Scene {
     this.pulsePreviewRing.setPosition(this.ball.x, this.ball.y);
   }
 
-  private resolvePulseBlastTargetIds(targetBlockId: string) {
-    const targetBlockView = this.blockViews.get(targetBlockId);
-
-    if (!targetBlockView) {
-      return [];
-    }
-
-    return [...this.blockViews.values()]
-      .filter((blockView) => blockView.cell.id !== targetBlockId)
-      .filter((blockView) => {
-        const distance = Phaser.Math.Distance.Between(
-          targetBlockView.rectangle.x,
-          targetBlockView.rectangle.y,
-          blockView.rectangle.x,
-          blockView.rectangle.y
-        );
-
-        return distance <= PULSE_PREVIEW_RADIUS;
-      })
-      .sort((left, right) => {
-        const leftDistance = Phaser.Math.Distance.Between(
-          targetBlockView.rectangle.x,
-          targetBlockView.rectangle.y,
-          left.rectangle.x,
-          left.rectangle.y
-        );
-        const rightDistance = Phaser.Math.Distance.Between(
-          targetBlockView.rectangle.x,
-          targetBlockView.rectangle.y,
-          right.rectangle.x,
-          right.rectangle.y
-        );
-
-        if (leftDistance !== rightDistance) {
-          return leftDistance - rightDistance;
-        }
-
-        if (right.cell.hp !== left.cell.hp) {
-          return right.cell.hp - left.cell.hp;
-        }
-
-        return left.cell.id.localeCompare(right.cell.id);
-      })
-      .map((blockView) => blockView.cell.id);
+  private resolvePulseBlastTargetIds(targetBlockId: string, centerX: number, centerY: number) {
+    return resolvePulseBlastTargets({
+      sourceId: targetBlockId,
+      centerX,
+      centerY,
+      radius: PULSE_PREVIEW_RADIUS,
+      candidates: [...this.blockViews.values()].map((blockView) => ({
+        id: blockView.cell.id,
+        x: blockView.rectangle.x,
+        y: blockView.rectangle.y,
+        width: blockView.rectangle.width,
+        height: blockView.rectangle.height,
+        hp: blockView.cell.hp
+      }))
+    });
   }
 
-  private emitPulseBlast(targetRectangle: Phaser.GameObjects.Rectangle) {
+  private emitPulseBlast(centerX: number, centerY: number) {
     const ring = this.add.circle(
-      targetRectangle.x,
-      targetRectangle.y,
+      centerX,
+      centerY,
       PULSE_PREVIEW_RADIUS,
       0xff77cd,
       0.05
