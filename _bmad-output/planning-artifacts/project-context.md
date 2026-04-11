@@ -43,6 +43,10 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - 모바일 HUD는 절대 두 줄로 래핑되면 안 된다.
 - Fever 버튼은 별도 하단 행이 아니라 게임 영역 하단 중앙의 보조 액션이다.
 - 모바일 게임 영역은 스테이지 정보 바와 HUD 사이의 남는 높이를 거의 전부 사용해야 한다.
+- 모바일 map mode에서는 `Buy Supporter Pack` support card가 화면 하단에서 잘리면 안 된다.
+- support card의 bottom border와 viewport 끝 사이에는 시각적으로 분명한 breathing room이 있어야 한다.
+- support card를 지키기 위해 필요한 경우, stage grid와 selected-stage card를 담는 map card만 내부 스크롤되고 support card는 하단 고정 섹션으로 유지한다.
+- 모바일 stage card 텍스트는 작은 카드 안에서도 읽히는 크기를 유지해야 하며, border와 텍스트 사이 padding이 지나치게 빡빡하면 안 된다.
 - Phaser 보드/블록/런처 위치는 모바일 폭과 높이에 맞게 재계산되어야 하며, 블록이 잘리면 구현이 잘못된 것이다.
 - 모바일 조준 시작은 좁은 런처 히트존이 아니라 플레이 가능 영역 드래그를 허용해야 한다.
 - 모바일 `LOSS LINE`은 보이는 선을 실제로 넘는 row에서만 실패해야 하며, 선 바로 위 row에서 조기 종료되면 안 된다.

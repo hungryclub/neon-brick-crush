@@ -80,6 +80,12 @@ relatedDocuments:
 - 해당 CTA는 현재 선택된 stage를 실제 플레이 부팅 경로로 다시 태워야 한다.
 - 모바일에서 map mode를 나와 play mode로 돌아올 때는 선택된 stage의 runtime이 유효한 부모 DOM에서 다시 생성되거나 reset되어야 한다.
 - `shot launched` 같은 이전 runtime 잔상이 남은 채 빈 게임 프레임만 보이는 상태는 실패한 구현이다.
+- 모바일 map mode에서는 하단 `Buy Supporter Pack` support card가 화면 끝에 잘려 보이면 안 된다.
+- support card의 bottom border와 화면 끝 사이에는 눈에 보이는 여백이 유지돼야 한다.
+- support card를 항상 보이게 하기 위해 필요한 경우, map stage grid와 selected-stage card가 들어 있는 상단 map card만 내부 스크롤될 수 있다.
+- 페이지 전체가 아니라 map card 내부만 스크롤되어야 하며, support card는 바깥 레이아웃의 고정 하단 섹션으로 남아야 한다.
+- stage card는 모바일에서도 읽기 쉬운 텍스트 크기를 유지해야 하며, border와 텍스트가 지나치게 붙어 보이지 않도록 충분한 내부 padding을 둬야 한다.
+- selected-stage CTA와 support CTA는 카드 높이를 잡아먹을 정도로 과도하게 커지면 안 되며, 카드 콘텐츠를 압박하지 않는 컴팩트 높이를 유지해야 한다.
 
 ## Game Area Contract
 
