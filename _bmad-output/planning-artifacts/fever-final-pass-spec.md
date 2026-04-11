@@ -29,8 +29,8 @@ relatedDocuments:
 - `Breaker Ready`: `45`
 - `Pierce Ready`: `85`
 - `Pulse Ready`: `130`
-- 블록 파괴 charge: `+15`
-- gate trigger charge: `+5`
+- direct block hit charge: `+15`
+- gate trigger charge: `+0`
 
 ## Pierce Final Behavior
 
@@ -51,12 +51,20 @@ relatedDocuments:
 - preview 또는 시각 효과와 무관한 블록이 부서지면 안 된다.
 - affected block 영역은 rectangle flash 또는 ring으로 시각화한다.
 - `Pulse`는 가장 드라마틱한 Fever여야 한다.
+- preview 포함 판정은 블록 중심점이 아니라 `원형 영역과 블록 사각형의 실제 교차` 기준으로 계산한다.
+- preview 반경 안에 포함된 블록은 HP와 관계없이 한 번에 파괴되어야 한다.
 
 ## Breaker Final Behavior
 
 - Breaker는 `직접 충돌한 블록`만 강화 대상으로 삼는다.
 - 직접 부딪히지 않은 블록은 Breaker 때문에 파괴되면 안 된다.
 - Breaker 효과는 Scene 충돌 결과에 한정되며, 턴 종료 후 임의 후처리 파괴를 만들지 않는다.
+
+## Fever Charge Contract
+
+- Fever 게이지는 `직접 블록 충돌 수`만 기준으로 오른다.
+- 게이트 통과, resolver 보너스 파괴, splash 파괴만으로는 게이지가 오르면 안 된다.
+- 플레이어는 `실제로 공으로 맞혔다`는 감각과 Fever 충전을 연결해서 읽을 수 있어야 한다.
 
 ## Mobile Bottom Lane Contract
 

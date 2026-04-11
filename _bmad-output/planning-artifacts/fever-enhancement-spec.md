@@ -100,9 +100,10 @@ Fever는 다음 조건을 만족해야 한다.
 
 - Fever가 여러 종류로 확장될 경우, mode/tier 정책은 `tiered-fever-system-spec.md`를 우선 기준으로 삼는다.
 - 모바일 플레이 화면에서는 기존 stage prompt 위치를 Fever 상태 안내와 공유해야 하며, `active > ready > base prompt` 우선순위를 따른다.
-- 밸런스 기본값은 `block +15`, `gate +5`, tier threshold `45 / 85 / 130`을 기준으로 잡는다.
+- 밸런스 기본값은 `direct block hit +15`, `gate +0`, tier threshold `45 / 85 / 130`을 기준으로 잡는다.
 - `Pierce`는 이름만 관통형이어서는 안 되며, 실제 Scene 충돌에서 반사 없이 다음 타깃으로 이어지는 체감이 있어야 한다.
 - `Pulse`는 최상위 티어이므로 중심 강타 + 다방향 splash + 연쇄 mini pulse를 기본 방향으로 삼는다.
+- `Pulse`는 이동 중 proximity 파괴가 아니라 충돌 순간 폭발로 정의하며, preview 반경과 실제 파괴 반경은 같은 규칙을 사용해야 한다.
 
 ## Recommended Behavior
 
@@ -133,6 +134,10 @@ Fever 턴에는 아래 3층 효과가 동시에 적용된다.
 
 기본 권장안:
 - 첫 3회 충돌에서 맞은 블록을 즉시 파괴
+
+추가 구현 규칙:
+- Fever 게이지는 직접 블록 충돌 수를 기준으로만 오른다.
+- 게이트 통과나 resolver 후처리만으로 Fever가 오르면 안 된다.
 
 #### 3. End-of-Turn Resolver Bonus
 

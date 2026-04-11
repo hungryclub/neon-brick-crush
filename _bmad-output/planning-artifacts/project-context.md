@@ -50,6 +50,11 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - Phaser 보드/블록/런처 위치는 모바일 폭과 높이에 맞게 재계산되어야 하며, 블록이 잘리면 구현이 잘못된 것이다.
 - 모바일 조준 시작은 좁은 런처 히트존이 아니라 플레이 가능 영역 드래그를 허용해야 한다.
 - 모바일 `LOSS LINE`은 보이는 선을 실제로 넘는 row에서만 실패해야 하며, 선 바로 위 row에서 조기 종료되면 안 된다.
+- Fever 게이지는 직접 블록 충돌 수를 기준으로만 오른다. gate 통과, resolver 후처리, splash 파괴만으로 게이지가 오르면 안 된다.
+- `Pierce`는 충돌한 블록을 부수고 반사 없이 그대로 진행해야 하며, 시각적으로도 관통으로 읽혀야 한다.
+- `Pulse`는 이동 중 proximity 파괴가 아니라 충돌 순간 폭발이다.
+- `Pulse` preview ring과 실제 파괴 판정은 같은 중심/반경 규칙을 써야 하며, 포함된 블록은 사각형 교차 기준으로 판정한다.
+- `Pulse` preview 영역에 포함된 블록은 HP와 관계없이 한 번에 파괴되어야 한다.
 
 ### Engine-Specific Rules
 
