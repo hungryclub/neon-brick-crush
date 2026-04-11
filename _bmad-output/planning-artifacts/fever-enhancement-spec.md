@@ -221,3 +221,100 @@ Gate와 Fever가 같은 턴에 모두 적용되면 `gate-fever-combo` branch를 
 ## Priority Rule
 
 Fever 관련 구현이 현재 코드와 이 문서가 충돌하면, 체감 강화 목표가 더 잘 달성되는 쪽으로 구현을 수정한다. 현재 구현의 "보드 1개 추가 제거"는 최종 목표가 아니라 임시 단계로 본다.
+
+## Implementation Status
+
+### Applied After Spec Link
+
+`[Execution] Dave: Fever 강화 설계 문서 연결` 이후, 이 문서의 권장 방향인 `Option B: One Turn Overdrive` 기준으로 실제 코드 반영을 진행했다.
+
+적용 커밋:
+
+- `7bafbff` `[Execution] Dave: Fever 오버드라이브 구현과 테스트 보강`
+
+### Implemented Scope
+
+#### 1. Scene Overdrive Feedback
+
+`StageScene.ts` 에 Fever 활성 직후 공 비주얼 상태가 즉시 바뀌도록 반영했다.
+
+- Fever active 시 공 fill/stroke/color를 강화
+- Fever active 시 공 scale을 소폭 올려 일반 턴과 구분
+- Fever 시작, 턴 종료, reset 시점마다 비주얼 상태를 동기화
+
+현재 구현은 충돌 반경 자체를 바꾸지 않고, 플레이어가 즉시 인지할 수 있는 시각 상태만 강화한다.
+
+#### 2. In-Turn Collision Bonus
+
+`fever-overdrive.ts` 를 추가해 Fever 턴의 첫 `3회 충돌`에 대해 추가 파괴 보너스를 분리된 규칙으로 구현했다.
+
+- 기본 hit로 HP가 남는 블록도 Fever bonus hit 구간에서는 즉시 제거
+- bonus hit 사용 횟수는 Scene이 관리
+- turn 중 `fever_collision_bonus_hits` profiler/logging 카운터를 남김
+
+이로써 Fever는 더 이상 턴 종료 시점의 작은 보정만이 아니라, 실제 플레이 중에도 체감되는 강화 턴이 되었다.
+
+#### 3. Resolver Bonus Upgrade
+
+`gate-modifier-pipeline.ts` 의 Fever modifier를 단일 블록 제거에서 다중 제거로 확장했다.
+
+- Fever 단독: 상위 위험 블록 `2개` 추가 제거
+- Gate + Fever combo: 상위 위험 블록 `3개`까지 추가 제거
+- feedback event는 `affectedCellIds[]` 와 `bonusHits` 를 함께 기록
+
+즉, resolver bonus는 이제 “블록 1개 추가 제거”가 아니라 `다중 타깃 overdrive clear`로 동작한다.
+
+#### 4. Gate + Fever Combo Branch Reinforcement
+
+`gate-fever-combo` 는 별도 강화 branch로 유지하고, 일반 Fever보다 더 강한 결과를 내도록 보강했다.
+
+- Gate 단독 branch와 구분된 combo branch 유지
+- Fever bonus hit 수 확대
+- feedback emitter에서 combo 전용 flash/shake/haptic/sfx 흐름 강화
+
+이 항목은 본 문서의 `Gate Combo Rule` 을 직접 코드에 반영한 부분이다.
+
+#### 5. Feedback Plan Reinforcement
+
+`turn-feedback-emitter.ts` 는 Fever-only 와 Gate+Fever combo 를 더 강하게 읽히는 playback command로 확장했다.
+
+- Fever-only: flash + shake + haptic + sfx
+- Gate+Fever combo: 기존 combo burst에 추가 flash를 더해 escalation 표현
+
+현재는 lightweight playback 구조를 유지하면서도, 일반 턴과 Fever 턴의 차이를 더 분명하게 전달한다.
+
+### Verification
+
+아래 테스트를 추가/보강해 Fever 관련 동작을 고정했다.
+
+- `app/tests/unit/fever-overdrive.test.mjs`
+  - 첫 3회 충돌 보너스 즉시 제거 확인
+  - bonus hit limit 이후 보너스 중단 확인
+- `app/tests/unit/turn-resolver.test.mjs`
+  - Fever-only 다중 제거 확인
+  - Gate+Fever combo branch와 다중 제거 확인
+- `app/tests/unit/turn-feedback-emitter.test.mjs`
+  - Fever-only overdrive feedback plan 확인
+  - Gate+Fever combo escalation command 확인
+
+검증 실행:
+
+- `npm run typecheck`
+- `npm run test`
+- `npm run build`
+
+모두 통과한 상태에서 반영되었다.
+
+### Current State Summary
+
+현재 Fever는 더 이상 “정산 시 블록 1개 추가 제거” 수준의 임시 구현이 아니다.
+
+현재 코드 기준의 Fever는 아래 의미를 가진다.
+
+- 플레이어가 수동으로 발동하는 `다음 1턴 오버드라이브`
+- Scene에서 즉시 보이는 비주얼 변화
+- turn 중 첫 3회 충돌 추가 파괴 보너스
+- turn 종료 정산 시 다중 블록 추가 제거
+- Gate와 결합 시 별도 강화 branch
+
+즉, 이 문서의 권장 방향은 설계 단계에만 머물지 않고 현재 구현의 기준선으로 반영된 상태다.
