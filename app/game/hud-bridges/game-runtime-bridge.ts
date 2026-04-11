@@ -14,6 +14,7 @@ type RuntimeDebugListener = (snapshot: IRuntimeDebugSnapshot) => void;
 export type TRuntimeShotState = 'idle' | 'aiming' | 'launched' | 'resolving';
 
 export interface ITurnResolvedPayload {
+  directBlockHitsThisTurn: number;
   destroyedBlocksThisTurn: number;
   feverApplied: boolean;
   gateTriggeredCount: number;

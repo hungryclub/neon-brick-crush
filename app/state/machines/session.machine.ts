@@ -9,7 +9,6 @@ import {
 import createMonetizationService from '../services/monetization.service.ts';
 
 const FEVER_CHARGE_PER_BLOCK = 15;
-const FEVER_CHARGE_PER_GATE = 5;
 
 interface ISessionContext {
   activeFeverMode: TFeverMode | null;
@@ -25,6 +24,7 @@ type TSessionEvent =
   | {
       type: 'TURN_RESOLVED';
       payload: {
+        directBlockHitsThisTurn: number;
         destroyedBlocksThisTurn: number;
         feverApplied: boolean;
         gateTriggeredCount: number;
@@ -115,8 +115,7 @@ export function createSessionMachine({
           }
 
           const addedCharge =
-            event.payload.destroyedBlocksThisTurn * FEVER_CHARGE_PER_BLOCK +
-            event.payload.gateTriggeredCount * FEVER_CHARGE_PER_GATE;
+            event.payload.directBlockHitsThisTurn * FEVER_CHARGE_PER_BLOCK;
 
           return Math.min(context.feverMeter + addedCharge, FEVER_METER_MAX);
         },

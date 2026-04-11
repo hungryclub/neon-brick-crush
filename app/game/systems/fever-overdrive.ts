@@ -205,12 +205,12 @@ export function resolveFeverCollisionBonus({
   }
 
   if (activeFeverMode === 'pierce') {
-    const shouldSpendBonus = hasBonusCapacity && currentHp > 1;
+    const shouldSpendBonus = hasBonusCapacity;
 
     return {
       bonusApplied: shouldSpendBonus,
       hitsUsed: shouldSpendBonus ? hitsUsed + 1 : hitsUsed,
-      nextHp: shouldSpendBonus ? Math.max(currentHp - 2, 0) : nextHp,
+      nextHp: shouldSpendBonus ? 0 : nextHp,
       pierceThrough: shouldSpendBonus,
       splashTargetIds: [],
       chainPulseTargetIds: []

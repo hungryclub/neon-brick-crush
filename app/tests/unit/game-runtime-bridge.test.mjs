@@ -33,6 +33,7 @@ test('game runtime bridge forwards failure and reset lifecycle signals', () => {
   runtimeBridge.requestStageReset();
   runtimeBridge.signalStageResetCompleted();
   runtimeBridge.signalTurnResolved({
+    directBlockHitsThisTurn: 2,
     destroyedBlocksThisTurn: 3,
     feverApplied: true,
     gateTriggeredCount: 1
@@ -49,6 +50,7 @@ test('game runtime bridge forwards failure and reset lifecycle signals', () => {
   assert.equal(resetRequestedCount, 1);
   assert.equal(resetCompletedCount, 1);
   assert.deepEqual(turnResolvedPayload, {
+    directBlockHitsThisTurn: 2,
     destroyedBlocksThisTurn: 3,
     feverApplied: true,
     gateTriggeredCount: 1

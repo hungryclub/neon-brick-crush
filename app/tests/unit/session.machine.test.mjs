@@ -144,6 +144,7 @@ test('session machine charges fever meter from turn results into tier 2 readines
   actor.send({
     type: 'TURN_RESOLVED',
     payload: {
+      directBlockHitsThisTurn: 2,
       destroyedBlocksThisTurn: 2,
       feverApplied: false,
       gateTriggeredCount: 1
@@ -152,13 +153,14 @@ test('session machine charges fever meter from turn results into tier 2 readines
   actor.send({
     type: 'TURN_RESOLVED',
     payload: {
+      directBlockHitsThisTurn: 4,
       destroyedBlocksThisTurn: 4,
       feverApplied: false,
       gateTriggeredCount: 0
     }
   });
 
-  assert.equal(actor.getSnapshot().context.feverMeter, 95);
+  assert.equal(actor.getSnapshot().context.feverMeter, 90);
   assert.equal(actor.getSnapshot().context.isFeverActive, false);
   assert.equal(actor.getSnapshot().context.activeFeverMode, null);
 });
@@ -173,6 +175,7 @@ test('session machine activates breaker once tier 1 is ready and clears it after
   actor.send({
     type: 'TURN_RESOLVED',
     payload: {
+      directBlockHitsThisTurn: 3,
       destroyedBlocksThisTurn: 3,
       feverApplied: false,
       gateTriggeredCount: 0
@@ -187,6 +190,7 @@ test('session machine activates breaker once tier 1 is ready and clears it after
   actor.send({
     type: 'TURN_RESOLVED',
     payload: {
+      directBlockHitsThisTurn: 1,
       destroyedBlocksThisTurn: 1,
       feverApplied: true,
       gateTriggeredCount: 0
@@ -205,6 +209,7 @@ test('session machine escalates ready fever mode by tier before activation', () 
   actor.send({
     type: 'TURN_RESOLVED',
     payload: {
+      directBlockHitsThisTurn: 6,
       destroyedBlocksThisTurn: 6,
       feverApplied: false,
       gateTriggeredCount: 0
@@ -216,6 +221,7 @@ test('session machine escalates ready fever mode by tier before activation', () 
   actor.send({
     type: 'TURN_RESOLVED',
     payload: {
+      directBlockHitsThisTurn: 9,
       destroyedBlocksThisTurn: 9,
       feverApplied: false,
       gateTriggeredCount: 0
@@ -232,6 +238,7 @@ test('session machine clears active fever even when the fever phase finds no tar
   actor.send({
     type: 'TURN_RESOLVED',
     payload: {
+      directBlockHitsThisTurn: 9,
       destroyedBlocksThisTurn: 9,
       feverApplied: false,
       gateTriggeredCount: 0
@@ -245,6 +252,7 @@ test('session machine clears active fever even when the fever phase finds no tar
   actor.send({
     type: 'TURN_RESOLVED',
     payload: {
+      directBlockHitsThisTurn: 0,
       destroyedBlocksThisTurn: 0,
       feverApplied: false,
       gateTriggeredCount: 1
@@ -252,5 +260,5 @@ test('session machine clears active fever even when the fever phase finds no tar
   });
 
   assert.equal(actor.getSnapshot().context.isFeverActive, false);
-  assert.equal(actor.getSnapshot().context.feverMeter, 5);
+  assert.equal(actor.getSnapshot().context.feverMeter, 0);
 });

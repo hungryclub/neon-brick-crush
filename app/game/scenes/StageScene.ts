@@ -99,6 +99,8 @@ export default class StageScene extends Phaser.Scene {
 
   private ball!: Phaser.GameObjects.Arc;
 
+  private pulsePreviewRing!: Phaser.GameObjects.Arc;
+
   private blockViews = new Map<string, IBlockView>();
 
   private boardState: IStageBoardCell[] = [];
@@ -132,6 +134,8 @@ export default class StageScene extends Phaser.Scene {
   private turnNumber = 1;
 
   private destroyedBlocksThisTurn = 0;
+
+  private directBlockHitsThisTurn = 0;
 
   private impactEffectsThisTurn = 0;
 
@@ -269,11 +273,13 @@ export default class StageScene extends Phaser.Scene {
 
   update() {
     if (this.shotState !== 'launched') {
+      this.syncPulsePreviewRing();
       return;
     }
 
     this.trackShotPathSegment();
     this.releaseSeparatedBlockCollisions();
+    this.syncPulsePreviewRing();
 
     const ballBody = this.ball.body as Phaser.Physics.Arcade.Body;
 
@@ -357,6 +363,17 @@ export default class StageScene extends Phaser.Scene {
   }
 
   private createBall() {
+    this.pulsePreviewRing = this.add.circle(
+      this.launcherPosition.x,
+      this.launcherPosition.y,
+      BALL_RADIUS + 18,
+      0xff77cd,
+      0.05
+    );
+    this.pulsePreviewRing.setStrokeStyle(2, 0xff9fd8, 0.34);
+    this.pulsePreviewRing.setDepth(7);
+    this.pulsePreviewRing.setVisible(false);
+
     this.ball = this.add.circle(
       this.launcherPosition.x,
       this.launcherPosition.y,
@@ -500,6 +517,7 @@ export default class StageScene extends Phaser.Scene {
     this.shotState = 'idle';
     this.turnNumber = 1;
     this.destroyedBlocksThisTurn = 0;
+    this.directBlockHitsThisTurn = 0;
     this.impactEffectsThisTurn = 0;
     this.feverCollisionBonusHitsUsed = 0;
     this.activeFeverMode = null;
@@ -570,6 +588,7 @@ export default class StageScene extends Phaser.Scene {
       this.playTurnFeedbackPlan(feedbackPlan.commands);
     });
     runtimeBridge?.signalTurnResolved({
+      directBlockHitsThisTurn: this.directBlockHitsThisTurn,
       destroyedBlocksThisTurn: this.destroyedBlocksThisTurn,
       feverApplied: resolution.feedbackEvents.some((event) => event.type === 'fever.activated'),
       gateTriggeredCount: resolution.feedbackEvents.filter((event) => event.type === 'gate.triggered')
@@ -581,6 +600,7 @@ export default class StageScene extends Phaser.Scene {
       stageId: this.stageRuntimeConfig.stageId,
       stageKind: this.stageRuntimeConfig.stageKind,
       turnNumber: this.turnNumber,
+      directBlockHitsThisTurn: this.directBlockHitsThisTurn,
       remainingBlocks: this.boardState.length,
       destroyedBlocksThisTurn: this.destroyedBlocksThisTurn,
       comboBranch: resolution.comboBranch,
@@ -596,6 +616,7 @@ export default class StageScene extends Phaser.Scene {
     });
 
     this.destroyedBlocksThisTurn = 0;
+    this.directBlockHitsThisTurn = 0;
     this.impactEffectsThisTurn = 0;
     this.feverCollisionBonusHitsUsed = 0;
     this.activeFeverMode = null;
@@ -757,6 +778,7 @@ export default class StageScene extends Phaser.Scene {
     }
 
     this.activeCollisionBlockIds.add(blockId);
+    this.directBlockHitsThisTurn += 1;
 
     const collisionResolution = resolveFeverCollisionBonus({
       currentHp: blockView.cell.hp,
@@ -1043,6 +1065,7 @@ export default class StageScene extends Phaser.Scene {
       this.ball.setFillStyle(0xfff2c7, 1);
       this.ball.setStrokeStyle(3, 0xff9a54, 1);
       this.ball.setScale(1.08);
+      this.pulsePreviewRing.setVisible(false);
       return;
     }
 
@@ -1050,6 +1073,7 @@ export default class StageScene extends Phaser.Scene {
       this.ball.setFillStyle(0xe3fbff, 1);
       this.ball.setStrokeStyle(3, 0x52d9ff, 1);
       this.ball.setScale(1.06);
+      this.pulsePreviewRing.setVisible(false);
       return;
     }
 
@@ -1057,12 +1081,18 @@ export default class StageScene extends Phaser.Scene {
       this.ball.setFillStyle(0xffe3f3, 1);
       this.ball.setStrokeStyle(3, 0xff5db1, 1);
       this.ball.setScale(1.08);
+      this.pulsePreviewRing.setVisible(true);
+      this.pulsePreviewRing.setRadius(BALL_RADIUS + 18);
+      this.pulsePreviewRing.setFillStyle(0xff77cd, 0.05);
+      this.pulsePreviewRing.setStrokeStyle(2, 0xff9fd8, 0.34);
+      this.syncPulsePreviewRing();
       return;
     }
 
     this.ball.setFillStyle(0xffffff, 1);
     this.ball.setStrokeStyle(2, 0x78e3ff, 0.9);
     this.ball.setScale(1);
+    this.pulsePreviewRing.setVisible(false);
   }
 
   private continuePierceTrajectory(targetRectangle: Phaser.GameObjects.Rectangle) {
@@ -1079,7 +1109,7 @@ export default class StageScene extends Phaser.Scene {
 
     const direction = new Phaser.Math.Vector2(directionX, directionY).normalize();
     const pierceOffset =
-      Math.max(targetRectangle.displayWidth, targetRectangle.displayHeight) * 0.9 + BALL_RADIUS;
+      Math.max(targetRectangle.displayWidth, targetRectangle.displayHeight) * 1.3 + BALL_RADIUS;
 
     this.emitPierceTrail(targetRectangle, direction);
 
@@ -1089,6 +1119,21 @@ export default class StageScene extends Phaser.Scene {
     );
     ballBody.reset(this.ball.x, this.ball.y);
     ballBody.setVelocity(direction.x * speed, direction.y * speed);
+    this.time.delayedCall(0, () => {
+      if (!ballBody.enable || this.shotState !== 'launched') {
+        return;
+      }
+
+      ballBody.setVelocity(direction.x * speed, direction.y * speed);
+    });
+  }
+
+  private syncPulsePreviewRing() {
+    if (!this.pulsePreviewRing || !this.ball) {
+      return;
+    }
+
+    this.pulsePreviewRing.setPosition(this.ball.x, this.ball.y);
   }
 
   private emitPierceTrail(

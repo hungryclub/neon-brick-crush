@@ -50,7 +50,7 @@ test('pierce fever marks early durable hits as pass-through hits', () => {
   });
 
   assert.equal(result.bonusApplied, true);
-  assert.equal(result.nextHp, 1);
+  assert.equal(result.nextHp, 0);
   assert.equal(result.pierceThrough, true);
 });
 
