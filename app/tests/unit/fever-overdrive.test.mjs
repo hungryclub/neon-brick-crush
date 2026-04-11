@@ -54,7 +54,7 @@ test('pierce fever marks early durable hits as pass-through hits', () => {
   assert.equal(result.pierceThrough, true);
 });
 
-test('pulse fever expands to splash and follow-up chain targets', () => {
+test('pulse fever marks the center hit strongly and leaves area targeting to the scene layer', () => {
   const result = resolveFeverCollisionBonus({
     activeFeverMode: 'pulse',
     board: [
@@ -71,8 +71,8 @@ test('pulse fever expands to splash and follow-up chain targets', () => {
 
   assert.equal(result.bonusApplied, true);
   assert.equal(result.nextHp, 0);
-  assert.deepEqual(result.splashTargetIds, ['east', 'north', 'diag']);
-  assert.deepEqual(result.chainPulseTargetIds, ['chain']);
+  assert.deepEqual(result.splashTargetIds, []);
+  assert.deepEqual(result.chainPulseTargetIds, []);
 });
 
 test('tiered fever helpers map meter into ready mode, label, hud value, and tone', () => {

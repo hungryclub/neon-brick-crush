@@ -110,52 +110,10 @@ export function applyFeverModifiers(
   state: IResolvedTurnState,
   context: ITurnModifierContext
 ): IResolvedTurnState {
-  if (!context.activeFeverMode) {
-    return appendModifierTrace(state, {
-      phase: 'fever',
-      applied: false
-    });
-  }
-
-  const targetCount = resolveFeverTargetCount({
-    activeFeverMode: context.activeFeverMode,
-    comboBranch: state.comboBranch
+  return appendModifierTrace(state, {
+    phase: 'fever',
+    applied: false
   });
-  const affectedCells = resolveFeverTargetCells({
-    activeFeverMode: context.activeFeverMode,
-    board: state.board,
-    shotPath: context.shotPath,
-    targetCount
-  });
-
-  if (affectedCells.length === 0) {
-    return appendModifierTrace(state, {
-      phase: 'fever',
-      applied: false
-    });
-  }
-
-  return {
-    board: state.board.filter((cell) => !affectedCells.some((targetCell) => targetCell.id === cell.id)),
-    comboBranch: state.comboBranch === 'gate-only' ? 'gate-fever-combo' : 'fever-only',
-    turnNumber: state.turnNumber,
-    feedbackEvents: [
-      ...state.feedbackEvents,
-      {
-        type: 'fever.activated',
-        affectedCellIds: affectedCells.map((cell) => cell.id),
-        bonusHits: affectedCells.length,
-        mode: context.activeFeverMode
-      }
-    ],
-    modifierTrace: [
-      ...state.modifierTrace,
-      {
-        phase: 'fever',
-        applied: true
-      }
-    ]
-  };
 }
 
 function resolveTriggeredGate(context: ITurnModifierContext) {
@@ -189,121 +147,6 @@ function resolveGateTargetCell(board: IStageBoardCell[]) {
 
     return left.col - right.col;
   })[0];
-}
-
-function resolveFeverTargetCells({
-  activeFeverMode,
-  board,
-  shotPath,
-  targetCount
-}: {
-  activeFeverMode: TFeverMode;
-  board: IStageBoardCell[];
-  shotPath?: TShotPath | null;
-  targetCount: number;
-}) {
-  if (board.length === 0 || targetCount <= 0) {
-    return [];
-  }
-
-  if (activeFeverMode === 'breaker') {
-    return sortByBreakerPriority(board).slice(0, targetCount);
-  }
-
-  if (activeFeverMode === 'pierce') {
-    const focusX = resolveShotFocusX(shotPath);
-
-    return [...board]
-      .sort((left, right) => {
-        const leftDistance = Math.abs(left.col - focusX);
-        const rightDistance = Math.abs(right.col - focusX);
-
-        if (leftDistance !== rightDistance) {
-          return leftDistance - rightDistance;
-        }
-
-        if (right.hp !== left.hp) {
-          return right.hp - left.hp;
-        }
-
-        if (right.row !== left.row) {
-          return right.row - left.row;
-        }
-
-        return left.col - right.col;
-      })
-      .slice(0, targetCount);
-  }
-
-  const anchor = sortByBreakerPriority(board)[0];
-
-  if (!anchor) {
-    return [];
-  }
-
-  return [anchor, ...board
-    .filter((cell) => cell.id !== anchor.id)
-    .sort((left, right) => {
-      const leftDistance = resolveManhattanDistance(left, anchor);
-      const rightDistance = resolveManhattanDistance(right, anchor);
-
-      if (leftDistance !== rightDistance) {
-        return leftDistance - rightDistance;
-      }
-
-      if (right.hp !== left.hp) {
-        return right.hp - left.hp;
-      }
-
-      if (right.row !== left.row) {
-        return right.row - left.row;
-      }
-
-      return left.col - right.col;
-    })].slice(0, targetCount);
-}
-
-function resolveFeverTargetCount({
-  activeFeverMode,
-  comboBranch
-}: {
-  activeFeverMode: TFeverMode;
-  comboBranch: TTurnComboBranch;
-}) {
-  if (activeFeverMode === 'pulse') {
-    return comboBranch === 'gate-only' ? 4 : 3;
-  }
-
-  return comboBranch === 'gate-only' ? 3 : 2;
-}
-
-function sortByBreakerPriority(board: IStageBoardCell[]) {
-  return [...board]
-    .sort((left, right) => {
-      if (right.hp !== left.hp) {
-        return right.hp - left.hp;
-      }
-
-      if (right.row !== left.row) {
-        return right.row - left.row;
-      }
-
-      return left.col - right.col;
-    });
-}
-
-function resolveShotFocusX(shotPath?: TShotPath | null) {
-  if (!shotPath?.length) {
-    return 0;
-  }
-
-  const lastSegment = shotPath[shotPath.length - 1];
-
-  return Math.round((lastSegment.end.x - 60) / 40);
-}
-
-function resolveManhattanDistance(cell: IStageBoardCell, anchor: IStageBoardCell) {
-  return Math.abs(cell.row - anchor.row) + Math.abs(cell.col - anchor.col);
 }
 
 function doesLineIntersectRect({

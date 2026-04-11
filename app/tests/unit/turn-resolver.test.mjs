@@ -120,7 +120,7 @@ test('resolveTurn can trigger a gate from a later shot-path segment', () => {
   assert.equal(result.feedbackEvents[0]?.gateId, gate.id);
 });
 
-test('resolveTurn records gate-fever combo branch when both modifiers apply', () => {
+test('resolveTurn keeps fever out of turn-finalize mutation even when a gate also triggered', () => {
   const [gate] = createStageGates({
     launcherY: 634,
     width: 960
@@ -145,20 +145,15 @@ test('resolveTurn records gate-fever combo branch when both modifiers apply', ()
     }
   });
 
-  assert.equal(result.comboBranch, 'gate-fever-combo');
+  assert.equal(result.comboBranch, 'gate-only');
   assert.deepEqual(
     result.feedbackEvents.map((event) => event.type),
-    ['gate.triggered', 'fever.activated']
+    ['gate.triggered']
   );
-  assert.deepEqual(result.feedbackEvents[1], {
-    type: 'fever.activated',
-    affectedCellIds: ['block-a', 'spawn-a'],
-    bonusHits: 2,
-    mode: 'breaker'
-  });
+  assert.equal(result.board.some((cell) => cell.id === 'block-a'), true);
 });
 
-test('resolveTurn upgrades fever-only turns into multi-target overdrive clears', () => {
+test('resolveTurn no longer clears unrelated blocks during fever-only turns', () => {
   const result = resolveTurn({
     board: [
       { id: 'block-a', col: 0, row: 1, hp: 1 },
@@ -173,21 +168,13 @@ test('resolveTurn upgrades fever-only turns into multi-target overdrive clears',
     }
   });
 
-  assert.equal(result.comboBranch, 'fever-only');
-  assert.deepEqual(
-    result.feedbackEvents.find((event) => event.type === 'fever.activated'),
-    {
-      type: 'fever.activated',
-      affectedCellIds: ['block-b', 'block-c'],
-      bonusHits: 2,
-      mode: 'breaker'
-    }
-  );
-  assert.equal(result.board.some((cell) => cell.id === 'block-b'), false);
-  assert.equal(result.board.some((cell) => cell.id === 'block-c'), false);
+  assert.equal(result.comboBranch, 'base');
+  assert.equal(result.feedbackEvents.some((event) => event.type === 'fever.activated'), false);
+  assert.equal(result.board.some((cell) => cell.id === 'block-b'), true);
+  assert.equal(result.board.some((cell) => cell.id === 'block-c'), true);
 });
 
-test('resolveTurn uses shot path focused targeting for pierce fever', () => {
+test('resolveTurn does not delete extra cells for pierce fever at finalize time', () => {
   const result = resolveTurn({
     board: [
       { id: 'left', col: 0, row: 3, hp: 3 },
@@ -208,18 +195,13 @@ test('resolveTurn uses shot path focused targeting for pierce fever', () => {
     }
   });
 
-  assert.deepEqual(
-    result.feedbackEvents.find((event) => event.type === 'fever.activated'),
-    {
-      type: 'fever.activated',
-      affectedCellIds: ['right', 'center'],
-      bonusHits: 2,
-      mode: 'pierce'
-    }
-  );
+  assert.equal(result.feedbackEvents.some((event) => event.type === 'fever.activated'), false);
+  assert.equal(result.board.some((cell) => cell.id === 'left'), true);
+  assert.equal(result.board.some((cell) => cell.id === 'center'), true);
+  assert.equal(result.board.some((cell) => cell.id === 'right'), true);
 });
 
-test('resolveTurn uses clustered targeting for pulse fever', () => {
+test('resolveTurn does not delete extra cells for pulse fever at finalize time', () => {
   const result = resolveTurn({
     board: [
       { id: 'anchor', col: 3, row: 4, hp: 5 },
@@ -235,15 +217,10 @@ test('resolveTurn uses clustered targeting for pulse fever', () => {
     }
   });
 
-  assert.deepEqual(
-    result.feedbackEvents.find((event) => event.type === 'fever.activated'),
-    {
-      type: 'fever.activated',
-      affectedCellIds: ['anchor', 'adjacent-b', 'adjacent-a'],
-      bonusHits: 3,
-      mode: 'pulse'
-    }
-  );
+  assert.equal(result.feedbackEvents.some((event) => event.type === 'fever.activated'), false);
+  assert.equal(result.board.some((cell) => cell.id === 'anchor'), true);
+  assert.equal(result.board.some((cell) => cell.id === 'adjacent-a'), true);
+  assert.equal(result.board.some((cell) => cell.id === 'adjacent-b'), true);
 });
 
 test('resolveTurn keeps deterministic output for identical inputs', () => {

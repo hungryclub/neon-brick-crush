@@ -34,18 +34,29 @@ relatedDocuments:
 
 ## Pierce Final Behavior
 
-- 첫 2회 bonus 충돌에서 `pass-through`가 발생해야 한다.
-- 공은 블록에 맞고도 뒤쪽으로 이어져야 한다.
+- 첫 2회 bonus 충돌에서만 `pass-through`가 발생해야 한다.
+- 관통은 "블록을 부수고 그대로 진행"을 의미한다.
+- 관통 순간 공은 반사되면 안 되며, 기존 진행 방향을 유지해야 한다.
+- 턴 종료 규칙은 일반 샷과 동일하게 유지되어야 하며, 좌우 수평 무한 이동 상태에 빠지면 안 된다.
 - 관통 순간 cyan trail이 남아야 한다.
 - 플레이어는 "맞고 지나갔다"가 아니라 "뚫고 지나갔다"라고 읽어야 한다.
 
 ## Pulse Final Behavior
 
+- Pulse는 `이동 중 proximity 파괴`가 아니라 `충돌 순간 폭발`로 정의한다.
+- 공 주위 원형 표시는 preview 전용이며, 실제 파괴 판정은 충돌 순간에만 발생해야 한다.
 - 중심 블록은 기존보다 강하게 타격한다.
-- 주변 splash는 orthogonal에 한정하지 않고 더 넓게 읽혀야 한다.
-- 파괴 발생 시 chain mini pulse를 추가한다.
+- 실제 splash 반경은 현재 preview 대비 `3배` 크기로 확장한다.
+- preview 반경과 actual splash 반경은 동일한 기준을 사용해야 한다.
+- preview 또는 시각 효과와 무관한 블록이 부서지면 안 된다.
 - affected block 영역은 rectangle flash 또는 ring으로 시각화한다.
 - `Pulse`는 가장 드라마틱한 Fever여야 한다.
+
+## Breaker Final Behavior
+
+- Breaker는 `직접 충돌한 블록`만 강화 대상으로 삼는다.
+- 직접 부딪히지 않은 블록은 Breaker 때문에 파괴되면 안 된다.
+- Breaker 효과는 Scene 충돌 결과에 한정되며, 턴 종료 후 임의 후처리 파괴를 만들지 않는다.
 
 ## Mobile Bottom Lane Contract
 
@@ -84,7 +95,8 @@ relatedDocuments:
 - Unit tests must verify tier thresholds and collision helper behavior.
 - Scene-affecting changes should preserve existing typecheck/build.
 - Manual preview check should confirm:
-  - `Pierce` trail is visible
-  - `Pulse` area flash is visible
+  - `Pierce` trail is visible and the ball does not enter horizontal lock
+  - `Pulse` preview ring and actual hit area match
+  - `Breaker` never destroys untouched blocks
   - bottom spacing no longer feels cramped
   - Fever rail fills toward `130`

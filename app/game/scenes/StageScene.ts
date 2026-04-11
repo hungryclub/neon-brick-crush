@@ -61,6 +61,7 @@ const BLOCK_WIDTH = 142;
 const BLOCK_HEIGHT = 54;
 const BLOCK_GAP = 12;
 const IMPACT_EFFECTS_PER_TURN_CAP = 8;
+const PULSE_PREVIEW_RADIUS = (BALL_RADIUS + 18) * 3;
 
 interface IBoardMetrics {
   blockGap: number;
@@ -120,6 +121,8 @@ export default class StageScene extends Phaser.Scene {
   private lossRow = 6;
 
   private lastTrackedBallPosition: { x: number; y: number } | null = null;
+
+  private lastTravelDirection = new Phaser.Math.Vector2(0, -1);
 
   private shotPathSegments: IShotPathSegment[] = [];
 
@@ -366,7 +369,7 @@ export default class StageScene extends Phaser.Scene {
     this.pulsePreviewRing = this.add.circle(
       this.launcherPosition.x,
       this.launcherPosition.y,
-      BALL_RADIUS + 18,
+      PULSE_PREVIEW_RADIUS,
       0xff77cd,
       0.05
     );
@@ -443,6 +446,7 @@ export default class StageScene extends Phaser.Scene {
       x: this.launcherPosition.x,
       y: this.launcherPosition.y
     };
+    this.lastTravelDirection.set(0, -1);
     ballBody.enable = true;
     ballBody.setVelocity(shotVelocity.x, shotVelocity.y);
     this.shotState = 'launched';
@@ -698,9 +702,21 @@ export default class StageScene extends Phaser.Scene {
       rectangle.setData('blockId', cell.id);
 
       this.physics.add.existing(rectangle, true);
-      this.physics.add.collider(this.ball, rectangle, () => {
-        this.handleBlockHit(cell.id);
-      });
+      this.physics.add.collider(
+        this.ball,
+        rectangle,
+        () => {
+          this.handleBlockHit(cell.id);
+        },
+        () => {
+          if (this.shouldBypassBlockBounce()) {
+            this.handleBlockHit(cell.id);
+            return false;
+          }
+
+          return true;
+        }
+      );
 
       const label = this.add.text(position.x, position.y, String(cell.hp), {
         color: '#f5f7ff',
@@ -802,6 +818,16 @@ export default class StageScene extends Phaser.Scene {
     }
 
     this.runtimeProfiler.incrementCounter('block_hit_events');
+    const pulseTargetIds =
+      collisionResolution.bonusApplied && this.activeFeverMode === 'pulse'
+        ? this.resolvePulseBlastTargetIds(blockId)
+        : [];
+
+    if (pulseTargetIds.length > 0) {
+      this.highlightPulseArea(pulseTargetIds);
+      this.emitPulseBlast(blockView.rectangle);
+    }
+
     if (collisionResolution.splashTargetIds.length > 0 || collisionResolution.chainPulseTargetIds.length > 0) {
       this.highlightPulseArea([
         ...collisionResolution.splashTargetIds,
@@ -828,12 +854,6 @@ export default class StageScene extends Phaser.Scene {
         this.handleStageClear();
       }
 
-      if (collisionResolution.chainPulseTargetIds.length > 0) {
-        collisionResolution.chainPulseTargetIds.forEach((targetId) => {
-          this.applySplashDamage(targetId);
-        });
-      }
-
       if (collisionResolution.pierceThrough) {
         this.continuePierceTrajectory(blockView.rectangle);
       }
@@ -841,15 +861,9 @@ export default class StageScene extends Phaser.Scene {
       return;
     }
 
-    collisionResolution.splashTargetIds.forEach((targetId) => {
+    pulseTargetIds.forEach((targetId) => {
       this.applySplashDamage(targetId);
     });
-
-    if (collisionResolution.chainPulseTargetIds.length > 0) {
-      collisionResolution.chainPulseTargetIds.forEach((targetId) => {
-        this.applySplashDamage(targetId);
-      });
-    }
 
     blockView.cell.hp = nextHp;
     blockView.label.setText(String(nextHp));
@@ -947,6 +961,11 @@ export default class StageScene extends Phaser.Scene {
     if (distance < 1) {
       return;
     }
+
+    this.lastTravelDirection = new Phaser.Math.Vector2(
+      currentPoint.x - this.lastTrackedBallPosition.x,
+      currentPoint.y - this.lastTrackedBallPosition.y
+    ).normalize();
 
     this.shotPathSegments.push({
       start: {
@@ -1082,7 +1101,7 @@ export default class StageScene extends Phaser.Scene {
       this.ball.setStrokeStyle(3, 0xff5db1, 1);
       this.ball.setScale(1.08);
       this.pulsePreviewRing.setVisible(true);
-      this.pulsePreviewRing.setRadius(BALL_RADIUS + 18);
+      this.pulsePreviewRing.setRadius(PULSE_PREVIEW_RADIUS);
       this.pulsePreviewRing.setFillStyle(0xff77cd, 0.05);
       this.pulsePreviewRing.setStrokeStyle(2, 0xff9fd8, 0.34);
       this.syncPulsePreviewRing();
@@ -1095,19 +1114,28 @@ export default class StageScene extends Phaser.Scene {
     this.pulsePreviewRing.setVisible(false);
   }
 
+  private shouldBypassBlockBounce() {
+    return (
+      this.shotState === 'launched' &&
+      this.activeFeverMode === 'pierce' &&
+      this.feverCollisionBonusHitsUsed < FEVER_COLLISION_BONUS_HIT_LIMIT.pierce
+    );
+  }
+
   private continuePierceTrajectory(targetRectangle: Phaser.GameObjects.Rectangle) {
     const ballBody = this.ball.body as Phaser.Physics.Arcade.Body;
     const speed = Math.max(ballBody.velocity.length(), 420);
-    const latestSegment = this.shotPathSegments[this.shotPathSegments.length - 1];
+    const direction = this.lastTravelDirection.clone();
 
-    let directionX = latestSegment ? latestSegment.end.x - latestSegment.start.x : ballBody.velocity.x;
-    let directionY = latestSegment ? latestSegment.end.y - latestSegment.start.y : ballBody.velocity.y;
-
-    if (directionX === 0 && directionY === 0) {
-      directionY = -1;
+    if (direction.lengthSq() === 0) {
+      direction.set(0, -1);
     }
 
-    const direction = new Phaser.Math.Vector2(directionX, directionY).normalize();
+    if (Math.abs(direction.y) < 0.18) {
+      direction.y = direction.y >= 0 ? 0.18 : -0.18;
+      direction.normalize();
+    }
+
     const pierceOffset =
       Math.max(targetRectangle.displayWidth, targetRectangle.displayHeight) * 1.3 + BALL_RADIUS;
 
@@ -1134,6 +1162,75 @@ export default class StageScene extends Phaser.Scene {
     }
 
     this.pulsePreviewRing.setPosition(this.ball.x, this.ball.y);
+  }
+
+  private resolvePulseBlastTargetIds(targetBlockId: string) {
+    const targetBlockView = this.blockViews.get(targetBlockId);
+
+    if (!targetBlockView) {
+      return [];
+    }
+
+    return [...this.blockViews.values()]
+      .filter((blockView) => blockView.cell.id !== targetBlockId)
+      .filter((blockView) => {
+        const distance = Phaser.Math.Distance.Between(
+          targetBlockView.rectangle.x,
+          targetBlockView.rectangle.y,
+          blockView.rectangle.x,
+          blockView.rectangle.y
+        );
+
+        return distance <= PULSE_PREVIEW_RADIUS;
+      })
+      .sort((left, right) => {
+        const leftDistance = Phaser.Math.Distance.Between(
+          targetBlockView.rectangle.x,
+          targetBlockView.rectangle.y,
+          left.rectangle.x,
+          left.rectangle.y
+        );
+        const rightDistance = Phaser.Math.Distance.Between(
+          targetBlockView.rectangle.x,
+          targetBlockView.rectangle.y,
+          right.rectangle.x,
+          right.rectangle.y
+        );
+
+        if (leftDistance !== rightDistance) {
+          return leftDistance - rightDistance;
+        }
+
+        if (right.cell.hp !== left.cell.hp) {
+          return right.cell.hp - left.cell.hp;
+        }
+
+        return left.cell.id.localeCompare(right.cell.id);
+      })
+      .map((blockView) => blockView.cell.id);
+  }
+
+  private emitPulseBlast(targetRectangle: Phaser.GameObjects.Rectangle) {
+    const ring = this.add.circle(
+      targetRectangle.x,
+      targetRectangle.y,
+      PULSE_PREVIEW_RADIUS,
+      0xff77cd,
+      0.05
+    );
+    ring.setStrokeStyle(2, 0xffa5de, 0.48);
+    ring.setDepth(9);
+
+    this.tweens.add({
+      targets: ring,
+      alpha: 0,
+      scaleX: 1.08,
+      scaleY: 1.08,
+      duration: 180,
+      onComplete: () => {
+        ring.destroy();
+      }
+    });
   }
 
   private emitPierceTrail(
